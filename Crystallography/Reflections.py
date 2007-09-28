@@ -2,12 +2,12 @@ from Scientific import N
 
 class Reflection(object):
 
-    def __init__(self, h, k, l, reflection_set, reflection_index):
+    def __init__(self, h, k, l, reflection_set, index):
         self.h = h
         self.k = k
         self.l = l
         self.reflection_set = reflection_set
-        self.reflection_index = reflection_index
+        self.index = index
         self.symmetry_count = None
 
     def _getarray(self):
@@ -52,7 +52,7 @@ class Reflection(object):
 
     def equivalentReflections(self):
         rs = self.reflection_set
-        ri = self.reflection_index
+        ri = self.index
         equivalents = rs.space_group.equivalentMillerIndices(self.array)
         equivalents.extend([-hkl for hkl in equivalents])
         unique_reflections = \
@@ -65,14 +65,18 @@ class Reflection(object):
 
 class ReflectionSet(object):
 
-    def __init__(self, cell, space_group, max_resolution):
+    def __init__(self, cell, space_group, max_resolution, min_resolution=None):
         self.cell = cell
         self.space_group = space_group
-        inv_sq_resolution = 1./max_resolution**2
+        max_inv_sq_resolution = 1.00001/max_resolution**2
+        if min_resolution is None:
+            min_inv_sq_resolution = 0.
+        else:
+            min_inv_sq_resolution = (1.-0.00001)/min_resolution**2
         r1, r2, r3 = self.cell.reciprocal_basis
-        h_max = int(N.sqrt(inv_sq_resolution/(r1*r1)))
-        k_max = int(N.sqrt(inv_sq_resolution/(r2*r2)))
-        l_max = int(N.sqrt(inv_sq_resolution/(r3*r3)))
+        h_max = int(N.sqrt(max_inv_sq_resolution/(r1*r1)))
+        k_max = int(N.sqrt(max_inv_sq_resolution/(r2*r2)))
+        l_max = int(N.sqrt(max_inv_sq_resolution/(r3*r3)))
         self.minimal_reflection_list = []
         self.reflection_map = {}
         self.systematic_absences = set()
@@ -85,7 +89,7 @@ class ReflectionSet(object):
                 for l in range(-l_max, l_max+1):
                     s3 = l*r3
                     s = s1+s2+s3
-                    if s*s <= inv_sq_resolution:
+                    if min_inv_sq_resolution <= s*s <= max_inv_sq_resolution:
                         hkl = Reflection(h, k, l, self,
                                          len(self.minimal_reflection_list))
                         if self.reflection_map.has_key((hkl.h, hkl.k, hkl.l)):
@@ -97,7 +101,7 @@ class ReflectionSet(object):
                         hkl = equivalents[-1]
                         if hkl.isSystematicAbsence():
                             for r in equivalents:
-                                r.reflection_index = None
+                                r.index = None
                                 self.systematic_absences.add(r)
                         else:
                             self.minimal_reflection_list.append(hkl)
@@ -112,3 +116,149 @@ class ReflectionSet(object):
 
     def __getitem__(self, item):
         return self.reflection_map[item]
+
+
+class ReflectionData(object):
+
+    def __init__(self, reflection_set):
+        self.reflection_set = reflection_set
+        self.number_of_reflections = \
+                 len(self.reflection_set.minimal_reflection_list)
+
+    def __getitem__(self, reflection):
+        index = reflection.index
+        if index is None: # systematic absence
+            return self.absent_value
+        return self.array[index]
+
+    def __iter__(self):
+        for r in self.reflection_set:
+            yield (r, self[r])
+
+
+class ExperimentalReflectionData(ReflectionData):
+
+    def __init__(self, reflection_set):
+        ReflectionData.__init__(self, reflection_set)
+        self.data_available = N.zeros((self.number_of_reflections,), N.Int0)
+
+    def __getitem__(self, reflection):
+        index = reflection.index
+        if index is None: # systematic absence
+            return self.absent_value
+        if self.data_available[index]:
+            return self.array[index, 0]
+        else:
+            return None
+
+    def __iter__(self):
+        for r in self.reflection_set:
+            value = self[r]
+            if value is not None:
+                yield (r, value)
+
+    def __setitem__(self, reflection, value, sigma):
+        index = reflection.index
+        if index is None: # systematic absence
+            raise ValueError("Cannot set value: "
+                             "reflection is absent due to symmetry")
+        self.data_available[index] = True
+        self.array[index, 0] = value
+        self.array[index, 1] = sigma
+
+    def setFromArrays(self, h, k, l, value, sigma, missing=None):
+        n = len(h)
+        assert len(k) == n
+        assert len(l) == n
+        assert len(value) == n
+        assert len(sigma) == n
+        if missing is not None:
+            assert len(missing) == n
+        for i in range(n):
+            if missing is None or missing[i] == 0:
+                r = self.reflection_set[(h[i], k[i], l[i])]
+                self.array[r.index, 0] = value[i]
+                self.array[r.index, 1] = sigma[i]
+                self.data_available[r.index] = True
+
+
+class AmplitudeData(object):
+
+    def rFactor(self, other):
+        sum_self = 0.
+        sum_diff = 0.
+        for r in self.reflection_set:
+            f_self = self[r]
+            f_other = other[r]
+            if f_self is None or f_other is None:
+                continue
+            f_self = abs(f_self)
+            f_other = abs(f_other)
+            sum_self += f_self
+            sum_diff += abs(f_self-f_other)
+        return sum_diff/sum_self
+
+
+class ReflectionAmplitudes(ReflectionData, AmplitudeData):
+
+    def __init__(self, reflection_set):
+        ReflectionData.__init__(self, reflection_set)
+        self.array = N.zeros((self.number_of_reflections,), N.Complex)
+        self.absent_value = 0j
+
+    def __setitem__(self, reflection, value):
+        index = reflection.index
+        if index is None: # systematic absence
+            raise ValueError("Cannot set value: "
+                             "reflection is absent due to symmetry")
+        self.array[index] = value
+
+    def setFromArrays(self, h, k, l, modulus, phase):
+        n = len(h)
+        assert len(k) == n
+        assert len(l) == n
+        assert len(modulus) == n
+        assert len(phase) == n
+        for i in range(n):
+            r = self.reflection_set[(h[i], k[i], l[i])]
+            self.array[r.index] = modulus[i]*N.exp(1j*phase[i])
+
+
+class ExperimentalReflectionAmplitudes(ExperimentalReflectionData,
+                                       AmplitudeData):
+
+    def __init__(self, reflection_set):
+        ExperimentalReflectionData.__init__(self, reflection_set)
+        self.array = N.zeros((self.number_of_reflections, 2), N.Float)
+        self.absent_value = N.zeros((2,), N.Float)
+
+    def convertToIntensities(self):
+        intensities = ExperimentalReflectionIntensities(self.reflection_set)
+        intensities.data_available[:] = self.data_available
+        intensities.array[:, 0] = self.array[:, 0]*self.array[:, 0]
+        intensities.array[:, 1] = 2.*self.array[:, 0]*self.array[:, 1]
+        return intensities
+
+
+class ExperimentalReflectionIntensities(ExperimentalReflectionData):
+
+    def __init__(self, reflection_set):
+        ExperimentalReflectionData.__init__(self, reflection_set)
+        self.array = N.zeros((self.number_of_reflections, 2), N.Float)
+        self.absent_value = N.zeros((2,), N.Float)
+
+    def convertToAmplitudes(self):
+        amplitudes = ExperimentalReflectionAmplitudes(self.reflection_set)
+        amplitudes.data_available[:] = self.data_available
+        for i in range(self.number_of_reflections):
+            if self.array[i, 0] > 0.:
+                a = N.sqrt(self.array[i, 0])
+                amplitudes.array[i, 0] = a
+                amplitudes.array[i, 1] = 0.5*self.array[i, 1]/a
+            elif self.array[i, 0] == 0.:
+                amplitudes.array[i, 0] = 0.
+                amplitudes.array[i, 1] = N.sqrt(self.array[i, 1])
+            else:
+                amplitudes.data_available[i] = False
+                amplitudes.array[i, :] = 0.
+        return amplitudes
