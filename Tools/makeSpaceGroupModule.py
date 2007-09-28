@@ -56,9 +56,17 @@ class SpaceGroup(object):
         self.number = number
         self.symbol = symbol
         self.transformations = transformations
+        self.transposed_rotations = [N.transpose(t[0])
+                                     for t in self.transformations]
 
     def __repr__(self):
-        return 'SpaceGroup(%d, %s)' % (self.number, self.symbol)
+        return 'SpaceGroup(%d, %s)' % (self.number, repr(self.symbol))
+
+    def equivalentMillerIndices(self, hkl):
+        hkl_list = []
+        for rot in self.transposed_rotations:
+            hkl_list.append(N.dot(rot, hkl))
+        return hkl_list
 
 space_groups = {}
 """
@@ -75,5 +83,4 @@ del rot
 del trans_num
 del trans_den
 del sg
-del N
 """
