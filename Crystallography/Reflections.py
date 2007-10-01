@@ -14,16 +14,32 @@ class Reflection(object):
         return N.array([self.h, self.k, self.l])
     array = property(_getarray)
 
-    def __cmp__(self, other):
-        pref1 = 4*(self.h >= 0) + 2*(self.k >= 0) + (self.l >= 0)
-        pref2 = 4*(other.h >= 0) + 2*(other.k >= 0) + (other.l >= 0)
-        return cmp(pref1, pref2) \
-               or cmp(self.h, other.h) \
-               or cmp(self.k, other.k) \
-               or cmp(self.l, other.l)
-
     def __repr__(self):
         return "Reflection(%d, %d, %d)" % (self.h, self.k, self.l)
+
+    def __eq__(self, other):
+        return self.h == other.h and self.k == other.k and self.l == other.l
+        
+    def __ne__(self, other):
+        return self.h != other.h or self.k != other.k or self.l != other.l
+
+    def __gt__(self, other):
+        pref1 = 4*(self.h >= 0) + 2*(self.k >= 0) + (self.l >= 0)
+        pref2 = 4*(other.h >= 0) + 2*(other.k >= 0) + (other.l >= 0)
+        return pref1 > pref2 \
+               or self.h > other.h or self.k > other.k or self.l > other.l
+
+    def __lt__(self, other):
+        pref1 = 4*(self.h >= 0) + 2*(self.k >= 0) + (self.l >= 0)
+        pref2 = 4*(other.h >= 0) + 2*(other.k >= 0) + (other.l >= 0)
+        return pref1 < pref2 \
+               or self.h < other.h or self.k < other.k or self.l < other.l
+
+    def __ge__(self, other):
+        return self.__eq__(other) or self.__gt__(other)
+
+    def __le__(self, other):
+        return self.__eq__(other) or self.__lt__(other)
 
     def __hash__(self):
         return 400*self.h + 20*self.k + self.l
