@@ -1,5 +1,9 @@
 from Scientific import N
 
+#
+# A Reflection object stores Miller indices and a reference to the
+# ReflectionSet to which it belongs, plus some bookkeeping information.
+#
 class Reflection(object):
 
     def __init__(self, h, k, l, reflection_set, index):
@@ -8,7 +12,7 @@ class Reflection(object):
         self.l = l
         self.reflection_set = reflection_set
         self.index = index
-        self.symmetry_count = None
+        self.n_symmetry_equivalents = None
 
     def _getarray(self):
         return N.array([self.h, self.k, self.l])
@@ -66,19 +70,28 @@ class Reflection(object):
                 return False
         return True
 
-    def equivalentReflections(self):
+    def symmetryEquivalents(self):
         rs = self.reflection_set
         ri = self.index
-        equivalents = rs.space_group.equivalentMillerIndices(self.array)
+        equivalents = rs.space_group.symmetryEquivalentMillerIndices(self.array)
         equivalents.extend([-hkl for hkl in equivalents])
         unique_reflections = \
               set([Reflection(h, k, l, rs, ri) for h, k, l in equivalents])
         n = len(unique_reflections)
         for r in unique_reflections:
-            r.symmetry_count = n
+            r.n_symmetry_equivalents = n
         return unique_reflections
 
-
+#
+# A ReflectionSet represents all possible reflections for a given crystal
+# within a given resolution range and manages a minimal list of reflections
+# from which all others can be constructed by symmetry operations.
+# Reflection amplitudes and intensities are stored separately in
+# ReflectionData objects.
+#
+# Iteration over a ReflectionSet yields the elements of the minimal list.
+# Indexation by (h, k, l) tuples gives access to arbitrary Miller indices.
+#
 class ReflectionSet(object):
 
     def __init__(self, cell, space_group, max_resolution, min_resolution=None):
@@ -96,8 +109,6 @@ class ReflectionSet(object):
         self.minimal_reflection_list = []
         self.reflection_map = {}
         self.systematic_absences = set()
-        rotations = [N.transpose(t[0])
-                     for t in self.space_group.transformations]
         for h in range(-h_max, h_max+1):
             s1 = h*r1
             for k in range(-k_max, k_max+1):
@@ -106,22 +117,25 @@ class ReflectionSet(object):
                     s3 = l*r3
                     s = s1+s2+s3
                     if min_inv_sq_resolution <= s*s <= max_inv_sq_resolution:
-                        hkl = Reflection(h, k, l, self,
-                                         len(self.minimal_reflection_list))
-                        if self.reflection_map.has_key((hkl.h, hkl.k, hkl.l)):
-                            continue
-                        equivalents = list(hkl.equivalentReflections())
-                        equivalents.sort()
-                        for r in equivalents:
-                            self.reflection_map[(r.h, r.k, r.l)] = r
-                        hkl = equivalents[-1]
-                        if hkl.isSystematicAbsence():
-                            for r in equivalents:
-                                r.index = None
-                                self.systematic_absences.add(r)
-                        else:
-                            self.minimal_reflection_list.append(hkl)
+                        self.addReflection(h, k, l)
         self.minimal_reflection_list.sort()
+
+    def addReflection(self, h, k, l):
+        hkl = Reflection(h, k, l, self,
+                         len(self.minimal_reflection_list))
+        if self.reflection_map.has_key((hkl.h, hkl.k, hkl.l)):
+            return
+        equivalents = list(hkl.symmetryEquivalents())
+        equivalents.sort()
+        for r in equivalents:
+            self.reflection_map[(r.h, r.k, r.l)] = r
+        hkl = equivalents[-1]
+        if hkl.isSystematicAbsence():
+            for r in equivalents:
+                r.index = None
+                self.systematic_absences.add(r)
+        else:
+            self.minimal_reflection_list.append(hkl)
 
     def __iter__(self):
         for r in self.minimal_reflection_list:
@@ -132,6 +146,14 @@ class ReflectionSet(object):
 
     def __getitem__(self, item):
         return self.reflection_map[item]
+
+    def getReflection(self, hkl):
+        try:
+            return self.reflection_map[hkl]
+        except KeyError:
+            h, k, l = hkl
+            self.addReflection(h, k, l)
+            return self.reflection_map[hkl]
 
 
 class ReflectionData(object):
@@ -173,14 +195,14 @@ class ExperimentalReflectionData(ReflectionData):
             if value is not None:
                 yield (r, value)
 
-    def __setitem__(self, reflection, value, sigma):
+    def __setitem__(self, reflection, value_sigma):
         index = reflection.index
         if index is None: # systematic absence
             raise ValueError("Cannot set value: "
                              "reflection is absent due to symmetry")
         self.data_available[index] = True
-        self.array[index, 0] = value
-        self.array[index, 1] = sigma
+        self.array[index, 0] = value_sigma[0]
+        self.array[index, 1] = value_sigma[1]
 
     def setFromArrays(self, h, k, l, value, sigma, missing=None):
         n = len(h)
@@ -210,9 +232,33 @@ class AmplitudeData(object):
                 continue
             f_self = abs(f_self)
             f_other = abs(f_other)
-            sum_self += f_self
-            sum_diff += abs(f_self-f_other)
+            sum_self += f_self*r.n_symmetry_equivalents
+            sum_diff += abs(f_self-f_other)*r.n_symmetry_equivalents
         return sum_diff/sum_self
+
+    def rFactorWithScale(self, other):
+        sum_self = 0.
+        sum_other = 0.
+        for r in self.reflection_set:
+            f_self = self[r]
+            f_other = other[r]
+            if f_self is None or f_other is None:
+                continue
+            f_self = abs(f_self)
+            f_other = abs(f_other)
+            sum_self += f_self*r.n_symmetry_equivalents
+            sum_other += f_self*r.n_symmetry_equivalents
+        scale = sum_self/sum_other
+        sum_diff = 0.
+        for r in self.reflection_set:
+            f_self = self[r]
+            f_other = other[r]
+            if f_self is None or f_other is None:
+                continue
+            f_self = abs(f_self)
+            f_other = abs(f_other)
+            sum_diff += abs(f_self-scale*f_other)*r.n_symmetry_equivalents
+        return sum_diff/sum_self, scale
 
 
 class ReflectionAmplitudes(ReflectionData, AmplitudeData):

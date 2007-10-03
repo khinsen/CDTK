@@ -62,7 +62,7 @@ class SpaceGroup(object):
     def __repr__(self):
         return 'SpaceGroup(%d, %s)' % (self.number, repr(self.symbol))
 
-    def equivalentMillerIndices(self, hkl):
+    def symmetryEquivalentMillerIndices(self, hkl):
         hkl_list = []
         for rot in self.transposed_rotations:
             hkl_list.append(N.dot(rot, hkl))
