@@ -32,3 +32,11 @@ class UnitCell(object):
 
         r = LA.inverse(N.transpose([e1, e2, e3]))
         self.reciprocal_basis = [Vector(r[0]), Vector(r[1]), Vector(r[2])]
+
+    def volume(self):
+        e1, e2, e3 = self.basis
+        return e1*e2.cross(e3)
+
+    def reciprocalCellVolume(self):
+        r1, r2, r3 = self.reciprocal_basis
+        return r1*r2.cross(r3)
