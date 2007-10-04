@@ -94,31 +94,17 @@ class Reflection(object):
 #
 class ReflectionSet(object):
 
-    def __init__(self, cell, space_group, max_resolution, min_resolution=None):
+    def __init__(self, cell, space_group,
+                 max_resolution=None, min_resolution=None):
         self.cell = cell
         self.space_group = space_group
-        max_inv_sq_resolution = 1.00001/max_resolution**2
-        if min_resolution is None:
-            min_inv_sq_resolution = 0.
-        else:
-            min_inv_sq_resolution = (1.-0.00001)/min_resolution**2
-        r1, r2, r3 = self.cell.reciprocal_basis
-        h_max = int(N.sqrt(max_inv_sq_resolution/(r1*r1)))
-        k_max = int(N.sqrt(max_inv_sq_resolution/(r2*r2)))
-        l_max = int(N.sqrt(max_inv_sq_resolution/(r3*r3)))
         self.minimal_reflection_list = []
         self.reflection_map = {}
         self.systematic_absences = set()
-        for h in range(-h_max, h_max+1):
-            s1 = h*r1
-            for k in range(-k_max, k_max+1):
-                s2 = k*r2
-                for l in range(-l_max, l_max+1):
-                    s3 = l*r3
-                    s = s1+s2+s3
-                    if min_inv_sq_resolution <= s*s <= max_inv_sq_resolution:
-                        self.addReflection(h, k, l)
-        self.minimal_reflection_list.sort()
+        self.s_min = None
+        self.s_max = None
+        if max_resolution is not None:
+            self.fillResolutionSphere(max_resolution, min_resolution)
 
     def addReflection(self, h, k, l):
         hkl = Reflection(h, k, l, self,
@@ -136,6 +122,42 @@ class ReflectionSet(object):
                 self.systematic_absences.add(r)
         else:
             self.minimal_reflection_list.append(hkl)
+        s = hkl.sVector().length()
+        if self.s_min is None:
+            self.s_min = s
+        else:
+            self.s_min = min(s, self.s_min)
+        if self.s_max is None:
+            self.s_max = s
+        else:
+            self.s_max = max(s, self.s_max)
+
+    def fillResolutionSphere(self, max_resolution, min_resolution=None):
+        max_inv_sq_resolution = 1.00001/max_resolution**2
+        if min_resolution is None:
+            min_inv_sq_resolution = 0.
+        else:
+            min_inv_sq_resolution = (1.-0.00001)/min_resolution**2
+        r1, r2, r3 = self.cell.reciprocal_basis
+        h_max = int(N.sqrt(max_inv_sq_resolution/(r1*r1)))
+        k_max = int(N.sqrt(max_inv_sq_resolution/(r2*r2)))
+        l_max = int(N.sqrt(max_inv_sq_resolution/(r3*r3)))
+        for h in range(-h_max, h_max+1):
+            s1 = h*r1
+            for k in range(-k_max, k_max+1):
+                s2 = k*r2
+                for l in range(-l_max, l_max+1):
+                    s3 = l*r3
+                    s = s1+s2+s3
+                    if min_inv_sq_resolution <= s*s \
+                           <= max_inv_sq_resolution:
+                        self.addReflection(h, k, l)
+        self.minimal_reflection_list.sort()
+
+    def resolutionRange(self):
+        if not self.reflection_map:
+            raise ValueError("Empty ReflectionSet")
+        return 1./self.s_max, 1./self.s_min
 
     def __iter__(self):
         for r in self.minimal_reflection_list:
