@@ -40,3 +40,10 @@ class UnitCell(object):
     def reciprocalCellVolume(self):
         r1, r2, r3 = self.reciprocal_basis
         return r1*r2.cross(r3)
+
+    def isCompatibleWithUniverse(self, universe, precision=1.e-5):
+        universe_basis = universe.basisVectors()
+        for i in range(3):
+            if (universe_basis[i]-self.basis[i]).length() > precision:
+                return False
+        return True
