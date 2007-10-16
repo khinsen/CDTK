@@ -283,7 +283,7 @@ class AmplitudeData(object):
         return sum_diff/sum_self, scale
 
 
-class ReflectionAmplitudes(ReflectionData, AmplitudeData):
+class StructureFactor(ReflectionData, AmplitudeData):
 
     def __init__(self, reflection_set):
         ReflectionData.__init__(self, reflection_set)
@@ -308,8 +308,8 @@ class ReflectionAmplitudes(ReflectionData, AmplitudeData):
             self.array[r.index] = modulus[i]*N.exp(1j*phase[i])
 
 
-class ExperimentalReflectionAmplitudes(ExperimentalReflectionData,
-                                       AmplitudeData):
+class ExperimentalAmplitudes(ExperimentalReflectionData,
+                             AmplitudeData):
 
     def __init__(self, reflection_set):
         ExperimentalReflectionData.__init__(self, reflection_set)
@@ -317,14 +317,14 @@ class ExperimentalReflectionAmplitudes(ExperimentalReflectionData,
         self.absent_value = N.zeros((2,), N.Float)
 
     def convertToIntensities(self):
-        intensities = ExperimentalReflectionIntensities(self.reflection_set)
+        intensities = ExperimentalIntensities(self.reflection_set)
         intensities.data_available[:] = self.data_available
         intensities.array[:, 0] = self.array[:, 0]*self.array[:, 0]
         intensities.array[:, 1] = 2.*self.array[:, 0]*self.array[:, 1]
         return intensities
 
 
-class ExperimentalReflectionIntensities(ExperimentalReflectionData):
+class ExperimentalIntensities(ExperimentalReflectionData):
 
     def __init__(self, reflection_set):
         ExperimentalReflectionData.__init__(self, reflection_set)
@@ -332,7 +332,7 @@ class ExperimentalReflectionIntensities(ExperimentalReflectionData):
         self.absent_value = N.zeros((2,), N.Float)
 
     def convertToAmplitudes(self):
-        amplitudes = ExperimentalReflectionAmplitudes(self.reflection_set)
+        amplitudes = ExperimentalAmplitudes(self.reflection_set)
         amplitudes.data_available[:] = self.data_available
         for i in range(self.number_of_reflections):
             if self.array[i, 0] > 0.:
