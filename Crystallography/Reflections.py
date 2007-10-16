@@ -1,4 +1,5 @@
 from Scientific import N
+from Scientific.Geometry import Tensor
 
 #
 # A Reflection object stores Miller indices and a reference to the
@@ -306,6 +307,66 @@ class StructureFactor(ReflectionData, AmplitudeData):
         for i in range(n):
             r = self.reflection_set[(h[i], k[i], l[i])]
             self.array[r.index] = modulus[i]*N.exp(1j*phase[i])
+
+    def calculateFromUnitCellAtoms(self, atom_iterator):
+        from AtomicStructureFactors import atomic_structure_factors
+        sv = N.zeros((self.number_of_reflections, 3), N.Float)
+        for r in self.reflection_set:
+            sv[r.index] = r.sVector().array
+        ssq = N.sum(sv*sv, axis=-1)
+        self.array[:] = 0j
+        twopii = -2.j*N.pi
+        twopisq = -2.*N.pi**2
+        for element, position, adp, occupancy in atom_iterator:
+            a, b = atomic_structure_factors[element.lower()]
+            f_atom = N.sum(a[:, N.NewAxis]
+                           * N.exp(-b[:, N.NewAxis]*ssq[N.NewAxis, :]))
+            if adp is None:
+                dwf = 1.
+            elif isinstance(adp, float):
+                dwf = N.exp(twopisq*adp*ssq)
+            else:
+                dwf = N.exp(twopisq*N.sum(N.dot(sv, adp.array)*sv, axis=-1))
+            self.array += occupancy*f_atom*dwf \
+                          * N.exp(twopii*(N.dot(sv, position.array)))
+
+    def calculateFromAsymmetricUnitAtoms(self, atom_iterator):
+        from AtomicStructureFactors import atomic_structure_factors
+        twopii = -2.j*N.pi
+        twopisq = -2.*N.pi**2
+        sg = self.reflection_set.space_group
+        ntrans = len(sg)
+        sv = N.zeros((ntrans, self.number_of_reflections, 3), N.Float)
+        p = N.zeros((ntrans, self.number_of_reflections), N.Complex)
+        r1, r2, r3 = self.reflection_set.cell.reciprocal_basis
+        for r in self.reflection_set:
+            hkl_list = sg.symmetryEquivalentMillerIndices(r.array)
+            for i in range(ntrans):
+                h, k, l = hkl_list[i]
+                sv[i, r.index] = (h*r1+k*r2+l*r3).array
+                tr_num, tr_den = sg.transformations[i][1:]
+                st = h*float(tr_num[0])/float(tr_den[0]) \
+                     + k*float(tr_num[1])/float(tr_den[1]) \
+                     + l*float(tr_num[2])/float(tr_den[2])
+                p[i, r.index] = N.exp(twopii*st)
+        ssq = N.sum(sv[0]*sv[0], axis=-1)
+        self.array[:] = 0j
+        for element, position, adp, occupancy in atom_iterator:
+            a, b = atomic_structure_factors[element.lower()]
+            f_atom = N.sum(a[:, N.NewAxis]
+                           * N.exp(-b[:, N.NewAxis]*ssq[N.NewAxis, :]))
+            if adp is None:
+                dwf = 1.
+            elif isinstance(adp, float):
+                dwf = N.exp(twopisq*adp*ssq)
+            else:
+                dwf = None
+            for i in range(ntrans):
+                if isinstance(adp, Tensor):
+                    dwf = N.exp(twopisq*N.sum(N.dot(sv[i], adp.array)*sv[i],
+                                              axis=-1))
+                self.array += occupancy*p[i]*f_atom*dwf \
+                                * N.exp(twopii*(N.dot(sv[i], position.array)))
 
 
 class ExperimentalAmplitudes(ExperimentalReflectionData,
