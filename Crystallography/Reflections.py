@@ -315,7 +315,7 @@ class StructureFactor(ReflectionData, AmplitudeData):
             sv[r.index] = r.sVector().array
         ssq = N.sum(sv*sv, axis=-1)
         self.array[:] = 0j
-        twopii = -2.j*N.pi
+        twopii = 2.j*N.pi
         twopisq = -2.*N.pi**2
         for element, position, adp, occupancy in atom_iterator:
             a, b = atomic_structure_factors[element.lower()]
@@ -332,7 +332,7 @@ class StructureFactor(ReflectionData, AmplitudeData):
 
     def calculateFromAsymmetricUnitAtoms(self, atom_iterator):
         from AtomicStructureFactors import atomic_structure_factors
-        twopii = -2.j*N.pi
+        twopii = 2.j*N.pi
         twopisq = -2.*N.pi**2
         sg = self.reflection_set.space_group
         ntrans = len(sg)
@@ -345,9 +345,9 @@ class StructureFactor(ReflectionData, AmplitudeData):
                 h, k, l = hkl_list[i]
                 sv[i, r.index] = (h*r1+k*r2+l*r3).array
                 tr_num, tr_den = sg.transformations[i][1:]
-                st = h*float(tr_num[0])/float(tr_den[0]) \
-                     + k*float(tr_num[1])/float(tr_den[1]) \
-                     + l*float(tr_num[2])/float(tr_den[2])
+                st = r.h*float(tr_num[0])/float(tr_den[0]) \
+                     + r.k*float(tr_num[1])/float(tr_den[1]) \
+                     + r.l*float(tr_num[2])/float(tr_den[2])
                 p[i, r.index] = N.exp(twopii*st)
         ssq = N.sum(sv[0]*sv[0], axis=-1)
         self.array[:] = 0j
