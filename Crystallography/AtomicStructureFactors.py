@@ -1,7 +1,7 @@
 
 # Atomic structure factors in Five-Gaussian approximation.
 # The formula for the atomic structure factor is
-#   f(s) = N.sum(a*N.exp(-b*s))
+#   f(s) = N.sum(a*N.exp(-b*s^2))
 # where (a, b) are the two arrays stored in atomic_structure_factors
 # and s is the length of the scattering vector (in 1/nm).
 #
