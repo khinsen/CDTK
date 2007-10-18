@@ -41,6 +41,20 @@ class UnitCell(object):
         r1, r2, r3 = self.reciprocal_basis
         return r1*r2.cross(r3)
 
+    def cartesianToFractional(self, vector):
+        r1, r2, r3 = self.reciprocal_basis
+        return N.array([r1*vector, r2*vector, r3*vector])
+
+    def cartesianToFractionalMatrix(self):
+        return N.array(self.reciprocal_basis)
+
+    def fractionalToCartesian(self, array):
+        e1, e2, e3 = self.basis
+        return array[0]*e1 + array[1]*e2 + array[2]*e3
+
+    def fractionalToCartesianMatrix(self):
+        return N.transpose(self.basis)
+
     def isCompatibleWithUniverse(self, universe, precision=1.e-5):
         universe_basis = universe.basisVectors()
         for i in range(3):

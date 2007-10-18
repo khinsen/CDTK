@@ -39,6 +39,10 @@ datasets = [
       Vector(0.000000, 0.000000, 0.026755)]),
     ]
 
+fractional_coordinates = [N.array([0., 0.1, 0.2]),
+                          N.array([-0.5, 1., 0.3]),
+                          N.array([2., -1., 3.]),
+                          N.array([-1.1, 5., -2.3])]
 
 class UnitCellTests(unittest.TestCase):
 
@@ -63,6 +67,19 @@ class UnitCellTests(unittest.TestCase):
             self.assertAlmostEqual(cell1.beta, cell2.beta, 5)
             self.assertAlmostEqual(cell1.gamma, cell2.gamma, 5)
 
+    def test_conversions(self):
+        for params, rb in datasets:
+            cell = UnitCell(*params)
+            m_fc = cell.fractionalToCartesianMatrix()
+            m_cf = cell.cartesianToFractionalMatrix()
+            for x in fractional_coordinates:
+                r = cell.fractionalToCartesian(x)
+                rr = N.dot(m_fc, x)
+                self.assert_(N.maximum.reduce(N.fabs(r.array-rr)) < 1.e-15)
+                xx = cell.cartesianToFractional(r)
+                self.assert_(N.maximum.reduce(N.fabs(x-xx)) < 1.e-15)
+                xx = N.dot(m_cf, rr)
+                self.assert_(N.maximum.reduce(N.fabs(x-xx)) < 1.e-15)
 
 if __name__ == '__main__':
     unittest.main()
