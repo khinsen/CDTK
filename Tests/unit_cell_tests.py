@@ -49,17 +49,19 @@ class UnitCellTests(unittest.TestCase):
     def test_geometry(self):
         for params, rb in datasets:
             cell1 = UnitCell(*params)
+            basis = cell1.basisVectors()
+            reciprocal_basis = cell1.reciprocalBasisVectors()
             for i in range(3):
-                self.assert_((cell1.reciprocal_basis[i]-rb[i]).length()
+                self.assert_((reciprocal_basis[i]-rb[i]).length()
                              < 1.e-6)
             for i in range(3):
                 for j in range(3):
-                    p = cell1.basis[i]*cell1.reciprocal_basis[j]
+                    p = basis[i]*reciprocal_basis[j]
                     if i == j:
                         self.assertAlmostEqual(p, 1., 10.)
                     else:
                         self.assertAlmostEqual(p, 0., 10.)
-            cell2 = UnitCell(*tuple(cell1.basis))
+            cell2 = UnitCell(*tuple(basis))
             self.assertAlmostEqual(cell1.a, cell2.a, 5)
             self.assertAlmostEqual(cell1.b, cell2.b, 5)
             self.assertAlmostEqual(cell1.c, cell2.c, 5)

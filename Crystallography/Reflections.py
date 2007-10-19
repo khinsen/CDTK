@@ -50,7 +50,7 @@ class Reflection(object):
         return 400*self.h + 20*self.k + self.l
 
     def sVector(self):
-        r1, r2, r3 = self.reflection_set.cell.reciprocal_basis
+        r1, r2, r3 = self.reflection_set.cell.reciprocalBasisVectors()
         return self.h*r1 + self.k*r2 + self.l*r3
 
     def qVector(self):
@@ -139,7 +139,7 @@ class ReflectionSet(object):
             min_inv_sq_resolution = 0.
         else:
             min_inv_sq_resolution = (1.-0.00001)/min_resolution**2
-        r1, r2, r3 = self.cell.reciprocal_basis
+        r1, r2, r3 = self.cell.reciprocalBasisVectors()
         h_max = int(N.sqrt(max_inv_sq_resolution/(r1*r1)))
         k_max = int(N.sqrt(max_inv_sq_resolution/(r2*r2)))
         l_max = int(N.sqrt(max_inv_sq_resolution/(r3*r3)))
@@ -160,6 +160,9 @@ class ReflectionSet(object):
             raise ValueError("Empty ReflectionSet")
         return 1./self.s_max, 1./self.s_min
 
+    def maxHKL(self):
+        return tuple(N.maximum.reduce(N.array(self.reflection_map.keys())))
+        
     def __iter__(self):
         for r in self.minimal_reflection_list:
             yield r
@@ -338,7 +341,7 @@ class StructureFactor(ReflectionData, AmplitudeData):
         ntrans = len(sg)
         sv = N.zeros((ntrans, self.number_of_reflections, 3), N.Float)
         p = N.zeros((ntrans, self.number_of_reflections), N.Complex)
-        r1, r2, r3 = self.reflection_set.cell.reciprocal_basis
+        r1, r2, r3 = self.reflection_set.cell.reciprocalBasisVectors()
         for r in self.reflection_set:
             hkl_list = sg.symmetryEquivalentMillerIndices(r.array)
             for i in range(ntrans):

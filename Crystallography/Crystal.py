@@ -33,13 +33,15 @@ class UnitCell(object):
         r = LA.inverse(N.transpose([e1, e2, e3]))
         self.reciprocal_basis = [Vector(r[0]), Vector(r[1]), Vector(r[2])]
 
-    def volume(self):
+    def basisVectors(self):
+        return self.basis
+
+    def reciprocalBasisVectors(self):
+        return self.reciprocal_basis
+
+    def cellVolume(self):
         e1, e2, e3 = self.basis
         return e1*e2.cross(e3)
-
-    def reciprocalCellVolume(self):
-        r1, r2, r3 = self.reciprocal_basis
-        return r1*r2.cross(r3)
 
     def cartesianToFractional(self, vector):
         r1, r2, r3 = self.reciprocal_basis
@@ -55,9 +57,9 @@ class UnitCell(object):
     def fractionalToCartesianMatrix(self):
         return N.transpose(self.basis)
 
-    def isCompatibleWithUniverse(self, universe, precision=1.e-5):
-        universe_basis = universe.basisVectors()
+    def isCompatibleWith(self, other_cell, precision=1.e-5):
+        other_basis = other_cell.basisVectors()
         for i in range(3):
-            if (universe_basis[i]-self.basis[i]).length() > precision:
+            if (other_basis[i]-self.basis[i]).length() > precision:
                 return False
         return True
