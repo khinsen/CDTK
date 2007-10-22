@@ -49,8 +49,10 @@ class Reflection(object):
     def __hash__(self):
         return 400*self.h + 20*self.k + self.l
 
-    def sVector(self):
-        r1, r2, r3 = self.reflection_set.cell.reciprocalBasisVectors()
+    def sVector(self, cell=None):
+        if cell is None:
+            cell = self.reflection_set.cell
+        r1, r2, r3 = cell.reciprocalBasisVectors()
         return self.h*r1 + self.k*r2 + self.l*r3
 
     def qVector(self):
@@ -311,11 +313,11 @@ class StructureFactor(ReflectionData, AmplitudeData):
             r = self.reflection_set[(h[i], k[i], l[i])]
             self.array[r.index] = modulus[i]*N.exp(1j*phase[i])
 
-    def calculateFromUnitCellAtoms(self, atom_iterator):
+    def calculateFromUnitCellAtoms(self, atom_iterator, cell=None):
         from AtomicStructureFactors import atomic_structure_factors
         sv = N.zeros((self.number_of_reflections, 3), N.Float)
         for r in self.reflection_set:
-            sv[r.index] = r.sVector().array
+            sv[r.index] = r.sVector(cell).array
         ssq = N.sum(sv*sv, axis=-1)
         self.array[:] = 0j
         twopii = 2.j*N.pi
@@ -333,15 +335,17 @@ class StructureFactor(ReflectionData, AmplitudeData):
             self.array += occupancy*f_atom*dwf \
                           * N.exp(twopii*(N.dot(sv, position.array)))
 
-    def calculateFromAsymmetricUnitAtoms(self, atom_iterator):
+    def calculateFromAsymmetricUnitAtoms(self, atom_iterator, cell=None):
         from AtomicStructureFactors import atomic_structure_factors
+        if cell is None:
+            cell = self.reflection_set.cell
         twopii = 2.j*N.pi
         twopisq = -2.*N.pi**2
         sg = self.reflection_set.space_group
         ntrans = len(sg)
         sv = N.zeros((ntrans, self.number_of_reflections, 3), N.Float)
         p = N.zeros((ntrans, self.number_of_reflections), N.Complex)
-        r1, r2, r3 = self.reflection_set.cell.reciprocalBasisVectors()
+        r1, r2, r3 = cell.reciprocalBasisVectors()
         for r in self.reflection_set:
             hkl_list = sg.symmetryEquivalentMillerIndices(r.array)
             for i in range(ntrans):
