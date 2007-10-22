@@ -251,6 +251,7 @@ class ExperimentalReflectionData(ReflectionData):
 class AmplitudeData(object):
 
     def rFactor(self, other):
+        assert isinstance(other, AmplitudeData)
         sum_self = 0.
         sum_diff = 0.
         for r in self.reflection_set:
@@ -265,6 +266,7 @@ class AmplitudeData(object):
         return sum_diff/sum_self
 
     def rFactorWithScale(self, other):
+        assert isinstance(other, AmplitudeData)
         sum_self = 0.
         sum_other = 0.
         for r in self.reflection_set:
@@ -289,6 +291,34 @@ class AmplitudeData(object):
         return sum_diff/sum_self, scale
 
 
+class IntensityData(object):
+
+    def isotropicAverage(self, nbins = 50):
+        from Scientific.Functions.Interpolation import InterpolatingFunction
+        r_min, r_max = self.reflection_set.resolutionRange()
+        s_min = 1./r_max
+        s_max = 1./r_min
+        bin_width = (s_max-s_min)/nbins
+        reflection_count = N.zeros((nbins,), N.Int)
+        intensity_sum = N.zeros((nbins,), N.Float)
+        for reflection, intensity in self:
+            s = reflection.sVector().length()
+            bin = min(nbins-1, int((s-s_min)/bin_width))
+            n = reflection.n_symmetry_equivalents
+            reflection_count[bin] += n
+            intensity_sum[bin] += n*intensity
+        intensity_average = intensity_sum/reflection_count
+        s = s_min + bin_width*(N.arange(nbins)+0.5)
+        return InterpolatingFunction((s,), intensity_average)
+
+    def wilsonPlot(self, nbins=50):
+        from Scientific.Functions.Interpolation import InterpolatingFunction
+        av = self.isotropicAverage(nbins)
+        s = av.axes[0]
+        intensity_average = av.values
+        return InterpolatingFunction((s*s,), N.log(intensity_average))
+
+
 class StructureFactor(ReflectionData, AmplitudeData):
 
     def __init__(self, reflection_set):
@@ -302,6 +332,11 @@ class StructureFactor(ReflectionData, AmplitudeData):
             raise ValueError("Cannot set value: "
                              "reflection is absent due to symmetry")
         self.array[index] = value
+
+    def convertToIntensities(self):
+        intensities = ModelIntensities(self.reflection_set)
+        intensities.array[:] = (self.array[:]*N.conjugate(self.array[:])).real
+        return intensities
 
     def setFromArrays(self, h, k, l, modulus, phase):
         n = len(h)
@@ -376,6 +411,37 @@ class StructureFactor(ReflectionData, AmplitudeData):
                                 * N.exp(twopii*(N.dot(sv[i], position.array)))
 
 
+    def applyDebyeWallerFactor(self, adp_or_scalar):
+        twopisq = -2.*N.pi**2
+        sv = N.zeros((self.number_of_reflections, 3), N.Float)
+        for r in self.reflection_set:
+            sv[r.index] = r.sVector(self.reflection_set.cell).array
+        if isinstance(adp_or_scalar, float):
+            dwf = N.exp(twopisq*adp_or_scalar*N.sum(sv*sv, axis=-1))
+        else:
+            dwf = N.exp(twopisq*N.sum(N.dot(sv, adp_or_scalar.array)*sv,
+                                      axis=-1))
+        new_sf = StructureFactor(self.reflection_set)
+        new_sf.array = self.array*dwf
+        return new_sf
+
+
+class ModelIntensities(ReflectionData,
+                       IntensityData):
+
+    def __init__(self, reflection_set):
+        ReflectionData.__init__(self, reflection_set)
+        self.array = N.zeros((self.number_of_reflections,), N.Float)
+        self.absent_value = 0.
+
+    def __setitem__(self, reflection, value):
+        index = reflection.index
+        if index is None: # systematic absence
+            raise ValueError("Cannot set value: "
+                             "reflection is absent due to symmetry")
+        self.array[index] = value
+
+
 class ExperimentalAmplitudes(ExperimentalReflectionData,
                              AmplitudeData):
 
@@ -392,7 +458,8 @@ class ExperimentalAmplitudes(ExperimentalReflectionData,
         return intensities
 
 
-class ExperimentalIntensities(ExperimentalReflectionData):
+class ExperimentalIntensities(ExperimentalReflectionData,
+                              IntensityData):
 
     def __init__(self, reflection_set):
         ExperimentalReflectionData.__init__(self, reflection_set)
