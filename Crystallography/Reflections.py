@@ -13,6 +13,7 @@ class Reflection(object):
         self.l = l
         self.reflection_set = reflection_set
         self.index = index
+        self.sf_conjugate = False
         self.n_symmetry_equivalents = None
 
     def _getarray(self):
@@ -77,9 +78,12 @@ class Reflection(object):
         rs = self.reflection_set
         ri = self.index
         equivalents = rs.space_group.symmetryEquivalentMillerIndices(self.array)
-        equivalents.extend([-hkl for hkl in equivalents])
         unique_reflections = \
               set([Reflection(h, k, l, rs, ri) for h, k, l in equivalents])
+        for h, k, l in equivalents:
+            r = Reflection(-h, -k, -l, rs, ri)
+            r.sf_conjugate = True
+            unique_reflections.add(r)
         n = len(unique_reflections)
         for r in unique_reflections:
             r.n_symmetry_equivalents = n
@@ -119,6 +123,9 @@ class ReflectionSet(object):
         for r in equivalents:
             self.reflection_map[(r.h, r.k, r.l)] = r
         hkl = equivalents[-1]
+        if hkl.sf_conjugate:
+            for r in equivalents:
+                r.sf_conjugate = not r.sf_conjugate
         if hkl.isSystematicAbsence():
             for r in equivalents:
                 r.index = None
@@ -325,6 +332,15 @@ class StructureFactor(ReflectionData, AmplitudeData):
         ReflectionData.__init__(self, reflection_set)
         self.array = N.zeros((self.number_of_reflections,), N.Complex)
         self.absent_value = 0j
+
+    def __getitem__(self, reflection):
+        index = reflection.index
+        if index is None: # systematic absence
+            return self.absent_value
+        if reflection.sf_conjugate:
+            return N.conjugate(self.array[index])
+        else:
+            return self.array[index]
 
     def __setitem__(self, reflection, value):
         index = reflection.index

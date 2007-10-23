@@ -63,6 +63,12 @@ class StructureFactorTests(unittest.TestCase):
         assert N.fabs(float(cell_data['angle_gamma'])-self.s.gamma) < 1.e-7
 
 
+    def checkSymmetry(self, sf):
+        for r in self.reflections:
+            other = self.reflections[(-r.h, -r.k, -r.l)]
+            d = sf[r]-N.conjugate(sf[other])
+            self.assert_((d*N.conjugate(d)).real < 1.e-10)
+
     def test_sf(self):
 
         # Tests on read-in data
@@ -71,6 +77,7 @@ class StructureFactorTests(unittest.TestCase):
         self.assert_(self.model_sf.rFactor(self.model_sf) == 0.)
         self.assert_(N.fabs(self.exp_amplitudes.rFactor(self.model_sf)-0.1842)
                      < 5.e-5)
+        self.checkSymmetry(self.model_sf)
 
         # Tests on structure factor calculations
         asu_atoms = sum(([atom for atom in residue] for residue in self.s), [])
@@ -105,6 +112,7 @@ class StructureFactorTests(unittest.TestCase):
                      < 5.e-5)
         self.assert_(N.fabs(self.model_sf.rFactor(sf_from_unit_cell)-0.0749)
                      < 5.e-5)
+        self.checkSymmetry(self.model_sf)
 
 
 if __name__ == '__main__':
