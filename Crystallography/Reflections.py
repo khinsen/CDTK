@@ -208,6 +208,29 @@ class ReflectionData(object):
         for r in self.reflection_set:
             yield (r, self[r])
 
+    def __len__(self):
+        return self.number_of_reflections
+
+    def __add__(self, other):
+        assert self.__class__ is other.__class__
+        assert self.reflection_set is other.reflection_set
+        result = self.__class__(self.reflection_set)
+        self.__add_op__(other, result)
+        return result
+
+    def __sub__(self, other):
+        assert self.__class__ is other.__class__
+        assert self.reflection_set is other.reflection_set
+        result = self.__class__(self.reflection_set)
+        self.__sub_op__(other, result)
+        return result
+
+    def __add_op__(self, other, result):
+        result.array[:] = self.array[:]+other.array[:]
+        
+    def __sub_op__(self, other, result):
+        result.array[:] = self.array[:]-other.array[:]
+
 
 class ExperimentalReflectionData(ReflectionData):
 
@@ -253,6 +276,15 @@ class ExperimentalReflectionData(ReflectionData):
                 self.array[r.index, 0] = value[i]
                 self.array[r.index, 1] = sigma[i]
                 self.data_available[r.index] = True
+
+    def __add_op__(self, other, result):
+        result.data_available[:] = self.data_available*other.data_available
+        result.array[:] = self.array[:]+other.array[:]
+        
+    def __sub_op__(self, other, result):
+        result.data_available[:] = self.data_available*other.data_available
+        result.array[:, 0] = self.array[:, 0]-other.array[:, 0]
+        result.array[:, 1] = self.array[:, 1]+other.array[:, 1]
 
 
 class AmplitudeData(object):

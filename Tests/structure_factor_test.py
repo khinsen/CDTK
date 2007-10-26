@@ -1,4 +1,5 @@
 import unittest
+import operator
 
 from mmLib.mmCIF import mmCIFFile
 
@@ -78,6 +79,17 @@ class StructureFactorTests(unittest.TestCase):
         self.assert_(N.fabs(self.exp_amplitudes.rFactor(self.model_sf)-0.1842)
                      < 5.e-5)
         self.checkSymmetry(self.model_sf)
+
+        # Tests on addition/subtraction
+        twice_model_sf = self.model_sf+self.model_sf
+        d = twice_model_sf.array-2.*self.model_sf.array
+        self.assert_(N.maximum.reduce(N.absolute(d)) < 1.e-14)
+        zero_sf = self.model_sf-self.model_sf
+        self.assert_(N.maximum.reduce(N.absolute(zero_sf.array)) < 1.e-14)
+        self.assertRaises(AssertionError, operator.add,
+                          self.model_sf, self.exp_amplitudes)
+        self.assertRaises(AssertionError, operator.sub,
+                          self.model_sf, self.exp_amplitudes)
 
         # Tests on structure factor calculations
         asu_atoms = sum(([atom for atom in residue] for residue in self.s), [])
