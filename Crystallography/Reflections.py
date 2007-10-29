@@ -218,6 +218,12 @@ class ReflectionData(object):
         self.__add_op__(other, result)
         return result
 
+    def __iadd__(self, other):
+        assert self.__class__ is other.__class__
+        assert self.reflection_set is other.reflection_set
+        self.__iadd_op__(other)
+        return self
+
     def __sub__(self, other):
         assert self.__class__ is other.__class__
         assert self.reflection_set is other.reflection_set
@@ -225,12 +231,24 @@ class ReflectionData(object):
         self.__sub_op__(other, result)
         return result
 
+    def __isub__(self, other):
+        assert self.__class__ is other.__class__
+        assert self.reflection_set is other.reflection_set
+        self.__isub_op__(other)
+        return self
+
     def __add_op__(self, other, result):
         result.array[:] = self.array[:]+other.array[:]
+        
+    def __iadd_op__(self, other):
+        self.array += other.array
         
     def __sub_op__(self, other, result):
         result.array[:] = self.array[:]-other.array[:]
 
+    def __isub_op__(self, other):
+        self.array -= other.array
+        
 
 class ExperimentalReflectionData(ReflectionData):
 
@@ -281,11 +299,20 @@ class ExperimentalReflectionData(ReflectionData):
         result.data_available[:] = self.data_available*other.data_available
         result.array[:] = self.array[:]+other.array[:]
         
+    def __iadd_op__(self, other):
+        self.data_available *= other.data_available
+        self.array += other.array
+        
     def __sub_op__(self, other, result):
         result.data_available[:] = self.data_available*other.data_available
         result.array[:, 0] = self.array[:, 0]-other.array[:, 0]
         result.array[:, 1] = self.array[:, 1]+other.array[:, 1]
 
+    def __isub_op__(self, other):
+        self.data_available *= other.data_available
+        self.array[:, 0] -= other.array[:, 0]
+        self.array[:, 1] += other.array[:, 1]
+        
 
 class AmplitudeData(object):
 
