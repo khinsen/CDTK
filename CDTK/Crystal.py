@@ -87,11 +87,11 @@ class ElectronDensityMap(object):
             xa = cell.cartesianToFractional(position)
             xa = xa-N.floor(xa) # map to interval [0..1)
             dx1 = self.x1-xa[0]
-            dx1 += (dx1 < -0.5) - (dx1 >= 0.5)
+            dx1 += (dx1 < -0.5).astype(N.Int) - (dx1 >= 0.5).astype(N.Int)
             dx2 = self.x2-xa[1]
-            dx2 += (dx2 < -0.5) - (dx2 >= 0.5)
+            dx2 += (dx2 < -0.5).astype(N.Int) - (dx2 >= 0.5).astype(N.Int)
             dx3 = self.x3-xa[2]
-            dx3 += (dx3 < -0.5) - (dx3 >= 0.5)
+            dx3 += (dx3 < -0.5).astype(N.Int) - (dx3 >= 0.5).astype(N.Int)
             for i in range(5):
                 if isinstance(adp, float):
                     sigma = (adp + bdiv[i])*delta

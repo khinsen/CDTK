@@ -38,7 +38,7 @@ class ReflectionSetTests(unittest.TestCase):
         for r in reflections:
             self.assert_(res_max <= r.resolution() <= res_min)
         for r in reflections.systematic_absences:
-            self.assertEqual((r.h == 0) + (r.k == 0) + (r.l == 0), 2)
+            self.assertEqual(int(r.h == 0) + int(r.k == 0) + int(r.l == 0), 2)
             if r.h != 0:
                 self.assertEqual(r.h % 2, 1)
             if r.k != 0:
