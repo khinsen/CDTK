@@ -1,4 +1,4 @@
-from Scientific import N
+from Scientific import N, LA
 from Scientific.Geometry import Tensor
 
 #
@@ -486,6 +486,12 @@ class StructureFactor(ReflectionData, AmplitudeData):
                                 * N.exp(twopii*(N.dot(sv[i], position.array)))
 
 
+    def calculateFromElectronDensityMap(self, density_map):
+        from CDTK_sf_fft import map_to_sf
+        m_fc = self.reflection_set.cell.fractionalToCartesianMatrix()
+        det_m_fc = LA.determinant(m_fc)
+        map_to_sf(density_map.array, self, det_m_fc)
+        
     def applyDebyeWallerFactor(self, adp_or_scalar):
         twopisq = -2.*N.pi**2
         sv = N.zeros((self.number_of_reflections, 3), N.Float)

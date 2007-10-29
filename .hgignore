@@ -8,6 +8,7 @@ dist
 Test
 Tests/2ONX.pdb.gz
 Tests/2onx-sf.cif.gz
+Src/CDTK_sf_fft.c
 MANIFEST
 HG_CHANGESET_ID
 1
