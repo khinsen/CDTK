@@ -6,10 +6,10 @@ from Scientific.IO.TextFile import TextFile
 from Scientific.IO.PDB import Structure
 from Scientific import N
 
-from Crystallography.SpaceGroups import space_groups
-from Crystallography.Crystal import UnitCell, ElectronDensityMap
-from Crystallography.Reflections import ReflectionSet, StructureFactor
-from Crystallography import Units
+from CDTK.SpaceGroups import space_groups
+from CDTK.Crystal import UnitCell, ElectronDensityMap
+from CDTK.Reflections import ReflectionSet, StructureFactor
+from CDTK import Units
 
 class ElectronDensityMapTests(unittest.TestCase):
 

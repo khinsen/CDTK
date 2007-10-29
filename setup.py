@@ -60,8 +60,19 @@ map_module_source = {
 setup (name = "CDTK",
        version = "0.1",
        description = "Crystallographic Data Toolkit",
+       long_description = """
+The Crystallographic Data Toolkit is a library for working with
+crystallographic data on macromolecules, in particular structure
+factors and experimental reflection intensities. It is designed
+as a companion to the Molecular Modelling Toolkit (MMTK), but
+can also be used independently.
+""",
+       author = "Konrad Hinsen",
+       author_email = "hinsen@cnrs-orleans.fr",
+       url = "http://dirac.cnrs-orleans.fr/CDTK/",
+       license = "CeCILL",
 
-       packages = [],
+       packages = ['CDTK'],
  
        ext_modules = [Extension('CDTK_sf_fft',
                                 [map_module_source[build_from]],

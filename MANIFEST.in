@@ -1,0 +1,4 @@
+include README
+include Src/*.pyx Src/*.c
+include Tests/*.py
+include Scripts/*.py

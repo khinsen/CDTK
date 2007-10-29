@@ -7,11 +7,11 @@ from Scientific.IO.TextFile import TextFile
 from Scientific.IO.PDB import Structure
 from Scientific import N
 
-from Crystallography.SpaceGroups import space_groups
-from Crystallography.Crystal import UnitCell
-from Crystallography.Reflections import ReflectionSet, \
+from CDTK.SpaceGroups import space_groups
+from CDTK.Crystal import UnitCell
+from CDTK.Reflections import ReflectionSet, \
      ExperimentalAmplitudes, StructureFactor
-from Crystallography import Units
+from CDTK import Units
 
 class StructureFactorTests(unittest.TestCase):
 

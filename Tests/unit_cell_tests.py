@@ -1,5 +1,5 @@
 import unittest
-from Crystallography.Crystal import UnitCell
+from CDTK.Crystal import UnitCell
 from Scientific.Geometry import Vector
 from Scientific import N
 

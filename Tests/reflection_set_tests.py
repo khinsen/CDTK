@@ -1,7 +1,7 @@
 import unittest
-from Crystallography.Crystal import UnitCell
-from Crystallography.Reflections import ReflectionSet
-from Crystallography.SpaceGroups import space_groups
+from CDTK.Crystal import UnitCell
+from CDTK.Reflections import ReflectionSet
+from CDTK.SpaceGroups import space_groups
 from Scientific.Geometry import Vector
 from Scientific import N
 

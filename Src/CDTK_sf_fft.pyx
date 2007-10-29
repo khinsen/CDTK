@@ -5,7 +5,7 @@
 include "numeric.pxi"
 
 from Scientific import N
-from Crystallography.Reflections import StructureFactor
+from CDTK.Reflections import StructureFactor
 
 cdef extern from "fftw3.h":
 
