@@ -1,5 +1,6 @@
 from Scientific import N, LA
 from Scientific.Geometry import Tensor
+from CDTK import Units
 
 #
 # A Reflection object stores Miller indices and a reference to the
@@ -249,6 +250,34 @@ class ReflectionData(object):
     def __isub_op__(self, other):
         self.array -= other.array
         
+    def writeToVMDScript(self, filename):
+        hmax, kmax, lmax = self.reflection_set.maxHKL()
+        array = N.zeros((2*hmax+1, 2*kmax+1, 2*lmax+1), N.Float)
+        for r_asu in self.reflection_set:
+            for r in r_asu.symmetryEquivalents():
+                value = self[r]
+                if value is not None:
+                    array[r.h+hmax, r.k+kmax, r.l+lmax] = N.absolute(value)
+        factor = 1./N.maximum.reduce(N.ravel(array))
+        r1, r2, r3 = self.reflection_set.cell.reciprocalBasisVectors()
+
+        vmd_script = file(filename, 'w')
+        vmd_script.write('mol new\n')
+        vmd_script.write('mol volume top "%s" \\\n' % self.__class__.__name__)
+        vmd_script.write('  {%f %f %f} \\\n' %
+                         tuple(-(hmax*r1+kmax*r2+lmax*r3)*Units.Ang))
+        vmd_script.write('  {%f %f %f} \\\n' % tuple((2*hmax+1)*r1*Units.Ang))
+        vmd_script.write('  {%f %f %f} \\\n' % tuple((2*kmax+1)*r2*Units.Ang))
+        vmd_script.write('  {%f %f %f} \\\n' % tuple((2*lmax+1)*r3*Units.Ang))
+        vmd_script.write('  %d %d %d \\\n' % array.shape)
+        vmd_script.write('  {')
+        for iz in range(array.shape[2]):
+            for iy in range(array.shape[1]):
+                for ix in range(array.shape[0]):
+                    vmd_script.write(str(factor*array[ix, iy, iz]) + ' ')
+        vmd_script.write('}\n')
+        vmd_script.write('mol addrep top\nmol modstyle 0 top isosurface\n')
+        vmd_script.close()
 
 class ExperimentalReflectionData(ReflectionData):
 
