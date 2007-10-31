@@ -84,12 +84,13 @@ def map_to_sf(array_type map_array, sf, double factor):
                      complex(factor*real_part, factor*imag_sign*imag_part)
 
 #
-# Convert structure factors to density map
+# Convert structure factors or intensities to density/Patterson map
 #
-def sf_to_map(sf, int n1, int n2, int n3, double factor):
+def reflections_to_map(data, int n1, int n2, int n3, double factor):
     """
-    @param sf: a StructureFactor object
+    @param data: a StructureFactor or IntensityData object
     @type sf: L{CDTK.Reflections.StructureFactor}
+              or L{CDTK.Reflections.IntensityData}
     @param n1: first dimension of the map array
     @type n1: C{int}
     @param n2: second dimension of the map array
@@ -107,13 +108,11 @@ def sf_to_map(sf, int n1, int n2, int n3, double factor):
     cdef int l
     cdef double imag_sign
     cdef fftw_plan plan
-    if not isinstance(sf, StructureFactor):
-        raise TypeError("%s is not a StructureFactor instance" % str(sf))
     n3r = 2*(n3/2+1)
     map_array = N.zeros((n1, n2, n3r), N.Float)
     complex_data = <fftw_complex *>map_array.data
     factor = factor*N.sqrt(2.*N.pi)**3
-    for r_asu in sf.reflection_set:
+    for r_asu in data.reflection_set:
         for r in r_asu.symmetryEquivalents():
             h = r.h
             k = r.k
@@ -131,9 +130,16 @@ def sf_to_map(sf, int n1, int n2, int n3, double factor):
             if h >= n1 or k >= n2 or l >= n3/2+1:
                 raise ValueError("Insufficient map resolution "
                                  "for Miller indices %d, %d, %d" % (r.h, r.k, r.l))
-            value = factor*sf[r]
-            complex_data[(h*n2+k)*(n3/2+1)+l][0] = value.real
-            complex_data[(h*n2+k)*(n3/2+1)+l][1] = value.imag*imag_sign
+            value = data[r]
+            if value is not None:
+                try:
+                    vreal = value.real
+                    vimag = value.imag
+                except AttributeError:
+                    vreal = value
+                    vimag = 0.
+                complex_data[(h*n2+k)*(n3/2+1)+l][0] = factor*vreal
+                complex_data[(h*n2+k)*(n3/2+1)+l][1] = factor*vimag*imag_sign
 
     plan = fftw_plan_dft_c2r_3d(n1, n2, n3,
                                 complex_data, <double*>complex_data,

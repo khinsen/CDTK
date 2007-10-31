@@ -66,7 +66,7 @@ class UnitCell(object):
         return True
 
 
-class ElectronDensityMap(object):
+class Map(object):
 
     def __init__(self, cell, n1, n2, n3):
         self.cell = cell
@@ -75,6 +75,33 @@ class ElectronDensityMap(object):
         self.x1 = N.arange(n1)/float(n1)
         self.x2 = N.arange(n2)/float(n2)
         self.x3 = N.arange(n3)/float(n3)
+
+    def writeToVMDScript(self, filename, label=None):
+        if label is None:
+            label = self.default_label
+        factor = 1./N.maximum.reduce(N.ravel(self.array))
+        vmd_script = file(filename, 'w')
+        vmd_script.write('mol new\n')
+        vmd_script.write('mol volume top "%s" \\\n' % label)
+        e1, e2, e3 = self.cell.basisVectors()
+        vmd_script.write('  {0. 0. 0.} \\\n') # Origin
+        vmd_script.write('  {%f %f %f} \\\n' % tuple(e1/Units.Ang))
+        vmd_script.write('  {%f %f %f} \\\n' % tuple(e2/Units.Ang))
+        vmd_script.write('  {%f %f %f} \\\n' % tuple(e3/Units.Ang))
+        vmd_script.write('  %d %d %d \\\n' % self.shape)
+        vmd_script.write('  {')
+        for iz in range(self.shape[2]):
+            for iy in range(self.shape[1]):
+                for ix in range(self.shape[0]):
+                    vmd_script.write(str(factor*self.array[ix, iy, iz]) + ' ')
+        vmd_script.write('}\n')
+        vmd_script.write('mol addrep top\nmol modstyle 0 top isosurface\n')
+        vmd_script.close()
+
+
+class ElectronDensityMap(Map):
+
+    default_label = "Electron density"
 
     def calculateFromUnitCellAtoms(self, atom_iterator, cell=None):
         if cell is None:
@@ -113,28 +140,31 @@ class ElectronDensityMap(object):
                 N.add(self.array, weight*N.exp(e), self.array)
 
     def calculateFromStructureFactor(self, sf):
-        from CDTK_sf_fft import sf_to_map
+        from CDTK_sf_fft import reflections_to_map
+        from CDTK.Reflections import StructureFactor
+        if not isinstance(sf, StructureFactor):
+            raise TypeError("%s is not a StructureFactor instance" % str(sf))
         m_cf = self.cell.cartesianToFractionalMatrix()
         det_m_cf = LA.determinant(m_cf)
         n1, n2, n3 = self.shape
-        self.array += sf_to_map(sf, n1, n2, n3, det_m_cf)
+        self.array += reflections_to_map(sf, n1, n2, n3, det_m_cf)
 
-    def writeToVMDScript(self, filename):
-        factor = 1./N.maximum.reduce(N.ravel(self.array))
-        vmd_script = file(filename, 'w')
-        vmd_script.write('mol new\n')
-        vmd_script.write('mol volume top "Electron Density" \\\n')
-        e1, e2, e3 = self.cell.basisVectors()
-        vmd_script.write('  {0. 0. 0.} \\\n') # Origin
-        vmd_script.write('  {%f %f %f} \\\n' % tuple(e1/Units.Ang))
-        vmd_script.write('  {%f %f %f} \\\n' % tuple(e2/Units.Ang))
-        vmd_script.write('  {%f %f %f} \\\n' % tuple(e3/Units.Ang))
-        vmd_script.write('  %d %d %d \\\n' % self.shape)
-        vmd_script.write('  {')
-        for iz in range(self.shape[2]):
-            for iy in range(self.shape[1]):
-                for ix in range(self.shape[0]):
-                    vmd_script.write(str(factor*self.array[ix, iy, iz]) + ' ')
-        vmd_script.write('}\n')
-        vmd_script.write('mol addrep top\nmol modstyle 1 top isosurface\n')
-        vmd_script.close()
+
+class PattersonMap(Map):
+
+    default_label = "Patterson map"
+
+    def calculateFromIntensities(self, intensities):
+        from CDTK_sf_fft import reflections_to_map
+        from CDTK.Reflections import IntensityData
+        if not isinstance(intensities, IntensityData):
+            raise TypeError("%s is not an IntensityData instance"
+                            % str(intensities))
+        m_cf = self.cell.cartesianToFractionalMatrix()
+        det_m_cf = LA.determinant(m_cf)
+        n1, n2, n3 = self.shape
+        array = reflections_to_map(intensities, n1, n2, n3, det_m_cf)
+        array = N.concatenate([array[n1/2:, :, :], array[:n1/2, :, :]], axis=0)
+        array = N.concatenate([array[:, n2/2:, :], array[:, :n2/2, :]], axis=1)
+        array = N.concatenate([array[:, :, n3/2:], array[:, :, :n3/2]], axis=2)
+        self.array += array
