@@ -15,6 +15,11 @@ else:
     from distutils.command.build_ext import build_ext
 import os, sys
 
+class Dummy:
+    pass
+pkginfo = Dummy()
+execfile('CDTK/__pkginfo__.py', pkginfo.__dict__)
+
 compile_args = []
 include_dirs = []
 
@@ -58,7 +63,7 @@ map_module_source = {
     }
 
 setup (name = "CDTK",
-       version = "0.1",
+       version = pkginfo.__version__,
        description = "Crystallographic Data Toolkit",
        long_description = """
 The Crystallographic Data Toolkit is a library for working with
@@ -74,6 +79,7 @@ can also be used independently.
 
        packages = ['CDTK'],
  
+       ext_package = 'CDTK.'+sys.platform,
        ext_modules = [Extension('CDTK_sf_fft',
                                 [map_module_source[build_from]],
                                 include_dirs = include_dirs+[fftw_include],
