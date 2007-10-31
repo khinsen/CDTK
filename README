@@ -1,0 +1,28 @@
+The Crystallographic Data Toolkit (CDTK) is a collection of Python
+modules for working with crystallographic data on biomolecules.
+
+
+Konrad Hinsen
+Centre de Biophysique MolÅÈculaire (CNRS)
+et Synchrotron Soleil
+E-Mail: hinsen@cnrs-orleans.fr
+
+---------------------------------------------------------------------------
+
+Installation:
+-------------
+
+Required: 
+- Python 2.4 or higher 
+- Numerical Python or its successor NumPy
+- ScientificPython 2.7 or higher
+
+CDTK will use Numeric or NumPy depending on how ScientificPython has been
+configured.
+
+Installation is as simple as
+
+    python setup.py build
+    python setup.py install
+
+(the second command requires root privileges on many installations).
