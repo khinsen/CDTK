@@ -1,0 +1,149 @@
+#!python
+# *--python-mode--*
+
+from Scientific.IO.TextFile import TextFile
+from mmLib.mmCIF import mmCIFFile
+from CDTK.SpaceGroups import space_groups
+from CDTK.Crystal import UnitCell
+from CDTK.Reflections import ReflectionSet, \
+     ExperimentalAmplitudes, ExperimentalIntensities, StructureFactor
+from CDTK import Units
+from Scientific import N
+import cPickle
+import os
+import sys
+import getopt
+
+usage = """Usage: convert_mmcif_reflections [options] mmcif_sf_file pickle_file
+
+mmcif_sf_file must be an mmCIF file containing structure factors.
+pickle_file is the name of the output file, which will be a cPickle
+dump of a tuple of three objects: a ReflectionSet object, an
+ExperimentalAmplitudes object containing the experimental scatterig
+amplitudes, and a StructureFactor object containing the structure factor
+calculated from the fitted model as contained in the mmCIF file. If the
+file contains no model structure factor, the last element of the tuple
+is None. Note that the experimental data is always stored in the form of
+amplitudes, even if the mmCIF file contains intensities instead.
+
+Options:
+
+ --mmcif_complement=file_name
+    The specified mmCIF file is read and used as a source for data missing
+    in the reflection file. This is required if the reflection file lacks
+    symmetry or unit cell data. In that case, the mmCIF file containing
+    the structure itself should be specified as a complement.
+"""
+
+
+try:
+    options, file_args = getopt.getopt(sys.argv[1:], '', ['mmcif_complement='])
+except getopt.GetoptError:
+    sys.stderr.write(usage)
+    raise SystemExit
+
+if len(file_args) != 2:
+    sys.stderr.write(usage)
+    raise SystemExit
+    
+complement_file = None
+for option, value in options:
+    if option == '--mmcif_complement':
+        complement_file = value
+
+for filename in [file_args[0], complement_file]:
+    if filename is not None:
+        if not os.path.exists(filename):
+            sys.stderr.write("File %s not found.\n" % filename)
+            raise SystemExit
+
+cif_file = mmCIFFile()
+cif_file.load_file(TextFile(file_args[0]))
+cif_data = cif_file[0]
+if complement_file is not None:
+    cif_file.load_file(TextFile(complement_file))
+    cif_data.extend(cif_file[1])
+
+try:
+    cell_data = cif_data['cell']
+except KeyError:
+    sys.stderr.write("No cell information in mmCIF data.\n")
+    raise SystemExit
+cell = UnitCell(float(cell_data['length_a'])*Units.Ang,
+                float(cell_data['length_b'])*Units.Ang,
+                float(cell_data['length_c'])*Units.Ang,
+                float(cell_data['angle_alpha'])*Units.deg,
+                float(cell_data['angle_beta'])*Units.deg,
+                float(cell_data['angle_gamma'])*Units.deg)
+
+try:
+    space_group = space_groups[cif_data['symmetry']['space_group_name_H-M']]
+except KeyError:
+    sys.stderr.write("No space group name in mmCIF data.\n")
+    raise SystemExit
+
+reflections = ReflectionSet(cell, space_group)
+for r in cif_data['refln']:
+    h = int(r['index_h'])
+    k = int(r['index_k'])
+    l = int(r['index_l'])
+    if h*h+k*k+l*l == 0:
+        print "Reflection(0, 0, 0) in data set"
+    else:
+        ri = reflections.getReflection((h, k, l))
+
+max_resolution, min_resolution = reflections.resolutionRange()
+print "Resolution range (1/Ang): %f - %f" % (max_resolution/Units.Ang,
+                                             min_resolution/Units.Ang)
+reflections.fillResolutionSphere(max_resolution, min_resolution)
+
+r = cif_data['refln'][0]
+if 'f_meas' in r:
+    data = exp_amplitudes = ExperimentalAmplitudes(reflections)
+    key = 'F_meas'
+    key_sigma = 'F_meas_sigma'
+elif 'f_meas_au' in r:
+    data = exp_amplitudes = ExperimentalAmplitudes(reflections)
+    key = 'F_meas_au'
+    key_sigma = 'F_meas_sigma_au'
+elif 'intensity_meas' in r:
+    data = exp_intensities = ExperimentalIntensities(reflections)
+    key = 'intensity_meas'
+    key_sigma = 'intensity_sigma'
+else:
+    print r.keys()
+    raise ValueError("no experimental data found")
+
+if key == 'intensity_meas':
+    print "Reading intensity data (%s/%s)" % (key, key_sigma)
+else:
+    print "Reading amplitude data (%s/%s)" % (key, key_sigma)
+
+if 'f_calc' in r and 'phase_calc' in r:
+    model_sf = StructueFactor(reflections)
+    print "Reading calculated structure factor (f_calc/phase_calc)"
+else:
+    model_sf = None
+
+for r in cif_data['refln']:
+    h = int(r['index_h'])
+    k = int(r['index_k'])
+    l = int(r['index_l'])
+    if h*h+k*k+l*l != 0:
+        ri = reflections[(h, k, l)]
+        if model_sf is not None:
+            model_sf[ri] = float(r['f_calc']) \
+                           * N.exp(1j*float(r['phase_calc'])*Units.deg)
+        if r[key] != '?' and r['status'] in 'ofhl':
+            try:
+                data[ri] = N.array([float(r[key]), float(r[key_sigma])])
+            except ValueError:
+                print ri, " with value", float(r[key]), "should be absent"
+
+if key == 'intensity_meas':
+    exp_amplitudes = exp_intensities.convertToAmplitudes()
+
+pickle_file = file(file_args[1], 'wb')
+cPickle.dump((reflections, exp_amplitudes, model_sf),
+             pickle_file)
+pickle_file.close()

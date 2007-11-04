@@ -86,5 +86,8 @@ can also be used independently.
                                 library_dirs = [fftw_lib],
                                 libraries = ['fftw3', 'm'],
                                 extra_compile_args = compile_args)],
+
+       scripts = ['Scripts/convert_mmcif_reflections'],
+ 
        cmdclass = {'build_ext': build_ext}
        )
