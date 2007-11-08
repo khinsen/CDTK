@@ -371,8 +371,8 @@ class AmplitudeData(object):
                 continue
             f_self = abs(f_self)
             f_other = abs(f_other)
-            sum_self += f_self
-            sum_other += f_other
+            sum_self += f_self*f_other
+            sum_other += f_other*f_other
         scale = sum_self/sum_other
         sum_diff = 0.
         for r in self.reflection_set:
