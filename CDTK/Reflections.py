@@ -443,7 +443,8 @@ class IntensityData(object):
             n = reflection.n_symmetry_equivalents
             reflection_count[bin] += n
             intensity_sum[bin] += n*intensity
-        intensity_average = intensity_sum/reflection_count
+        intensity_average = intensity_sum / \
+                            (reflection_count + (reflection_count==0))
         s = s_min + bin_width*(N.arange(nbins)+0.5)
         return InterpolatingFunction((s,), intensity_average)
 
