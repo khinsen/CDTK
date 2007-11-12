@@ -249,7 +249,7 @@ class ReflectionData(object):
 
     def __isub_op__(self, other):
         self.array -= other.array
-        
+
     def writeToVMDScript(self, filename):
         hmax, kmax, lmax = self.reflection_set.maxHKL()
         array = N.zeros((2*hmax+1, 2*kmax+1, 2*lmax+1), N.Float)
@@ -374,6 +374,7 @@ class AmplitudeData(object):
             sum_self += f_self*f_other
             sum_other += f_other*f_other
         scale = sum_self/sum_other
+        sum_self = 0.
         sum_diff = 0.
         for r in self.reflection_set:
             f_self = self[r]
@@ -382,6 +383,7 @@ class AmplitudeData(object):
                 continue
             f_self = abs(f_self)
             f_other = abs(f_other)
+            sum_self += f_self
             sum_diff += abs(f_self-scale*f_other)
         return sum_diff/sum_self, scale
 
