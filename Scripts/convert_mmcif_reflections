@@ -120,7 +120,7 @@ else:
     print "Reading amplitude data (%s/%s)" % (key, key_sigma)
 
 if 'f_calc' in r and 'phase_calc' in r:
-    model_sf = StructueFactor(reflections)
+    model_sf = StructureFactor(reflections)
     print "Reading calculated structure factor (f_calc/phase_calc)"
 else:
     model_sf = None
