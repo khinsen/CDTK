@@ -387,6 +387,23 @@ class AmplitudeData(object):
             sum_diff += abs(f_self-scale*f_other)
         return sum_diff/sum_self, scale
 
+    def rFactorByResolution(self, other, s_intervals):
+        assert isinstance(other, AmplitudeData)
+        sum_self = N.zeros((len(s_intervals)+1,), N.Float)
+        sum_diff = N.zeros((len(s_intervals)+1,), N.Float)
+        for r in self.reflection_set:
+            f_self = self[r]
+            f_other = other[r]
+            if f_self is None or f_other is None:
+                continue
+            f_self = abs(f_self)
+            f_other = abs(f_other)
+            s = r.sVector().length()
+            index = N.sum(s >= s_intervals)
+            sum_self[index] += f_self
+            sum_diff[index] += abs(f_self-f_other)
+        return sum_diff/(sum_self+(sum_self == 0.))
+
 
 class IntensityData(object):
 
