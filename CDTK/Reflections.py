@@ -454,6 +454,16 @@ class StructureFactor(ReflectionData, AmplitudeData):
             r = self.reflection_set[(h[i], k[i], l[i])]
             self.array[r.index] = modulus[i]*N.exp(1j*phase[i])
 
+    def calculateFromUniverse(self, universe, adps, conf=None):
+        if conf is None:
+            conf = universe.configuration()
+        cell = universe.__class__()
+        cell.setCellParameters(conf.cell_parameters)
+        self.calculateFromUnitCellAtoms(((atom.symbol, conf[atom],
+                                          adps[atom], 1.)
+                                         for atom in universe.atomList()),
+                                        cell)
+
     def calculateFromUnitCellAtoms(self, atom_iterator, cell=None):
         from AtomicStructureFactors import atomic_structure_factors
         sv = N.zeros((self.number_of_reflections, 3), N.Float)
