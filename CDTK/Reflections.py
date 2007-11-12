@@ -165,6 +165,11 @@ class ReflectionSet(object):
                         self.addReflection(h, k, l)
         self.minimal_reflection_list.sort()
 
+    def sRange(self):
+        if not self.reflection_map:
+            raise ValueError("Empty ReflectionSet")
+        return self.s_min, self.s_max
+
     def resolutionRange(self):
         if not self.reflection_map:
             raise ValueError("Empty ReflectionSet")
