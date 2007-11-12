@@ -250,6 +250,23 @@ class ReflectionData(object):
     def __isub_op__(self, other):
         self.array -= other.array
 
+    def __mul__(self, other):
+        result = self.__class__(self.reflection_set)
+        self.__mul_op__(other, result)
+        return result
+
+    __rmul__ = __mul__
+
+    def __mul_op__(self, other, result):
+        result.array[:] = self.array*other
+
+    def __imul__(self, other):
+        self.__imul_op__(other)
+        return self
+
+    def __imul_op__(self, other):
+        self.array *= other
+
     def writeToVMDScript(self, filename):
         hmax, kmax, lmax = self.reflection_set.maxHKL()
         array = N.zeros((2*hmax+1, 2*kmax+1, 2*lmax+1), N.Float)
