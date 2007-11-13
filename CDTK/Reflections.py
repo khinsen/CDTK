@@ -279,6 +279,18 @@ class ReflectionData(object):
     def __imul_op__(self, other):
         self.array *= other
 
+    def _debyeWallerFactor(self, adp_or_scalar):
+        twopisq = -2.*N.pi**2
+        sv = N.zeros((self.number_of_reflections, 3), N.Float)
+        for r in self.reflection_set:
+            sv[r.index] = r.sVector(self.reflection_set.cell).array
+        if isinstance(adp_or_scalar, float):
+            dwf = N.exp(twopisq*adp_or_scalar*N.sum(sv*sv, axis=-1))
+        else:
+            dwf = N.exp(twopisq*N.sum(N.dot(sv, adp_or_scalar.array)*sv,
+                                      axis=-1))
+        return dwf
+
     def writeToVMDScript(self, filename):
         hmax, kmax, lmax = self.reflection_set.maxHKL()
         array = N.zeros((2*hmax+1, 2*kmax+1, 2*lmax+1), N.Float)
@@ -433,6 +445,17 @@ class AmplitudeData(object):
             sum_diff[index] += abs(f_self-f_other)
         return sum_diff/(sum_self+(sum_self == 0.))
 
+    def intensities(self):
+        intensities = ModelIntensities(self.reflection_set)
+        intensities.array[:] = (self.array[:]*N.conjugate(self.array[:])).real
+        return intensities
+
+    def applyDebyeWallerFactor(self, adp_or_scalar):
+        dwf = self._debyeWallerFactor(adp_or_scalar)
+        result = self.__class__(self.reflection_set)
+        result.array = self.array*dwf
+        return result
+
 
 class IntensityData(object):
 
@@ -462,6 +485,12 @@ class IntensityData(object):
         intensity_average = av.values
         return InterpolatingFunction((s*s,), N.log(intensity_average))
 
+    def applyDebyeWallerFactor(self, adp_or_scalar):
+        dwf = self._debyeWallerFactor(adp_or_scalar)
+        result = self.__class__(self.reflection_set)
+        result.array = self.array*(dwf**2)
+        return result
+
 
 class StructureFactor(ReflectionData, AmplitudeData):
 
@@ -478,11 +507,6 @@ class StructureFactor(ReflectionData, AmplitudeData):
             return N.conjugate(self.array[index])
         else:
             return self.array[index]
-
-    def intensities(self):
-        intensities = ModelIntensities(self.reflection_set)
-        intensities.array[:] = (self.array[:]*N.conjugate(self.array[:])).real
-        return intensities
 
     def setFromArrays(self, h, k, l, modulus, phase):
         n = len(h)
@@ -573,20 +597,6 @@ class StructureFactor(ReflectionData, AmplitudeData):
         det_m_fc = LA.determinant(m_fc)
         map_to_sf(density_map.array, self, det_m_fc)
         
-    def applyDebyeWallerFactor(self, adp_or_scalar):
-        twopisq = -2.*N.pi**2
-        sv = N.zeros((self.number_of_reflections, 3), N.Float)
-        for r in self.reflection_set:
-            sv[r.index] = r.sVector(self.reflection_set.cell).array
-        if isinstance(adp_or_scalar, float):
-            dwf = N.exp(twopisq*adp_or_scalar*N.sum(sv*sv, axis=-1))
-        else:
-            dwf = N.exp(twopisq*N.sum(N.dot(sv, adp_or_scalar.array)*sv,
-                                      axis=-1))
-        new_sf = StructureFactor(self.reflection_set)
-        new_sf.array = self.array*dwf
-        return new_sf
-
 
 class ModelAmplitudes(ReflectionData,
                       AmplitudeData):
@@ -626,6 +636,13 @@ class ExperimentalAmplitudes(ExperimentalReflectionData,
         intensities.array[:, 1] = 2.*self.array[:, 0]*self.array[:, 1]
         return intensities
 
+    def applyDebyeWallerFactor(self, adp_or_scalar):
+        dwf = self._debyeWallerFactor(adp_or_scalar)
+        result = self.__class__(self.reflection_set)
+        result.array[:] = self.array*dwf
+        result.data_available[:] = self.data_available
+        return result
+
 
 class ExperimentalIntensities(ExperimentalReflectionData,
                               IntensityData):
@@ -650,3 +667,10 @@ class ExperimentalIntensities(ExperimentalReflectionData,
                 amplitudes.data_available[i] = False
                 amplitudes.array[i, :] = 0.
         return amplitudes
+
+    def applyDebyeWallerFactor(self, adp_or_scalar):
+        dwf = self._debyeWallerFactor(adp_or_scalar)
+        result = self.__class__(self.reflection_set)
+        result.array[:] = self.array*(dwf**2)
+        result.data_available[:] = self.data_available
+        return result
