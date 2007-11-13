@@ -428,10 +428,13 @@ class AmplitudeData(object):
             sum_diff += abs(f_self-scale*f_other)
         return sum_diff/sum_self, scale
 
-    def rFactorByResolution(self, other, s_intervals):
+    def rFactorByResolution(self, other, nbins = 50):
+        from Scientific.Functions.Interpolation import InterpolatingFunction
         assert isinstance(other, AmplitudeData)
-        sum_self = N.zeros((len(s_intervals)+1,), N.Float)
-        sum_diff = N.zeros((len(s_intervals)+1,), N.Float)
+        s_min, s_max = self.reflection_set.sRange()
+        bin_width = (s_max-s_min)/nbins
+        sum_self = N.zeros((nbins,), N.Float)
+        sum_diff = N.zeros((nbins,), N.Float)
         for r in self.reflection_set:
             f_self = self[r]
             f_other = other[r]
@@ -440,10 +443,11 @@ class AmplitudeData(object):
             f_self = abs(f_self)
             f_other = abs(f_other)
             s = r.sVector().length()
-            index = N.sum(s >= s_intervals)
-            sum_self[index] += f_self
-            sum_diff[index] += abs(f_self-f_other)
-        return sum_diff/(sum_self+(sum_self == 0.))
+            bin = min(nbins-1, int((s-s_min)/bin_width))
+            sum_self[bin] += f_self
+            sum_diff[bin] += abs(f_self-f_other)
+        s = s_min + bin_width*(N.arange(nbins)+0.5)
+        return InterpolatingFunction((s,), sum_diff/(sum_self+(sum_self == 0.)))
 
     def intensities(self):
         intensities = ModelIntensities(self.reflection_set)
@@ -461,9 +465,7 @@ class IntensityData(object):
 
     def isotropicAverage(self, nbins = 50):
         from Scientific.Functions.Interpolation import InterpolatingFunction
-        r_min, r_max = self.reflection_set.resolutionRange()
-        s_min = 1./r_max
-        s_max = 1./r_min
+        s_min, s_max = self.reflection_set.sRange()
         bin_width = (s_max-s_min)/nbins
         reflection_count = N.zeros((nbins,), N.Int)
         intensity_sum = N.zeros((nbins,), N.Float)
