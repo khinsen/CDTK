@@ -141,7 +141,7 @@ for r in cif_data['refln']:
                 print ri, " with value", float(r[key]), "should be absent"
 
 if key == 'intensity_meas':
-    exp_amplitudes = exp_intensities.convertToAmplitudes()
+    exp_amplitudes = exp_intensities.amplitudes()
 
 pickle_file = file(file_args[1], 'wb')
 cPickle.dump((reflections, exp_amplitudes, model_sf),

@@ -210,6 +210,13 @@ class ReflectionData(object):
             return self.absent_value
         return self.array[index]
 
+    def __setitem__(self, reflection, value):
+        index = reflection.index
+        if index is None: # systematic absence
+            raise ValueError("Cannot set value: "
+                             "reflection is absent due to symmetry")
+        self.array[index] = value
+
     def __iter__(self):
         for r in self.reflection_set:
             yield (r, self[r])
@@ -472,14 +479,7 @@ class StructureFactor(ReflectionData, AmplitudeData):
         else:
             return self.array[index]
 
-    def __setitem__(self, reflection, value):
-        index = reflection.index
-        if index is None: # systematic absence
-            raise ValueError("Cannot set value: "
-                             "reflection is absent due to symmetry")
-        self.array[index] = value
-
-    def convertToIntensities(self):
+    def intensities(self):
         intensities = ModelIntensities(self.reflection_set)
         intensities.array[:] = (self.array[:]*N.conjugate(self.array[:])).real
         return intensities
@@ -588,6 +588,15 @@ class StructureFactor(ReflectionData, AmplitudeData):
         return new_sf
 
 
+class ModelAmplitudes(ReflectionData,
+                      AmplitudeData):
+
+    def __init__(self, reflection_set):
+        ReflectionData.__init__(self, reflection_set)
+        self.array = N.zeros((self.number_of_reflections,), N.Float)
+        self.absent_value = 0.
+
+
 class ModelIntensities(ReflectionData,
                        IntensityData):
 
@@ -596,12 +605,10 @@ class ModelIntensities(ReflectionData,
         self.array = N.zeros((self.number_of_reflections,), N.Float)
         self.absent_value = 0.
 
-    def __setitem__(self, reflection, value):
-        index = reflection.index
-        if index is None: # systematic absence
-            raise ValueError("Cannot set value: "
-                             "reflection is absent due to symmetry")
-        self.array[index] = value
+    def amplitudes(self):
+        amplitudes = ModelAmplitudes(self.reflection_set)
+        amplitudes.array = N.sqrt(self.array)
+        return amplitudes
 
 
 class ExperimentalAmplitudes(ExperimentalReflectionData,
@@ -612,7 +619,7 @@ class ExperimentalAmplitudes(ExperimentalReflectionData,
         self.array = N.zeros((self.number_of_reflections, 2), N.Float)
         self.absent_value = N.zeros((2,), N.Float)
 
-    def convertToIntensities(self):
+    def intensities(self):
         intensities = ExperimentalIntensities(self.reflection_set)
         intensities.data_available[:] = self.data_available
         intensities.array[:, 0] = self.array[:, 0]*self.array[:, 0]
@@ -628,7 +635,7 @@ class ExperimentalIntensities(ExperimentalReflectionData,
         self.array = N.zeros((self.number_of_reflections, 2), N.Float)
         self.absent_value = N.zeros((2,), N.Float)
 
-    def convertToAmplitudes(self):
+    def amplitudes(self):
         amplitudes = ExperimentalAmplitudes(self.reflection_set)
         amplitudes.data_available[:] = self.data_available
         for i in range(self.number_of_reflections):
