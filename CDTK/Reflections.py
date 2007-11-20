@@ -460,6 +460,65 @@ class AmplitudeData(object):
         result.array = self.array*dwf
         return result
 
+    def scaleTo(self, other, iterations=0):
+        assert isinstance(other, AmplitudeData)
+        twopisq = -2.*N.pi**2
+        mat = []
+        rhs = []
+        for r in self.reflection_set:
+            a1 = other[r]
+            a2 = self[r]
+            if a1 is None or a2 is None:
+                continue
+            rhs.append(N.log(abs(a1)/abs(a2)))
+            sx, sy, sz = r.sVector()
+            mat.append([1., twopisq*sx*sx, twopisq*sy*sy, twopisq*sz*sz,
+                        2.*twopisq*sy*sz, 2.*twopisq*sx*sz, 2.*twopisq*sx*sy])
+        fit = LA.linear_least_squares(N.array(mat), N.array(rhs))
+        log_k, uxx, uyy, uzz, uyz, uxz, uxy = fit[0]
+        k = N.exp(log_k)
+        u = Tensor(N.array([[uxx, uxy, uxz],
+                            [uxy, uyy, uyz],
+                            [uxz, uyz, uzz]]))
+        ev, rot = u.diagonalization()
+        if N.sum(ev) >= 0.:
+            u = Tensor(N.dot(N.transpose(rot)*N.maximum(ev, 0.), rot))
+        else:
+            u = Tensor(N.dot(N.transpose(rot)*N.minimum(ev, 0.), rot))
+
+        while iterations > 0:
+            iterations -= 1
+            # Gauss-Newton iteration
+            mat = []
+            rhs = []
+            for r in self.reflection_set:
+                a1 = other[r]
+                a2 = self[r]
+                if a1 is None or a2 is None:
+                    continue
+                a1 = abs(a1)
+                a2 = abs(a2)
+                s = r.sVector()
+                sx, sy, sz = s
+                dwf = N.exp(twopisq*(s*(u*s)))
+                rhs.append(a1-k*dwf*a2)
+                f = k*twopisq*a2*dwf
+                mat.append([a2*dwf, f*sx*sx, f*sy*sy, f*sz*sz,
+                            2.*f*sy*sz, 2.*f*sx*sz, 2.*f*sx*sy])
+            fit = LA.linear_least_squares(N.array(mat), N.array(rhs))
+            dk, duxx, duyy, duzz, duyz, duxz, duxy = fit[0]
+            k += dk
+            u += Tensor(N.array([[duxx, duxy, duxz],
+                                 [duxy, duyy, duyz],
+                                 [duxz, duyz, duzz]]))
+            ev, rot = u.diagonalization()
+            if N.sum(ev) >= 0.:
+                u = Tensor(N.dot(N.transpose(rot)*N.maximum(ev, 0.), rot))
+            else:
+                u = Tensor(N.dot(N.transpose(rot)*N.minimum(ev, 0.), rot))
+
+        return k*self.applyDebyeWallerFactor(u), k, u
+
 
 class IntensityData(object):
 
