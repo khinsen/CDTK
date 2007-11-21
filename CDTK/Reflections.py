@@ -579,15 +579,37 @@ class StructureFactor(ReflectionData, AmplitudeData):
             r = self.reflection_set[(h[i], k[i], l[i])]
             self.array[r.index] = modulus[i]*N.exp(1j*phase[i])
 
-    def calculateFromUniverse(self, universe, adps, conf=None):
+    def calculateFromUniverse(self, universe, adps=None, conf=None):
+        from AtomicStructureFactors import atomic_structure_factors
         if conf is None:
             conf = universe.configuration()
+
         cell = universe.__class__()
         cell.setCellParameters(conf.cell_parameters)
-        self.calculateFromUnitCellAtoms(((atom.symbol, conf[atom],
-                                          adps[atom], 1.)
-                                         for atom in universe.atomList()),
-                                        cell)
+        sv = N.zeros((self.number_of_reflections, 3), N.Float)
+        for r in self.reflection_set:
+            sv[r.index] = r.sVector(cell).array
+        ssq = N.sum(sv*sv, axis=-1)
+
+        self.array[:] = 0j
+        twopii = 2.j*N.pi
+        twopisq = -2.*N.pi**2
+        f_atom = {}
+        for atom in universe.atomList():
+            key = atom.symbol
+            if f_atom.has_key(key):
+                continue
+            a, b = atomic_structure_factors[key.lower()]
+            f_atom[key] = N.sum(a[:, N.NewAxis] \
+                                * N.exp(-b[:, N.NewAxis]*ssq[N.NewAxis, :]))
+        for atom in universe.atomList():
+            if adps is None:
+                dwf = 1.
+            else:
+                dwf = N.exp(twopisq*N.sum(N.dot(sv, adps[atom].array)*sv,
+                                          axis=-1))
+            self.array += f_atom[atom.symbol]*dwf \
+                          * N.exp(twopii*(N.dot(sv, conf[atom].array)))
 
     def calculateFromUnitCellAtoms(self, atom_iterator, cell=None):
         from AtomicStructureFactors import atomic_structure_factors
