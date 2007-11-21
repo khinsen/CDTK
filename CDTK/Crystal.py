@@ -144,6 +144,16 @@ class ElectronDensityMap(Map):
                    dx2[N.NewAxis, :, N.NewAxis]*dx3[N.NewAxis, N.NewAxis, :], e)
                 N.add(self.array, weight*N.exp(e), self.array)
 
+    def calculateFromUniverse(self, universe, adps, conf=None):
+        if conf is None:
+            conf = universe.configuration()
+        cell = universe.__class__()
+        cell.setCellParameters(conf.cell_parameters)
+        self.calculateFromUnitCellAtoms(((atom.symbol, conf[atom],
+                                          adps[atom], 1.)
+                                         for atom in universe.atomList()),
+                                        cell)
+
     def calculateFromStructureFactor(self, sf):
         from CDTK_sf_fft import reflections_to_map
         from CDTK.Reflections import StructureFactor
