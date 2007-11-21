@@ -5,6 +5,7 @@ from mmLib.mmCIF import mmCIFFile
 
 from Scientific.IO.TextFile import TextFile
 from Scientific.IO.PDB import Structure
+from Scientific.Geometry import Tensor
 from Scientific import N
 
 from CDTK.SpaceGroups import space_groups
@@ -126,6 +127,28 @@ class StructureFactorTests(unittest.TestCase):
                      < 5.e-5)
         self.checkSymmetry(self.model_sf)
 
+    def test_scaling(self):
+        u = Tensor([[0.1, 0., 0.02],
+                    [0., 0.08, 0.],
+                    [0.02, 0., 0.12]])
+        k = 2.5
+        test_sf = k*self.model_sf.applyDebyeWallerFactor(u)
+        scaled, k_fit, u_fit = self.model_sf.scaleTo(test_sf, 0)
+        self.assertAlmostEqual(k_fit, k, 1.e-14)
+        self.assert_(N.maximum.reduce(N.fabs(N.ravel((u-u_fit).array)))
+                     < 1.e-14)
+        scaled, k_fit, u_fit = test_sf.scaleTo(self.model_sf, 0)
+        self.assertAlmostEqual(k_fit, 1./k, 1.e-14)
+        self.assert_(N.maximum.reduce(N.fabs(N.ravel((u+u_fit).array)))
+                     < 1.e-14)
 
+        test_sf = k*self.model_sf.applyDebyeWallerFactor(-u)
+        sf_scaled, k_fit, u_fit = test_sf.scaleTo(self.exp_amplitudes, 5)
+        self.assertAlmostEqual(k_fit, 1./k, 2.e-2)
+        self.assert_(N.maximum.reduce(N.fabs(N.ravel((u-u_fit).array)))
+                     < 1.5e-4)
+        self.assert_(self.exp_amplitudes.rFactor(sf_scaled) < 0.185)
+
+        
 if __name__ == '__main__':
     unittest.main()
