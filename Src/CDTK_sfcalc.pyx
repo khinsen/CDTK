@@ -17,7 +17,7 @@ twopi = 2.*N.pi
 twopisq = -2.*N.pi**2
 
 def sfTerm(array_type result, array_type s, array_type f_atom,
-           array_type r, array_type u, int use_u):
+           array_type r, array_type u, double u_scalar, int use_u):
     cdef int ns
     cdef int i
     cdef double *resp
@@ -50,13 +50,18 @@ def sfTerm(array_type result, array_type s, array_type f_atom,
             dot_sr = twopi*(rp[0]*sp[3*i] + rp[1]*sp[3*i+1] + rp[2]*sp[3*i+2])
             f_r = fap[i]*cos(dot_sr)
             f_i = fap[i]*sin(dot_sr)
-            if use_u:
-                sus = up[3*0+0] * sp[3*i+0] * sp[3*i+0] + \
-                      up[3*1+1] * sp[3*i+1] * sp[3*i+1] + \
-                      up[3*2+2] * sp[3*i+2] * sp[3*i+2] + \
-                      2. * up[3*0+1] * sp[3*i+0] * sp[3*i+1] + \
-                      2. * up[3*0+2] * sp[3*i+0] * sp[3*i+2] + \
-                      2. * up[3*1+2] * sp[3*i+1] * sp[3*i+2]
+            if use_u > 0:
+                if use_u == 1:
+                    sus = u_scalar * (sp[3*i+0] * sp[3*i+0]
+                                      + sp[3*i+1] * sp[3*i+1]
+                                      + sp[3*i+2] * sp[3*i+2])
+                else:
+                    sus = up[3*0+0] * sp[3*i+0] * sp[3*i+0] + \
+                          up[3*1+1] * sp[3*i+1] * sp[3*i+1] + \
+                          up[3*2+2] * sp[3*i+2] * sp[3*i+2] + \
+                          2. * up[3*0+1] * sp[3*i+0] * sp[3*i+1] + \
+                          2. * up[3*0+2] * sp[3*i+0] * sp[3*i+2] + \
+                          2. * up[3*1+2] * sp[3*i+1] * sp[3*i+2]
                 dwf = exp(twopisq*sus)
                 f_r = f_r*dwf
                 f_i = f_i*dwf
@@ -67,7 +72,10 @@ def sfTerm(array_type result, array_type s, array_type f_atom,
         # If any of the input arrays is not contiguous (which is
         # highly unlikely), fall back to Python version.
         sf = N.exp(twopi*1j*(N.dot(s, r)))
-        if use_u:
+        if use_u == 1:
+            dwf = N.exp(twopisq*u_scalar*N.sum(sv*sv, axis=-1))
+            N.add(result, f_atom*dwf*sf, result)
+        if use_u == 2:
             dwf = N.exp(twopisq*N.sum(N.dot(s, u)*s, axis=-1))
             N.add(result, f_atom*dwf*sf, result)
         else:

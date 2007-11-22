@@ -605,13 +605,14 @@ class StructureFactor(ReflectionData, AmplitudeData):
         for atom in universe.atomList():
             if adps is None:
                 sfTerm(self.array, sv, f_atom[atom.symbol],
-                       conf[atom].array, sv, False)
+                       conf[atom].array, sv, 0., 0)
             else:
                 sfTerm(self.array, sv, f_atom[atom.symbol],
-                       conf[atom].array, adps[atom].array, True)
+                       conf[atom].array, adps[atom].array, 0., 2)
 
     def calculateFromUnitCellAtoms(self, atom_iterator, cell=None):
         from AtomicStructureFactors import atomic_structure_factors
+        from CDTK_sfcalc import sfTerm
         sv = N.zeros((self.number_of_reflections, 3), N.Float)
         for r in self.reflection_set:
             sv[r.index] = r.sVector(cell).array
@@ -621,16 +622,15 @@ class StructureFactor(ReflectionData, AmplitudeData):
         twopisq = -2.*N.pi**2
         for element, position, adp, occupancy in atom_iterator:
             a, b = atomic_structure_factors[element.lower()]
-            f_atom = N.sum(a[:, N.NewAxis]
+            f_atom = occupancy * \
+                     N.sum(a[:, N.NewAxis]
                            * N.exp(-b[:, N.NewAxis]*ssq[N.NewAxis, :]))
             if adp is None:
-                dwf = 1.
+                sfTerm(self.array, sv, f_atom, position.array, sv, 0., 0)
             elif isinstance(adp, float):
-                dwf = N.exp(twopisq*adp*ssq)
+                sfTerm(self.array, sv, f_atom, position.array, sv, adp, 1)
             else:
-                dwf = N.exp(twopisq*N.sum(N.dot(sv, adp.array)*sv, axis=-1))
-            self.array += occupancy*f_atom*dwf \
-                          * N.exp(twopii*(N.dot(sv, position.array)))
+                sfTerm(self.array, sv, f_atom, position.array, adp.array, 0., 2)
 
     def calculateFromAsymmetricUnitAtoms(self, atom_iterator, cell=None):
         from AtomicStructureFactors import atomic_structure_factors
