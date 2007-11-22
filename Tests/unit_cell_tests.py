@@ -58,9 +58,9 @@ class UnitCellTests(unittest.TestCase):
                 for j in range(3):
                     p = basis[i]*reciprocal_basis[j]
                     if i == j:
-                        self.assertAlmostEqual(p, 1., 10.)
+                        self.assertAlmostEqual(p, 1., 10)
                     else:
-                        self.assertAlmostEqual(p, 0., 10.)
+                        self.assertAlmostEqual(p, 0., 10)
             cell2 = UnitCell(*tuple(basis))
             self.assertAlmostEqual(cell1.a, cell2.a, 5)
             self.assertAlmostEqual(cell1.b, cell2.b, 5)
