@@ -34,5 +34,6 @@ cdef extern from "Scientific/arrayobject.h":
     object PyArray_FromDims(int n_dimensions, int dimensions[], int item_type)
     object PyArray_FromDimsAndData(int n_dimensions, int dimensions[],
                                    int item_type, char *data)
+    int PyArray_ISCONTIGUOUS(array_type a)
 
 import_array()

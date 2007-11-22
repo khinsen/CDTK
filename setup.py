@@ -61,6 +61,10 @@ map_module_source = {
     'c': 'Src/CDTK_sf_fft.c',
     'pyrex': 'Src/CDTK_sf_fft.pyx'
     }
+sfcalc_module_source = {
+    'c': 'Src/CDTK_sfcalc.c',
+    'pyrex': 'Src/CDTK_sfcalc.pyx'
+    }
 
 setup (name = "CDTK",
        version = pkginfo.__version__,
@@ -85,6 +89,11 @@ can also be used independently.
                                 include_dirs = include_dirs+[fftw_include],
                                 library_dirs = [fftw_lib],
                                 libraries = ['fftw3', 'm'],
+                                extra_compile_args = compile_args),
+                      Extension('CDTK_sfcalc',
+                                [sfcalc_module_source[build_from]],
+                                include_dirs = include_dirs,
+                                libraries = ['m'],
                                 extra_compile_args = compile_args)],
 
        scripts = ['Scripts/convert_mmcif_reflections'],

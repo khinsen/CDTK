@@ -581,6 +581,7 @@ class StructureFactor(ReflectionData, AmplitudeData):
 
     def calculateFromUniverse(self, universe, adps=None, conf=None):
         from AtomicStructureFactors import atomic_structure_factors
+        from CDTK_sfcalc import sfTerm
         if conf is None:
             conf = universe.configuration()
 
@@ -591,9 +592,6 @@ class StructureFactor(ReflectionData, AmplitudeData):
             sv[r.index] = r.sVector(cell).array
         ssq = N.sum(sv*sv, axis=-1)
 
-        self.array[:] = 0j
-        twopii = 2.j*N.pi
-        twopisq = -2.*N.pi**2
         f_atom = {}
         for atom in universe.atomList():
             key = atom.symbol
@@ -602,14 +600,15 @@ class StructureFactor(ReflectionData, AmplitudeData):
             a, b = atomic_structure_factors[key.lower()]
             f_atom[key] = N.sum(a[:, N.NewAxis] \
                                 * N.exp(-b[:, N.NewAxis]*ssq[N.NewAxis, :]))
+
+        self.array[:] = 0j
         for atom in universe.atomList():
             if adps is None:
-                dwf = 1.
+                sfTerm(self.array, sv, f_atom[atom.symbol],
+                       conf[atom].array, sv, False)
             else:
-                dwf = N.exp(twopisq*N.sum(N.dot(sv, adps[atom].array)*sv,
-                                          axis=-1))
-            self.array += f_atom[atom.symbol]*dwf \
-                          * N.exp(twopii*(N.dot(sv, conf[atom].array)))
+                sfTerm(self.array, sv, f_atom[atom.symbol],
+                       conf[atom].array, adps[atom].array, True)
 
     def calculateFromUnitCellAtoms(self, atom_iterator, cell=None):
         from AtomicStructureFactors import atomic_structure_factors
