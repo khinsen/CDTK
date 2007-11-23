@@ -1,19 +1,19 @@
-from Crystallography import Units
+from CDTK import Units
 
 lines = file('/Users/hinsen/Temp/ccp4-6.0.2/lib/data/atomsf.lib').readlines()
 lines = lines[31:]
 
 print """
-# Atomic structure factors in Five-Gaussian approximation.
-# The formula for the atomic structure factor is
-#   f(s) = N.sum(a*N.exp(-b*s))
-# where (a, b) are the two arrays stored in atomic_structure_factors
+# Atomic scattering factors in Five-Gaussian approximation.
+# The formula for the atomic scattering factor is
+#   f(s) = N.sum(a*N.exp(-b*s^2))
+# where (a, b) are the two arrays stored in atomic_scattering_factors
 # and s is the length of the scattering vector (in 1/nm).
 #
 
 from Scientific import N
 
-atomic_structure_factors = {
+atomic_scattering_factors = {
 """
 
 while lines:
@@ -54,7 +54,7 @@ print "}"
 
 print """
 
-for (element, charge), value in atomic_structure_factors.items():
+for (element, charge), value in atomic_scattering_factors.items():
     if charge == 0:
-       atomic_structure_factors[element] = value
+       atomic_scattering_factors[element] = value
 """

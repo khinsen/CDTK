@@ -112,9 +112,9 @@ class ElectronDensityMap(Map):
         if cell is None:
             cell = self.cell
         m_fc = cell.fractionalToCartesianMatrix()
-        from AtomicStructureFactors import atomic_structure_factors
+        from AtomicScatteringFactors import atomic_scattering_factors
         for element, position, adp, occupancy in atom_iterator:
-            a, b = atomic_structure_factors[element.lower()]
+            a, b = atomic_scattering_factors[element.lower()]
             bdiv = b / (2.*N.pi**2)
             xa = cell.cartesianToFractional(position)
             xa = xa-N.floor(xa) # map to interval [0..1)

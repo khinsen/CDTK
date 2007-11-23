@@ -580,7 +580,7 @@ class StructureFactor(ReflectionData, AmplitudeData):
             self.array[r.index] = modulus[i]*N.exp(1j*phase[i])
 
     def calculateFromUniverse(self, universe, adps=None, conf=None):
-        from AtomicStructureFactors import atomic_structure_factors
+        from AtomicScatteringFactors import atomic_scattering_factors
         from CDTK_sfcalc import sfTerm
         if conf is None:
             conf = universe.configuration()
@@ -597,7 +597,7 @@ class StructureFactor(ReflectionData, AmplitudeData):
             key = atom.symbol
             if f_atom.has_key(key):
                 continue
-            a, b = atomic_structure_factors[key.lower()]
+            a, b = atomic_scattering_factors[key.lower()]
             f_atom[key] = N.sum(a[:, N.NewAxis] \
                                 * N.exp(-b[:, N.NewAxis]*ssq[N.NewAxis, :]))
 
@@ -611,7 +611,7 @@ class StructureFactor(ReflectionData, AmplitudeData):
                        conf[atom].array, adps[atom].array, 0., 2)
 
     def calculateFromUnitCellAtoms(self, atom_iterator, cell=None):
-        from AtomicStructureFactors import atomic_structure_factors
+        from AtomicScatteringFactors import atomic_scattering_factors
         from CDTK_sfcalc import sfTerm
         sv = N.zeros((self.number_of_reflections, 3), N.Float)
         for r in self.reflection_set:
@@ -621,7 +621,7 @@ class StructureFactor(ReflectionData, AmplitudeData):
         twopii = 2.j*N.pi
         twopisq = -2.*N.pi**2
         for element, position, adp, occupancy in atom_iterator:
-            a, b = atomic_structure_factors[element.lower()]
+            a, b = atomic_scattering_factors[element.lower()]
             f_atom = occupancy * \
                      N.sum(a[:, N.NewAxis]
                            * N.exp(-b[:, N.NewAxis]*ssq[N.NewAxis, :]))
@@ -633,7 +633,7 @@ class StructureFactor(ReflectionData, AmplitudeData):
                 sfTerm(self.array, sv, f_atom, position.array, adp.array, 0., 2)
 
     def calculateFromAsymmetricUnitAtoms(self, atom_iterator, cell=None):
-        from AtomicStructureFactors import atomic_structure_factors
+        from AtomicScatteringFactors import atomic_scattering_factors
         if cell is None:
             cell = self.reflection_set.cell
         twopii = 2.j*N.pi
@@ -656,7 +656,7 @@ class StructureFactor(ReflectionData, AmplitudeData):
         ssq = N.sum(sv[0]*sv[0], axis=-1)
         self.array[:] = 0j
         for element, position, adp, occupancy in atom_iterator:
-            a, b = atomic_structure_factors[element.lower()]
+            a, b = atomic_scattering_factors[element.lower()]
             f_atom = N.sum(a[:, N.NewAxis]
                            * N.exp(-b[:, N.NewAxis]*ssq[N.NewAxis, :]))
             if adp is None:

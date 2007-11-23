@@ -1,14 +1,14 @@
 
-# Atomic structure factors in Five-Gaussian approximation.
-# The formula for the atomic structure factor is
+# Atomic scattering factors in Five-Gaussian approximation.
+# The formula for the atomic scattering factor is
 #   f(s) = N.sum(a*N.exp(-b*s^2))
-# where (a, b) are the two arrays stored in atomic_structure_factors
+# where (a, b) are the two arrays stored in atomic_scattering_factors
 # and s is the length of the scattering vector (in 1/nm).
 #
 
 from Scientific import N
 
-atomic_structure_factors = {
+atomic_scattering_factors = {
 
 ('h', 0): (N.array([  0.49300200,   0.32291200,   0.14019100,   0.04081000,   0.00303800]),
              N.array([  0.02627725,   0.06531425,   0.00785590,   0.14449924,   0.00000000])),
@@ -429,7 +429,7 @@ atomic_structure_factors = {
 }
 
 
-for (element, charge), value in atomic_structure_factors.items():
+for (element, charge), value in atomic_scattering_factors.items():
     if charge == 0:
-       atomic_structure_factors[element] = value
+       atomic_scattering_factors[element] = value
 
