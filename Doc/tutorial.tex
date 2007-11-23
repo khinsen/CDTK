@@ -1,0 +1,430 @@
+\documentclass[12pt]{article}
+\usepackage{a4}
+
+\newcommand{\vect}[1]{{\bf #1}}
+\newcommand{\mat}[1]{{\bf #1}}
+
+\newcommand{\va}{\vect{a}}
+\newcommand{\vb}{\vect{b}}
+\newcommand{\vq}{\vect{q}}
+\newcommand{\vr}{\vect{r}}
+\newcommand{\vs}{\vect{s}}
+\newcommand{\vt}{\vect{t}}
+
+\newcommand{\mU}{\mat{U}}
+
+\begin{document}
+
+{\parindent=0mm
+
+{\Large
+A Physicist's Guide to Crystallographic Data
+}
+
+\vspace{5mm}
+
+{\large Konrad Hinsen$^{a, b}$}\\
+\\
+$^a$Centre de Biophysique Mol\'eculaire, CNRS UPR 4301
+\footnote{Affiliated with the University of Orl\'eans}\\
+Rue Charles Sadron\\
+45071 Orl\'eans Cedex 2\\
+France\\
+\\
+$^b$Synchrotron Soleil, Saint Aubin, B.P. 48\\
+91192 Gif sur Yvette Cedex\\
+France\\
+\\
+E-mail: hinsen@cnrs-orleans.fr\\
+}
+\date{}
+
+\vspace{15mm}
+
+\begin{abstract}
+  This tutorial explains as much of crystallographers' jargon and
+  conventions as is required to interpret crystallographic data
+  such as the structure factor files published in the Protein
+  Data Bank (PDB). It also explains how such data is represented
+  in the Crystallographic Data Toolkit (CDTK), a Python library for
+  working with crystallographic data.
+\end{abstract}
+
+\newpage
+\begin{sloppy}
+
+\section{Units}
+
+Crystallographers measure lengths in {\AA}ngstr{\"om}s (\AA) and angles
+in degrees. CDTK uses the same ``atomic SI'' unit system as the
+Molecular Modelling Toolkit (MMTK), meaning that distances are
+measured in nm and angles in radians.
+
+The module \texttt{CDTK.Units} contains a large collection of unit
+conversion factors from and to CDTK's internal units. It is a good
+habit to use these factors in Python scripts to indicate the unit
+of all input quantities. For example:
+
+\begin{verbatim}
+from CDTK import Units
+
+length_1 = 2.5*Units.Ang  # Angstrom
+length_2 = 0.5*Units.nm   # nanometer
+big_length = 300.*Units.m # meter
+
+angle_1 = 90.*Units.deg   # degrees
+angle_2 = 1.3*Units.rad   # radians
+\end{verbatim}
+
+The same factors can be used for printing results in the desired units:
+
+\begin{verbatim}
+from CDTK import Units
+
+print "the length is %f Angstrom" % (length/Units.Ang)
+\end{verbatim}
+
+
+\section{Crystals}
+
+\subsection{The unit cell}
+
+An ideal crystal is an arrangement of molecules that is periodic in
+the three dimensions of space. Its basic motif is the \textit{unit cell},
+whose most general shape is a parallelepiped defined by the three
+\textit{lattice vectors} $\va_i$, $i=1, 2, 3$.
+In PDB files, the shape of the unit cell is described
+in terms of the six parameters
+\begin{eqnarray}
+a &=& |\va_1| \nonumber \\
+b &=& |\va_2| \nonumber \\
+c &=& |\va_3| \nonumber \\
+\alpha &=& \arccos \va_2\cdot\va_3 \nonumber \\
+\beta  &=& \arccos \va_1\cdot\va_3 \nonumber \\
+\gamma &=& \arccos \va_1\cdot\va_2 \nonumber
+\end{eqnarray}
+that are given in the \texttt{CRYST1} record.
+These six parameters define the shape of the unit cell, but not its
+orientation in space. The orientation is defined by the convention
+that $\va_1$ is parallel to the $x$-axis and that $\va_2$
+lies in the $x$-$y$-plane.
+
+In CDTK, the unit cell is defined by the class
+\texttt{CDTK.Crystal.UnitCell}. The class constructor can either be
+called with three vector arguments, defining the lattice vectors, or
+with six number arguments that correspond to $a$, $b$, $c$, $\alpha$,
+$\beta$, and $\gamma$. All CDTK routines that expect a unit cell
+argument will also accept an MMTK universe object instead.
+
+\subsection{Fractional and Cartesian coordinates}
+
+Points in the unit cell can of course be identified by their Cartesian
+coordinates in space. However, it is often practical to use
+\textit{fractional coordinates} instead. Fractional coordinates
+describe a point by displacements from the origin along the lattice
+vectors. A point defined by the fractional coordinates $(x_1, x_2, x_3)$
+has Cartesian coordinates $\vect{r} = \sum_{i=1}^3 x_i\va_i$.
+For points inside the unit cell, the fractional coordinates are in the
+range $0 <= x_i < 1$.
+
+Conversion between fractional and Cartesian coordinates is provided by
+CDTK's \texttt{UnitCell} class (and also by MMTK's universe classes).
+The methods \texttt{fractionalToCartesian} and
+\texttt{cartesianToFractional} convert one point, whereas the methods
+\texttt{fractionalToCartesianMatrix} and
+\texttt{cartesianToFractionalMatrix} return the $3 \times 3$
+conversion matrix.
+
+\subsection{Symmetry}
+
+Symmetry operations are geometrical operations (translations,
+rotations, reflections, inversions, and combinations thereof) that
+leave a given crystal unchanged. All crystals share three basic
+symmetry operations: translations along the three lattice vectors
+$\va_i$.
+
+Most crystals have additional symmetry operations that are defined by
+its \textit{space group}. There are in total 230 space groups, but
+only 65 of them can occur in crystals of biological macromolecules
+because reflections and inversions are not admitted due to the
+chirality of the molecules. In a PDB file, the space group of the
+crystal is indicated in the \texttt{CRYST1} record by its name (e.g.
+\texttt{P 21 21 21} or \texttt{C 2}). The set of symmetry operations
+for a given space group can be looked up in tables. CDTK provides a
+table containing all 230 space groups. This table is accessible as
+\texttt{CDTK.SpaceGroups.space\_groups} and takes the form of a
+dictionary that maps space group names or space group numbers (unique
+numbers have been assigned by convention) to the corresponding space
+group object.
+
+A space group object stores the list of symmetry operations. Each
+symmetry operation is represented by a rotation matrix $\mat{D}$ and a
+translation vector $\vt$ and specifies that the point $\vr' =
+\mat{D}\cdot \vr + \vt$ is equivalent to point $\vr$. The first
+element of the symmetry operation list is always the identity
+operation ($\mat{D}=\mat{1}$, $\vt=\vect{0}$).
+
+The symmetry operations defined by the space group reduce the amount
+of information required to describe the contents of the unit cell. If
+the space group has $N$ symmetry operations, the number of independent
+atom specifications is reduced by a factor of $N$. A subset of the
+unit cell from which all the other atoms can be reconstructed using
+symmetry operations is called an \textit{asymmetric unit}. This subset
+is of course not unique. The atom records in a PDB file describe an
+asymmetric unit.
+
+
+\section{Structure factors}
+
+The central quantity in the description of X-ray scattering from
+crystals is the \textit{structure factor} defined by
+\begin{equation}
+\label{eq:sf}
+F(\vs) = \sum_k f_k(|\vs|) e^{2\pi i\vs\cdot\vr_k},
+\end{equation}
+where $\vr_k$ is the position of atom $k$ and $f_k(|\vs|)$ is its
+\textit{atomic scattering factor}. The summation is performed over all
+atoms in the crystal.
+
+The atomic scattering factor describes the electron cloud around an
+atom and depends on its chemical element and its ionization state. For
+numerical calculations, it is most commonly approximated by a sum of
+four Gaussians plus a constant:
+\begin{equation}
+f(s) = \sum_{i=1}^5 a_i e^{-b_i s^2}
+\end{equation}
+with $b_5 = 0$. The parameters of this approximation have been tabulated
+\cite{}. In CDTK, this table is available in the form of the
+dictionary
+\texttt{CDTK.AtomicScatteringFactors.atomic\_scattering\_factors}.
+
+Since the atomic scattering factor is the Fourier transform of the
+electron density of a single atom, the structure factor defined
+by Eq.~(\ref{eq:sf}) is the Fourier transform of the electron density
+of the whole crystal. Note that physicists would write it in terms
+of the vector $\vq = 2\pi\vs$.
+
+
+\subsection{Bragg reflections}
+
+For an ideal crystal, the structure factor defined by
+Eq.~(\ref{eq:sf}), being the Fourier transform of a periodic function,
+is non-zero only at discrete points in reciprocal space. These points
+are known as \textit{Bragg reflections} (usually just called
+``reflections''). They lie on the \textit{reciprocal lattice} and are
+given by
+\begin{equation}
+\vs_{hkl} = h \vb_1 + k \vb_2 + l \vb_3
+\end{equation}
+where $h, k, l$ are integer numbers called the \textit{Miller indices}
+of a reflection and $\vb_i$ are the reciprocal basis vectors defined by
+\begin{equation}
+\va_i \cdot \vb_j = \delta_{ij}.
+\end{equation}
+Moreover, the summation in Eq.~(\ref{eq:sf}) can be restricted to the
+atoms in the unit cell for an ideal crystal.
+
+The quantity measured in a standard crystallographic experiment is the
+square of the magnitude of the structure factor at the reciprocal
+lattice points, i.e.
+\begin{equation}
+I(\vs_{hkl}) = \left| F(\vs_{hkl}) \right|^2,
+\end{equation}
+which is called the \textit{intensity} of the reflection $\vs_{hkl}$.
+
+The quantity $d_{hkl}=1/|\vs_{hkl}|$ is called the \textit{resolution}
+of a reflection. When a crystal structure is described as ``at $2 \AA$
+resolution'', this means that there were observable reflections up to
+$|\vs|=0.5 \AA^{-1}$.
+\begin{quote}
+\textbf{Watch out: ``high resolution'' means large $|\vs|$ and thus small $d$;
+a resolution of $1 \AA$ is higher than a resolution of $2 \AA$!}
+\end{quote}
+
+In practice there is also a lower limit to the resolution of the
+available reflections, meaning that the result of a crystallographic
+experiment consists of the intensities $I(\vs_{hkl})$ for the
+reflections in the range $1/d_{\mbox{low}} \leq \vs_{hkl} \leq
+1/d_{\mbox{high}}$. $d_{\mbox{low}}$ and $d_{\mbox{high}}$ are
+specified as the \textit{resolution range} in a PDB file (in the
+\texttt{REMARK   3} section).
+
+The mmCIF structure factor files available for many structures from
+the PDB contain $I(\vs_{hkl})$ (mmCIF label \texttt{intensity\_meas})
+or $\sqrt{I(\vs_{hkl})}$ (mmCIF label \texttt{F\_meas} or
+\texttt{F\_meas\_au}) for the reflections in the specified resolution
+range. However, not all reflections are given explicitly, because the
+number of independent reflections is reduced by symmetry:
+\begin{enumerate}
+\item
+In the absence of anomalous scattering, the atomic scattering factors
+$f_k(|\vs|)$ are real and the structure factor has the symmetry
+$F(-\vs) = F^{*}(\vs)$.
+\item
+The symmetry operations of the space group also apply in reciprocal
+space. A symmetry relation defined by ($\mat{D}$, $\vt$) in real space
+implies that the reciprocal space point $\vs' = \mat{D}^T\cdot\vs$
+is equivalent to $\vs$.
+\item
+If the space group has symmetry operations with non-zero translations,
+the intensities of certain reflections must vanish. These reflections
+are called \textit{systematic absences}.
+\end{enumerate}
+A structure factor file usually lists only a minimal set of
+independent reflections. However, the choice of these reflections is
+not unique.
+
+\vspace{3mm}
+
+In CDTK, the class \texttt{Reflection} represents a single reflection
+defined by its Miller indices. The class \texttt{ReflectionSet}
+represents the spherical shell in reciprocal space that corresponds to
+a particular crystallographic experiment. A \texttt{ReflectionSet} stores
+only a minimal set of reflections explicitly, and it provides iteration
+over this minimal set. However, it can also provide a \texttt{Reflection}
+object for any set of Miller indices inside the spherical shell.
+
+Data defined for each reflection (intensities, structure factors,
+structure factor amplitudes) are not stored in a
+\texttt{ReflectionSet}, but in separate classes
+(\texttt{ExperimentalIntensities}, \texttt{ExperimentalAmplitudes},
+\texttt{StructureFactor}, \texttt{ModelAmplitudes},
+\texttt{ModelIntensities}) that store a reference to a
+\texttt{ReflectionSet}. The reason for this is that there are usually
+several data sets for a single \texttt{ReflectionSet} object. In a
+typical workflow, parsing a reflection file yields a
+\texttt{ReflectionSet} and an associated
+\texttt{ExperimentalIntensities} or \texttt{ExperimentalAmplitudes}
+object. Then a \texttt{StructureFactor} object is generated from
+a model and compared to the experimental data.
+
+\subsection{Crystallographic models}
+
+Real biomolecular crystals are not perfectly periodic. The arrangement
+of the molecules in the different copies of the unit cell varies due
+to crystal defects and thermal motion. As a consequence, the structure
+factor in Eq.~(\ref{eq:sf}) is non-zero for points in reciprocal space
+outside the reciprocal lattice; this is known as \textit{diffuse
+scattering}. The energy that goes into diffuse scattering is also
+lost to the Bragg reflections, whose intensity is reduced by
+destructive interference between the contributions from unit cell
+copies with slightly different conformations. This attenuation of the
+Bragg peaks becomes more important with increasing $|\vs|$.
+
+Crystallographic models represent non-ideal crystals by an average
+conformation plus a fluctuation around it. Eq.~(\ref{eq:sf}) is
+replaced by
+\begin{equation}
+\label{eq:model_sf}
+F(\vs) = \sum_k f_k(|\vs|) e^{-2\pi^2 \vs\cdot\mU_k\cdot\vs} e^{2\pi i\vs\cdot<\vr_k>},
+\end{equation}
+with a summation over the atoms in the unit cell.
+The additional factor $\exp(-2\pi^2 \vs\cdot\mU_k\cdot\vs)$,
+called the \textit{Debye-Waller factor}, describes the fluctuation
+of an atom in an harmonic potential well. The symmetric tensor $\mU_k$
+describes the position fluctuations of atom~$k$; it is given by
+\begin{equation}
+\mU_k = \left<  (\vr_k-<\vr_k>) (\vr_k-<\vr_k>) \right>.
+\end{equation}
+Its elements are called \textit{anisotropic displacement parameters}
+(ADPs) by crystallographers. Their use in biomolecular crystallography
+is relatively recent, because high-resolution data is required to fit
+nine parameters per atom (three for the position, six for the
+fluctuations). For lower-resolution experiments, the fluctuation tensor
+is assumed to be isotropic, reducing it to a single parameter known
+as the \textit{B factor} and given by
+\begin{equation}
+B_k = \frac{8\pi^2}{3} \mbox{tr } \mU_k.
+\end{equation}
+
+Two points are important to note:
+\begin{enumerate}
+\item
+  Eq.~(\ref{eq:model_sf}) is an approximation. The conformational
+  variability of the crystal need not be described by Gaussian
+  fluctuations.
+\item
+  The Debye-Waller factor was originally derived as a model for
+  thermal fluctuations in an harmonic potential, and the B~factor is
+  often called ``temperature factor'' for this reason. However, the
+  conformational variability it is made to describe in practice is
+  only partly due to thermal fluctuations.
+\end{enumerate}
+
+A complementaary approach to modelling conformational variability is
+the use of multiple position/fluctuation sets for some atoms. In this
+case, each set carries a weight called the \textit{occupancy}; the sum
+of the occupancies over all position/fluctuation sets for one atom
+must be~1.
+
+\vspace{3mm}
+
+CDTK permits the calculation of structure factors from standard
+crystallographic models for a given \texttt{ReflectionSet}.
+There are three ways to specify the model:
+\begin{itemize}
+\item
+as an iterator over the atoms in the unit cell, yielding a tuple
+of (chemical element, position, fluctuation tensor, occupancy)
+for each atom:
+{\small
+\begin{verbatim}
+sf = StructureFactor(reflection_set)
+sf.calculateFromUnitCellAtoms((atom.symbol, atom.position(),
+                               atom.temperature_factor/(8.*N.pi**2),
+                               atom.occupancy)
+                              for atom in unit_cell.atomList())
+\end{verbatim}
+}
+\item
+as an iterator over the atoms in the asymmetric unit, yielding a tuple
+of (chemical element, position, fluctuation tensor, occupancy)
+for each atom:
+{\small
+\begin{verbatim}
+sf = StructureFactor(reflection_set)
+sf.calculateFromAsymmetricUnitAtoms((atom.symbol, atom.position(),
+                                     adps[atom], atom.occupancy)
+                                    for atom in asu.atomList())
+\end{verbatim}
+}
+\item
+as an MMTK universe plus an optional MMTK \texttt{ParticleTensor} object
+specifying the fluctuation tensors:
+{\small
+\begin{verbatim}
+sf = StructureFactor(reflection_set)
+sf.calculateFromUniverse(universe, adps)
+\end{verbatim}
+}
+\end{itemize}
+
+\subsection{Comparing models to experimental data}
+
+The most commonly used similarity criterion for comparing a model
+to an experimental data set is the R~factor, defined by
+\begin{equation}
+R = \frac{\sum_{hkl}
+    \left| |F_{\mbox{model}}(\vs_{hkl})|-|F_{\mbox{experiment}}(\vs_{hkl})| \right|}
+    {\sum_{hkl} |F_{\mbox{experiment}}(\vs_{hkl})|}.
+\end{equation}
+The summation is performed over the minimal set of unique reflections.
+The experimental structure factor amplitudes are simply the square roots
+of the measured intensities.
+
+In CDTK, the R~factor is calculated by
+\begin{verbatim}
+r = exp_amplitudes.rFactor(model_sf)
+\end{verbatim}
+Since experimental intensities are usually not normalized, it is often
+preferable to allow a scale factor between the two data sets that
+minimizes the R~factor. This is written as
+\begin{verbatim}
+r, scale = exp_amplitudes.rFactorWithScale(model_sf)
+\end{verbatim}
+
+%\begin{equation}
+%\end{equation}
+
+\end{sloppy}
+\end{document}
