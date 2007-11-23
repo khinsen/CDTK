@@ -482,9 +482,11 @@ class AmplitudeData(object):
                             [uxz, uyz, uzz]]))
         ev, rot = u.diagonalization()
         if N.sum(ev) >= 0.:
-            u = Tensor(N.dot(N.transpose(rot)*N.maximum(ev, 0.), rot))
+            u = Tensor(N.dot(N.transpose(rot.array)*N.maximum(ev, 0.),
+                             rot.array))
         else:
-            u = Tensor(N.dot(N.transpose(rot)*N.minimum(ev, 0.), rot))
+            u = Tensor(N.dot(N.transpose(rot.array)*N.minimum(ev, 0.),
+                             rot.array))
 
         while iterations > 0:
             iterations -= 1
@@ -513,9 +515,11 @@ class AmplitudeData(object):
                                  [duxz, duyz, duzz]]))
             ev, rot = u.diagonalization()
             if N.sum(ev) >= 0.:
-                u = Tensor(N.dot(N.transpose(rot)*N.maximum(ev, 0.), rot))
+                u = Tensor(N.dot(N.transpose(rot.array)*N.maximum(ev, 0.),
+                                 rot.array))
             else:
-                u = Tensor(N.dot(N.transpose(rot)*N.minimum(ev, 0.), rot))
+                u = Tensor(N.dot(N.transpose(rot.array)*N.minimum(ev, 0.),
+                                 rot.array))
 
         return k*self.applyDebyeWallerFactor(u), k, u
 
