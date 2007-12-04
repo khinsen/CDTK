@@ -90,6 +90,16 @@ class Reflection(object):
             r.n_symmetry_equivalents = n
         return unique_reflections
 
+    def symmetryFactor(self):
+        rs = self.reflection_set
+        equivalents = rs.space_group.symmetryEquivalentMillerIndices(self.array)
+        return N.sum(N.alltrue(N.array(equivalents) == self.array, axis=1))
+
+    def isCentric(self):
+        rs = self.reflection_set
+        equivalents = rs.space_group.symmetryEquivalentMillerIndices(self.array)
+        return N.sum(N.alltrue(N.array(equivalents) == -self.array, axis=1)) > 0
+        
 #
 # A ReflectionSet represents all possible reflections for a given crystal
 # within a given resolution range and manages a minimal list of reflections
