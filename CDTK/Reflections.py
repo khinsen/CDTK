@@ -1,6 +1,7 @@
 from Scientific import N, LA
 from Scientific.Geometry import Tensor
 from CDTK import Units
+import copy
 
 #
 # A Reflection object stores Miller indices and a reference to the
@@ -566,6 +567,20 @@ class IntensityData(object):
         result.array = self.array*(dwf**2)
         return result
 
+    def scaleTo(self, other, iterations=0):
+        a, k, u = self.amplitudes().scaleTo(other.amplitudes(), iterations)
+        return a.intensities(), k, u
+
+    def normalize(self, atom_count):
+        i_random = ModelIntensities(self.reflection_set)
+        i_random.calculateFromUniformAtomDistribution(atom_count)
+        i_random, k, u = i_random.scaleTo(self)
+        result = self.__class__(self.reflection_set)
+        result.array = N.transpose(N.transpose(self.array)/i_random.array)
+        if hasattr(self, 'data_available'):
+            result.data_available = copy.copy(self.data_available)
+        return result
+
 
 class StructureFactor(ReflectionData, AmplitudeData):
 
@@ -715,6 +730,22 @@ class ModelIntensities(ReflectionData,
         amplitudes = ModelAmplitudes(self.reflection_set)
         amplitudes.array = N.sqrt(self.array)
         return amplitudes
+
+    def calculateFromUniformAtomDistribution(self, atom_count):
+        from AtomicScatteringFactors import atomic_scattering_factors
+        sv = N.zeros((self.number_of_reflections, 3), N.Float)
+        epsilon = N.zeros((self.number_of_reflections,), N.Int)
+        for r in self.reflection_set:
+            sv[r.index] = r.sVector().array
+            epsilon[r.index] = r.symmetryFactor()
+        ssq = N.sum(sv*sv, axis=-1)
+        sum_f_sq = N.zeros((self.number_of_reflections,), N.Float)
+        for element, count in atom_count.items():
+            a, b = atomic_scattering_factors[element.lower()]
+            f_atom = N.sum(a[:, N.NewAxis]
+                           * N.exp(-b[:, N.NewAxis]*ssq[N.NewAxis, :]))
+            sum_f_sq += count*f_atom*f_atom
+        self.array[:] = epsilon*sum_f_sq
 
 
 class ExperimentalAmplitudes(ExperimentalReflectionData,
