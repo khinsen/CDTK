@@ -263,8 +263,7 @@ $F(-\vs) = F^{*}(\vs)$.
 \item
 The symmetry operations of the space group also apply in reciprocal
 space. A symmetry relation defined by ($\mat{D}$, $\vt$) in real space
-implies that the reciprocal space point $\vs' = \mat{D}^T\cdot\vs$
-is equivalent to $\vs$.
+implies that $F(\mat{D}^T\cdot\vs) = F(\vs) \exp(-2\pi i \vs\cdot\vt)$.
 \item
 If the space group has symmetry operations with non-zero translations,
 the intensities of certain reflections must vanish. These reflections
@@ -311,9 +310,9 @@ destructive interference between the contributions from unit cell
 copies with slightly different conformations. This attenuation of the
 Bragg peaks becomes more important with increasing $|\vs|$.
 
-Crystallographic models represent non-ideal crystals by an average
-conformation plus a fluctuation around it. Eq.~(\ref{eq:sf}) is
-replaced by
+Standard crystallographic models represent non-ideal crystals by an
+average unit cell containing an average conformation plus Gaussian
+fluctuations around the average. Eq.~(\ref{eq:sf}) is replaced by
 \begin{equation}
 \label{eq:model_sf}
 F(\vs) = \sum_k f_k(|\vs|) e^{-2\pi^2 \vs\cdot\mU_k\cdot\vs} e^{2\pi i\vs\cdot<\vr_k>},
@@ -327,17 +326,17 @@ describes the position fluctuations of atom~$k$; it is given by
 \mU_k = \left<  (\vr_k-<\vr_k>) (\vr_k-<\vr_k>) \right>.
 \end{equation}
 Its elements are called \textit{anisotropic displacement parameters}
-(ADPs) by crystallographers. Their use in biomolecular crystallography
-is relatively recent, because high-resolution data is required to fit
-nine parameters per atom (three for the position, six for the
-fluctuations). For lower-resolution experiments, the fluctuation tensor
-is assumed to be isotropic, reducing it to a single parameter known
-as the \textit{B factor} and given by
+(ADPs). Their use in biomolecular crystallography is relatively
+recent, because high-resolution data is required to fit nine
+parameters per atom (three for the position, six for the
+fluctuations). For fitting lower-resolution data, the fluctuation
+tensor is assumed to be isotropic, reducing it to a single parameter
+known as the \textit{B factor} and given by
 \begin{equation}
 B_k = \frac{8\pi^2}{3} \mbox{tr } \mU_k.
 \end{equation}
 
-Two points are important to note:
+Several points are important to note:
 \begin{enumerate}
 \item
   Eq.~(\ref{eq:model_sf}) is an approximation. The conformational
@@ -349,9 +348,28 @@ Two points are important to note:
   often called ``temperature factor'' for this reason. However, the
   conformational variability it is made to describe in practice is
   only partly due to thermal fluctuations.
+\item
+  The refinement process includes restraints on the parameters which
+  are necessary for obtaining reasonable models without any reliable
+  information about the phases of the structure factors.
+  The restraints on the average positions are derived from the known
+  chemical structure of the building blocks of the molecules and are
+  thus physicallly reasonable. The restraints on the fluctuation
+  parameters are chosen much more arbitrarily with the main goal
+  of stabilizing the convergence of the fit procedure.
+\item
+  Crystallographers are much more interested in the conformation than
+  in the fluctuations. A lot of effort has gone into obtaining ever
+  better structural models, but B factors and ADPs are still mostly
+  considered an inevitable nuisance (because no reasonable agreement
+  between model and experiment is possible without them) rather than
+  parameters of direct physical interest.
 \end{enumerate}
+For these reasons, the information about the fluctuations in the fitted
+crystallographic models is much less reliable than the atomic positions
+and should be interpreted with care.
 
-A complementaary approach to modelling conformational variability is
+A complementary approach to modelling conformational variability is
 the use of multiple position/fluctuation sets for some atoms. In this
 case, each set carries a weight called the \textit{occupancy}; the sum
 of the occupancies over all position/fluctuation sets for one atom
@@ -422,6 +440,26 @@ minimizes the R~factor. This is written as
 \begin{verbatim}
 r, scale = exp_amplitudes.rFactorWithScale(model_sf)
 \end{verbatim}
+
+In some situations, it is of interest to compare data sets allowing not only
+a constant factor between them, but also a global Debye-Waller factor.
+Fitting the model
+\begin{equation}
+\label{eq:scaling}
+F_1(\vs_{hkl}) = k F_2(\vs_{hkl}) e^{-2\pi^2 \vs_{hkl}\cdot\mU\cdot\vs_{hkl}}
+\end{equation}
+with the fit parameters $k$ and $\mU$ is known as \textit{scaling} $F_2$
+to $F_1$. In CDTK, it is performed by
+\begin{verbatim}
+scaled_sf, k, u = model_sf.scaleTo(exp_amplitudes, iterations)
+\end{verbatim}
+The integer parameter \verb/iterations/ indicates the number of iterations
+of the non-linear fit (using the Gauss-Newton algorithm) to be performed.
+A first approximation is obtained by taking the logarithm of 
+Eq.~(\ref{eq:scaling}) and obtaining $k_0, \mU_0$ from the resulting
+linear least-squares problem. With the default of \verb/iterations=0/,
+this is the return value. Otherwise, the indicated number of iterations
+are performed to solve the non-linear least-squares problem.
 
 %\begin{equation}
 %\end{equation}
