@@ -794,7 +794,7 @@ class ExperimentalAmplitudes(ExperimentalReflectionData,
 class ExperimentalIntensities(ExperimentalReflectionData,
                               IntensityData):
 
-    def __init__(self, reflection_set):
+    def __init__(self, reflection_set, data=None):
         ExperimentalReflectionData.__init__(self, reflection_set)
         if data is None:
             self.array = N.zeros((self.number_of_reflections, 2), N.Float)
