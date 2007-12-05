@@ -286,20 +286,71 @@ class ReflectionData(object):
 
     def __mul__(self, other):
         result = self.__class__(self.reflection_set)
-        self.__mul_op__(other, result)
+        if isinstance(other, ReflectionData):
+            self.__mul_op__(other, result)
+        else:
+            self.__mul_scalar_op__(other, result)
         return result
 
     __rmul__ = __mul__
 
     def __mul_op__(self, other, result):
+        other_array = other.array
+        if len(other_array.shape) == 2:
+            other_array = other_array[:, 0]
+        result.array[:] = self.array*other_array
+
+    def __mul_scalar_op__(self, other, result):
         result.array[:] = self.array*other
 
     def __imul__(self, other):
-        self.__imul_op__(other)
+        if isinstance(other, ReflectionData):
+            self.__imul_op__(other)
+        else:
+            self.__imul_scalar_op__(other)
         return self
 
     def __imul_op__(self, other):
+        other_array = other.array
+        if len(other_array.shape) == 2:
+            other_array = other_array[:, 0]
+        self.array *= other_array
+
+    def __imul_scalar_op__(self, other):
         self.array *= other
+
+    def __div__(self, other):
+        result = self.__class__(self.reflection_set)
+        if isinstance(other, ReflectionData):
+            self.__div_op__(other, result)
+        else:
+            self.__div_scalar_op__(other, result)
+        return result
+
+    def __div_op__(self, other, result):
+        other_array = other.array
+        if len(other_array.shape) == 2:
+            other_array = other_array[:, 0]
+        result.array[:] = self.array/other_array
+
+    def __div_scalar_op__(self, other, result):
+        result.array[:] = self.array/other
+
+    def __idiv__(self, other):
+        if isinstance(other, ReflectionData):
+            self.__idiv_op__(other)
+        else:
+            self.__idiv_scalar_op__(other)
+        return self
+
+    def __idiv_op__(self, other):
+        other_array = other.array
+        if len(other_array.shape) == 2:
+            other_array = other_array[:, 0]
+        self.array /= other_array
+
+    def __idiv_scalar_op__(self, other):
+        self.array /= other
 
     def _debyeWallerFactor(self, adp_or_scalar):
         twopisq = -2.*N.pi**2
@@ -404,7 +455,47 @@ class ExperimentalReflectionData(ReflectionData):
         self.data_available *= other.data_available
         self.array[:, 0] -= other.array[:, 0]
         self.array[:, 1] += other.array[:, 1]
-        
+
+    def __mul_op__(self, other, result):
+        other_array = other.array
+        if len(other_array.shape) == 2:
+            other_array = other_array[:, 0]
+        result.data_available[:] = self.data_available
+        if hasattr(other, 'data_available'):
+            result.data_available *= other.data_available
+        result.array[:] = self.array*other_array[:, N.NewAxis]
+
+    def __imul_op__(self, other):
+        other_array = other.array
+        if len(other_array.shape) == 2:
+            other_array = other_array[:, 0]
+        if hasattr(other, 'data_available'):
+            self.data_available *= other.data_available
+        self.array *= other_array[:, N.NewAxis]
+
+    def __div_op__(self, other, result):
+        other_array = other.array
+        if len(other_array.shape) == 2:
+            other_array = other_array[:, 0]
+        result.data_available[:] = self.data_available
+        if hasattr(other, 'data_available'):
+            result.data_available *= other.data_available
+            result.array[:] = self.array / \
+                              (other_array+(1-other.data_available)) \
+                              [:, N.NewAxis]
+        else:
+            result.array[:] = self.array/other_array[:, N.NewAxis]
+
+    def __idiv_op__(self, other):
+        other_array = other.array
+        if len(other_array.shape) == 2:
+            other_array = other_array[:, 0]
+        if hasattr(other, 'data_available'):
+            self.data_available *= other.data_available
+            self.array /= (other_array+(1-other.data_available))[:, N.NewAxis]
+        else:
+            self.array /= other_array[:, N.NewAxis]
+
 
 class AmplitudeData(object):
 
@@ -581,12 +672,7 @@ class IntensityData(object):
         i_random = ModelIntensities(self.reflection_set)
         i_random.calculateFromUniformAtomDistribution(atom_count)
         i_random, k, u = i_random.scaleTo(self)
-        result = self.__class__(self.reflection_set,
-                                N.transpose(N.transpose(self.array) / \
-                                            i_random.array))
-        if hasattr(self, 'data_available'):
-            result.data_available = copy.copy(self.data_available)
-        return result
+        return self/i_random
 
 
 class StructureFactor(ReflectionData, AmplitudeData):

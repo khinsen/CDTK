@@ -92,6 +92,14 @@ class StructureFactorTests(unittest.TestCase):
         self.assertRaises(AssertionError, operator.sub,
                           self.model_sf, self.exp_amplitudes)
 
+        # Tests on multiplication/division
+        squared_model_sf = self.model_sf*self.model_sf
+        d = squared_model_sf/self.model_sf - self.model_sf
+        self.assert_(N.maximum.reduce(N.absolute(d.array)) < 1.e-12)
+        squared_amplitudes = self.exp_amplitudes*self.exp_amplitudes
+        d = squared_amplitudes/self.exp_amplitudes - self.exp_amplitudes
+        self.assert_(N.maximum.reduce(N.absolute(d.array[:, 0])) < 1.e-12)
+        
         # Tests on structure factor calculations
         asu_atoms = sum(([atom for atom in residue] for residue in self.s), [])
 
