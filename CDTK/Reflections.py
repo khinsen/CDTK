@@ -207,7 +207,18 @@ class ReflectionSet(object):
             self.addReflection(h, k, l)
             return self.reflection_map[hkl]
 
-
+#
+# ReflectionData and its subclasses describe data defined per reflection,
+# such as structure factors or intensities.
+#
+# There are "experimental" and "model" classes, the former storing
+# variances and missing-value information in addition to the basic data.
+# There is also a distinction between "amplitude" and "intensity" classes,
+# because the operations on them are different. In the "model" and
+# "amplitude" category, there are two classes: StructureFactor stores
+# amplitude and phase information, whereas ModelAmplitudes stores only
+# the amplitudes.
+#
 class ReflectionData(object):
 
     def __init__(self, reflection_set):
@@ -461,15 +472,12 @@ class AmplitudeData(object):
         return InterpolatingFunction((s,), sum_diff/(sum_self+(sum_self == 0.)))
 
     def intensities(self):
-        intensities = ModelIntensities(self.reflection_set)
-        intensities.array[:] = (self.array[:]*N.conjugate(self.array[:])).real
-        return intensities
+        return ModelIntensities(self.reflection_set,
+                                (self.array[:]*N.conjugate(self.array[:])).real)
 
     def applyDebyeWallerFactor(self, adp_or_scalar):
         dwf = self._debyeWallerFactor(adp_or_scalar)
-        result = self.__class__(self.reflection_set)
-        result.array = self.array*dwf
-        return result
+        return self.__class__(self.reflection_set, self.array*dwf)
 
     def scaleTo(self, other, iterations=0):
         assert isinstance(other, AmplitudeData)
@@ -563,9 +571,7 @@ class IntensityData(object):
 
     def applyDebyeWallerFactor(self, adp_or_scalar):
         dwf = self._debyeWallerFactor(adp_or_scalar)
-        result = self.__class__(self.reflection_set)
-        result.array = self.array*(dwf**2)
-        return result
+        return self.__class__(self.reflection_set, self.array*(dwf**2))
 
     def scaleTo(self, other, iterations=0):
         a, k, u = self.amplitudes().scaleTo(other.amplitudes(), iterations)
@@ -575,8 +581,9 @@ class IntensityData(object):
         i_random = ModelIntensities(self.reflection_set)
         i_random.calculateFromUniformAtomDistribution(atom_count)
         i_random, k, u = i_random.scaleTo(self)
-        result = self.__class__(self.reflection_set)
-        result.array = N.transpose(N.transpose(self.array)/i_random.array)
+        result = self.__class__(self.reflection_set,
+                                N.transpose(N.transpose(self.array) / \
+                                            i_random.array))
         if hasattr(self, 'data_available'):
             result.data_available = copy.copy(self.data_available)
         return result
@@ -584,9 +591,13 @@ class IntensityData(object):
 
 class StructureFactor(ReflectionData, AmplitudeData):
 
-    def __init__(self, reflection_set):
+    def __init__(self, reflection_set, data=None):
         ReflectionData.__init__(self, reflection_set)
-        self.array = N.zeros((self.number_of_reflections,), N.Complex)
+        if data is None:
+            self.array = N.zeros((self.number_of_reflections,), N.Complex)
+        else:
+            assert(data.shape == (self.number_of_reflections,))
+            self.array = data
         self.absent_value = 0j
 
     def __getitem__(self, reflection):
@@ -712,24 +723,30 @@ class StructureFactor(ReflectionData, AmplitudeData):
 class ModelAmplitudes(ReflectionData,
                       AmplitudeData):
 
-    def __init__(self, reflection_set):
+    def __init__(self, reflection_set, data=None):
         ReflectionData.__init__(self, reflection_set)
-        self.array = N.zeros((self.number_of_reflections,), N.Float)
+        if data is None:
+            self.array = N.zeros((self.number_of_reflections,), N.Float)
+        else:
+            assert(data.shape == (self.number_of_reflections,))
+            self.array = data
         self.absent_value = 0.
 
 
 class ModelIntensities(ReflectionData,
                        IntensityData):
 
-    def __init__(self, reflection_set):
+    def __init__(self, reflection_set, data=None):
         ReflectionData.__init__(self, reflection_set)
-        self.array = N.zeros((self.number_of_reflections,), N.Float)
+        if data is None:
+            self.array = N.zeros((self.number_of_reflections,), N.Float)
+        else:
+            assert(data.shape == (self.number_of_reflections,))
+            self.array = data
         self.absent_value = 0.
 
     def amplitudes(self):
-        amplitudes = ModelAmplitudes(self.reflection_set)
-        amplitudes.array = N.sqrt(self.array)
-        return amplitudes
+        return ModelAmplitudes(self.reflection_set, N.sqrt(self.array))
 
     def calculateFromUniformAtomDistribution(self, atom_count):
         from AtomicScatteringFactors import atomic_scattering_factors
@@ -751,9 +768,13 @@ class ModelIntensities(ReflectionData,
 class ExperimentalAmplitudes(ExperimentalReflectionData,
                              AmplitudeData):
 
-    def __init__(self, reflection_set):
+    def __init__(self, reflection_set, data=None):
         ExperimentalReflectionData.__init__(self, reflection_set)
-        self.array = N.zeros((self.number_of_reflections, 2), N.Float)
+        if data is None:
+            self.array = N.zeros((self.number_of_reflections, 2), N.Float)
+        else:
+            assert(data.shape == (self.number_of_reflections, 2))
+            self.array = data
         self.absent_value = N.zeros((2,), N.Float)
 
     def intensities(self):
@@ -765,8 +786,7 @@ class ExperimentalAmplitudes(ExperimentalReflectionData,
 
     def applyDebyeWallerFactor(self, adp_or_scalar):
         dwf = self._debyeWallerFactor(adp_or_scalar)
-        result = self.__class__(self.reflection_set)
-        result.array[:] = self.array*dwf
+        result = self.__class__(self.reflection_set, self.array*dwf)
         result.data_available[:] = self.data_available
         return result
 
@@ -776,7 +796,11 @@ class ExperimentalIntensities(ExperimentalReflectionData,
 
     def __init__(self, reflection_set):
         ExperimentalReflectionData.__init__(self, reflection_set)
-        self.array = N.zeros((self.number_of_reflections, 2), N.Float)
+        if data is None:
+            self.array = N.zeros((self.number_of_reflections, 2), N.Float)
+        else:
+            assert(data.shape == (self.number_of_reflections, 2))
+            self.array = data
         self.absent_value = N.zeros((2,), N.Float)
 
     def amplitudes(self):
@@ -797,7 +821,6 @@ class ExperimentalIntensities(ExperimentalReflectionData,
 
     def applyDebyeWallerFactor(self, adp_or_scalar):
         dwf = self._debyeWallerFactor(adp_or_scalar)
-        result = self.__class__(self.reflection_set)
-        result.array[:] = self.array*(dwf**2)
+        result = self.__class__(self.reflection_set, self.array*(dwf**2))
         result.data_available[:] = self.data_available
         return result
