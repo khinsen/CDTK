@@ -65,6 +65,9 @@ class ReflectionSetTests(unittest.TestCase):
             if r.l != 0:
                 self.assertNotEqual(r.l % 4, 0)
 
-     
+
+def suite():
+    return unittest.TestLoader().loadTestsFromTestCase(ReflectionSetTests)
+
 if __name__ == '__main__':
     unittest.main()

@@ -83,5 +83,9 @@ class ElectronDensityMapTests(unittest.TestCase):
         self.assert_(sf_from_unit_cell.rFactor(sf_from_test_map) < 1.e-15)
         self.assert_(N.maximum.reduce(d) < 1.e-13)
 
+
+def suite():
+    return unittest.TestLoader().loadTestsFromTestCase(ElectronDensityMapTests)
+
 if __name__ == '__main__':
     unittest.main()

@@ -83,5 +83,9 @@ class UnitCellTests(unittest.TestCase):
                 xx = N.dot(m_cf, rr)
                 self.assert_(N.maximum.reduce(N.fabs(x-xx)) < 1.e-15)
 
+
+def suite():
+    return unittest.TestLoader().loadTestsFromTestCase(UnitCellTests)
+
 if __name__ == '__main__':
     unittest.main()

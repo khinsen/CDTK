@@ -1,6 +1,0 @@
-#!/bin/sh
-for script in *_tests.py
-do
-   echo $script
-   python $script
-done

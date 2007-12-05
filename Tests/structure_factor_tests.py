@@ -150,5 +150,8 @@ class StructureFactorTests(unittest.TestCase):
         self.assert_(self.exp_amplitudes.rFactor(sf_scaled) < 0.185)
 
         
+def suite():
+    return unittest.TestLoader().loadTestsFromTestCase(StructureFactorTests)
+
 if __name__ == '__main__':
     unittest.main()
