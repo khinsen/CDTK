@@ -2,6 +2,7 @@ import unittest
 from CDTK.Crystal import UnitCell
 from CDTK.Reflections import ReflectionSet
 from CDTK.SpaceGroups import space_groups
+from CDTK import Units
 from Scientific.Geometry import Vector
 from Scientific import N
 
@@ -25,6 +26,29 @@ class ReflectionSetTests(unittest.TestCase):
             self.assert_(res_max <= r.resolution() <= res_min)
             self.assert_(not r.isCentric())
             self.assert_(r.symmetryFactor() == 1)
+
+    def test_P31(self):
+        cell = UnitCell(3., 3., 4.,
+                        90.*Units.deg, 90.*Units.deg, 120.*Units.deg)
+        res_max = 0.5
+        res_min = 10.
+        reflections = ReflectionSet(cell, space_groups['P 31'],
+                                    res_max, res_min)
+        nr = sum([r.n_symmetry_equivalents for r in reflections]) + \
+             len(reflections.systematic_absences)
+        self.assertEqual(len(reflections), nr)
+        for r in reflections:
+            self.assert_(res_max <= r.resolution() <= res_min)
+            sg = reflections.space_group
+            for rot, tn, td in sg.transposed_transformations:
+                h, k, l = N.dot(rot, N.array([r.h, r.k, r.l]))
+                p = N.exp(-2j*N.pi*N.dot(N.array([r.h, r.k, r.l]), (tn*1.)/td))
+                self.assert_(N.absolute(p-reflections[(h, k, l)].phase_factor)
+                             < 1.e-14)
+        for r in reflections.systematic_absences:
+            self.assertEqual(r.h, 0)
+            self.assertEqual(r.k, 0)
+            self.assertNotEqual(r.l % 3, 0)
 
     def test_P43212(self):
         cell = UnitCell(Vector(1., 0., 0.),

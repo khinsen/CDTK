@@ -15,6 +15,7 @@ class Reflection(object):
         self.l = l
         self.reflection_set = reflection_set
         self.index = index
+        self.phase_factor = 1.
         self.sf_conjugate = False
         self.n_symmetry_equivalents = None
 
@@ -78,12 +79,16 @@ class Reflection(object):
 
     def symmetryEquivalents(self):
         rs = self.reflection_set
+        sg = rs.space_group
         ri = self.index
-        equivalents = rs.space_group.symmetryEquivalentMillerIndices(self.array)
-        unique_reflections = \
-              set([Reflection(h, k, l, rs, ri) for h, k, l in equivalents])
-        for h, k, l in equivalents:
+        unique_reflections = set()
+        equivalents, phases = sg.symmetryEquivalentMillerIndices(self.array)
+        for (h, k, l), p in zip(equivalents, phases):
+            r = Reflection(h, k, l, rs, ri)
+            r.phase_factor = p
+            unique_reflections.add(r)
             r = Reflection(-h, -k, -l, rs, ri)
+            r.phase_factor = p
             r.sf_conjugate = True
             unique_reflections.add(r)
         n = len(unique_reflections)
@@ -92,13 +97,13 @@ class Reflection(object):
         return unique_reflections
 
     def symmetryFactor(self):
-        rs = self.reflection_set
-        equivalents = rs.space_group.symmetryEquivalentMillerIndices(self.array)
+        sg = self.reflection_set.space_group
+        equivalents = sg.symmetryEquivalentMillerIndices(self.array)[0]
         return N.sum(N.alltrue(N.array(equivalents) == self.array, axis=1))
 
     def isCentric(self):
-        rs = self.reflection_set
-        equivalents = rs.space_group.symmetryEquivalentMillerIndices(self.array)
+        sg = self.reflection_set.space_group
+        equivalents = sg.symmetryEquivalentMillerIndices(self.array)[0]
         return N.sum(N.alltrue(N.array(equivalents) == -self.array, axis=1)) > 0
         
 #
@@ -135,9 +140,12 @@ class ReflectionSet(object):
         for r in equivalents:
             self.reflection_map[(r.h, r.k, r.l)] = r
         hkl = equivalents[-1]
+        for r in equivalents:
+            r.phase_factor /= hkl.phase_factor
         if hkl.sf_conjugate:
             for r in equivalents:
                 r.sf_conjugate = not r.sf_conjugate
+                r.phase_factor = N.conjugate(r.phase_factor)
         if hkl.isSystematicAbsence():
             for r in equivalents:
                 r.index = None
@@ -691,9 +699,19 @@ class StructureFactor(ReflectionData, AmplitudeData):
         if index is None: # systematic absence
             return self.absent_value
         if reflection.sf_conjugate:
-            return N.conjugate(self.array[index])
+            return N.conjugate(self.array[index]*reflection.phase_factor)
         else:
-            return self.array[index]
+            return self.array[index]*reflection.phase_factor
+
+    def __setitem__(self, reflection, value):
+        index = reflection.index
+        if index is None: # systematic absence
+            raise ValueError("Cannot set value: "
+                             "reflection is absent due to symmetry")
+        if reflection.sf_conjugate:
+            self.array[index] = N.conjugate(value)/reflection.phase_factor
+        else:
+            self.array[index] = value/reflection.phase_factor
 
     def setFromArrays(self, h, k, l, modulus, phase):
         n = len(h)
@@ -703,7 +721,11 @@ class StructureFactor(ReflectionData, AmplitudeData):
         assert len(phase) == n
         for i in range(n):
             r = self.reflection_set[(h[i], k[i], l[i])]
-            self.array[r.index] = modulus[i]*N.exp(1j*phase[i])
+            f = modulus[i]*N.exp(1j*phase[i])
+            if r.sf_conjugate:
+                self.array[r.index] = N.conjugate(f)/r.phase_factor
+            else:
+                self.array[r.index] = f/r.phase_factor
 
     def calculateFromUniverse(self, universe, adps=None, conf=None):
         from AtomicScatteringFactors import atomic_scattering_factors
@@ -770,7 +792,7 @@ class StructureFactor(ReflectionData, AmplitudeData):
         p = N.zeros((ntrans, self.number_of_reflections), N.Complex)
         r1, r2, r3 = cell.reciprocalBasisVectors()
         for r in self.reflection_set:
-            hkl_list = sg.symmetryEquivalentMillerIndices(r.array)
+            hkl_list = sg.symmetryEquivalentMillerIndices(r.array)[0]
             for i in range(ntrans):
                 h, k, l = hkl_list[i]
                 sv[i, r.index] = (h*r1+k*r2+l*r3).array

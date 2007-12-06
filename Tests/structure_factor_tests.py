@@ -14,7 +14,7 @@ from CDTK.Reflections import ReflectionSet, \
      ExperimentalAmplitudes, StructureFactor
 from CDTK import Units
 
-class StructureFactorTests(unittest.TestCase):
+class StructureFactorTests2ONX(unittest.TestCase):
 
     def setUp(self):
         cif_file = mmCIFFile()
@@ -157,9 +157,31 @@ class StructureFactorTests(unittest.TestCase):
                      < 1.5e-4)
         self.assert_(self.exp_amplitudes.rFactor(sf_scaled) < 0.185)
 
-        
+
+class StructureFactorAssignmentTests(unittest.TestCase):
+
+    def test_P31(self):
+        cell = UnitCell(3., 3., 4.,
+                        90.*Units.deg, 90.*Units.deg, 120.*Units.deg)
+        res_max = 0.5
+        res_min = 10.
+        reflections = ReflectionSet(cell, space_groups['P 31'],
+                                    res_max, res_min)
+        sf = StructureFactor(reflections)
+        value = 1.1-0.8j
+        for r in reflections:
+            for re in r.symmetryEquivalents():
+                sf[re] = value
+                self.assert_(N.absolute(sf[re]-value) < 1.e-14)
+                ri = reflections[(-re.h, -re.k, -re.l)]
+                self.assert_(N.absolute(sf[ri]-N.conjugate(value)) < 1.e-13)
+
 def suite():
-    return unittest.TestLoader().loadTestsFromTestCase(StructureFactorTests)
+    loader = unittest.TestLoader()
+    s = unittest.TestSuite()
+    s.addTest(loader.loadTestsFromTestCase(StructureFactorTests2ONX))
+    s.addTest(loader.loadTestsFromTestCase(StructureFactorAssignmentTests))
+    return s
 
 if __name__ == '__main__':
     unittest.main()
