@@ -5,7 +5,7 @@ from CDTK.SpaceGroups import space_groups
 from CDTK import Units
 from Scientific.Geometry import Vector
 from Scientific import N
-
+import cPickle
 
 class ReflectionSetTests(unittest.TestCase):
 
@@ -89,6 +89,36 @@ class ReflectionSetTests(unittest.TestCase):
             if r.l != 0:
                 self.assertNotEqual(r.l % 4, 0)
 
+    def test_pickle(self):
+        cell = UnitCell(Vector(1., 0., 0.),
+                        Vector(0., 1., 0.),
+                        Vector(0., 0., 1.5))
+        res_max = 0.5
+        res_min = 10.
+        reflections = ReflectionSet(cell, space_groups['P 43 21 2'],
+                                    res_max, res_min)
+        string = cPickle.dumps(reflections)
+        unpickled = cPickle.loads(string)
+        self.assertEqual(len(reflections), len(unpickled))
+        self.assertEqual(len(reflections.minimal_reflection_list),
+                         len(unpickled.minimal_reflection_list))
+        self.assertEqual(len(reflections.systematic_absences),
+                         len(unpickled.systematic_absences))
+        for r in reflections:
+            for re in r.symmetryEquivalents():
+                rp = unpickled[(re.h, re.k, re.l)]
+                self.assertEqual(re.h, rp.h)
+                self.assertEqual(re.k, rp.k)
+                self.assertEqual(re.l, rp.l)
+                self.assertEqual(re.index, rp.index)
+                self.assertEqual(re.sf_conjugate, rp.sf_conjugate)
+                self.assertEqual(re.phase_factor, rp.phase_factor)
+                self.assertEqual(re.n_symmetry_equivalents,
+                                 rp.n_symmetry_equivalents)
+
+        for r in reflections.systematic_absences:
+            self.assert_(unpickled[(r.h, r.k, r.l)]
+                         in unpickled.systematic_absences)
 
 def suite():
     return unittest.TestLoader().loadTestsFromTestCase(ReflectionSetTests)

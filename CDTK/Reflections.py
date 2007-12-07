@@ -215,6 +215,44 @@ class ReflectionSet(object):
             self.addReflection(h, k, l)
             return self.reflection_map[hkl]
 
+    # When pickling, store only a minimal information set in order to
+    # reduce pickle file size and CPU time. The lost information is
+    # restored after unpickling.
+
+    def __getstate__(self):
+        reflections = [(r.h, r.k, r.l, r.index)
+                       for r in self.minimal_reflection_list]
+        absences = [(r.h, r.k, r.l)
+                    for r in self.systematic_absences]
+        return (tuple(self.cell.basis),
+                self.space_group.number,
+                self.s_min, self.s_max,
+                N.array(reflections), N.array(absences))
+
+    def __setstate__(self, state):
+        from CDTK.SpaceGroups import space_groups
+        from CDTK.Crystal import UnitCell
+        cell_basis, space_group_number, \
+                    self.s_min, self.s_max, \
+                    reflections, absences = state
+        self.cell = UnitCell(*cell_basis)
+        self.space_group = space_groups[space_group_number]
+        self.minimal_reflection_list = []
+        self.reflection_map = {}
+        self.systematic_absences = set()
+        for h, k, l, index in reflections:
+            r = Reflection(h, k, l, self, index)
+            for re in r.symmetryEquivalents():
+                hkl = (re.h, re.k, re.l)
+                if hkl == (h, k, l):
+                    r = re
+                self.reflection_map[hkl] = re
+            self.minimal_reflection_list.append(r)
+        for h, k, l in absences:
+            r = Reflection(h, k, l, self, None)
+            self.systematic_absences.add(r)
+            self.reflection_map[(h, k, l)] = r
+
 #
 # ReflectionData and its subclasses describe data defined per reflection,
 # such as structure factors or intensities.
