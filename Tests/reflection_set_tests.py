@@ -90,12 +90,11 @@ class ReflectionSetTests(unittest.TestCase):
                 self.assertNotEqual(r.l % 4, 0)
 
     def test_pickle(self):
-        cell = UnitCell(Vector(1., 0., 0.),
-                        Vector(0., 1., 0.),
-                        Vector(0., 0., 1.5))
+        cell = UnitCell(3., 3., 4.,
+                        90.*Units.deg, 90.*Units.deg, 120.*Units.deg)
         res_max = 0.5
         res_min = 10.
-        reflections = ReflectionSet(cell, space_groups['P 43 21 2'],
+        reflections = ReflectionSet(cell, space_groups['P 31'],
                                     res_max, res_min)
         string = cPickle.dumps(reflections)
         unpickled = cPickle.loads(string)
