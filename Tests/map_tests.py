@@ -7,7 +7,8 @@ from Scientific.IO.PDB import Structure
 from Scientific import N
 
 from CDTK.SpaceGroups import space_groups
-from CDTK.Crystal import UnitCell, ElectronDensityMap
+from CDTK.Crystal import UnitCell
+from CDTK.Maps import ElectronDensityMap
 from CDTK.Reflections import ReflectionSet, StructureFactor
 from CDTK import Units
 

@@ -10,7 +10,8 @@ from MMTK.PDB import PDBConfiguration
 from MMTK.PDBMoleculeFactory import PDBMoleculeFactory
 
 from CDTK.SpaceGroups import space_groups
-from CDTK.Crystal import UnitCell, ElectronDensityMap
+from CDTK.Crystal import UnitCell
+from CDTK.Maps import ElectronDensityMap
 from CDTK.Reflections import ReflectionSet, StructureFactor
 
 from Scientific.IO.TextFile import TextFile
