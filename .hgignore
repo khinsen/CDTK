@@ -5,6 +5,7 @@ syntax: glob
 **.pyo
 build
 dist
+epydoc
 Test
 Tests/2ONX.pdb.gz
 Tests/2onx-sf.cif.gz
