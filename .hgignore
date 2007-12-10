@@ -14,6 +14,7 @@ Src/CDTK_sfcalc.c
 Doc/*.log
 Doc/*.aux
 Doc/*.pdf
+Doc/reference
 MANIFEST
 HG_CHANGESET_ID
 1
