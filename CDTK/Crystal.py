@@ -77,7 +77,7 @@ class UnitCell(object):
         @param vector: a vector in real Cartesian space
         @type vector: C{Scientific.Geometry.Vector}
         @return: the vector in fractional coordinates
-        @rtype: C{Scientific.N.array}
+        @rtype: C{Scientific.N.array_type}
         """
         r1, r2, r3 = self.reciprocal_basis
         return N.array([r1*vector, r2*vector, r3*vector])
@@ -92,7 +92,7 @@ class UnitCell(object):
     def fractionalToCartesian(self, array):
         """
         @param array: a vector in fractional coordinates
-        @type array: C{Scientific.N.array}
+        @type array: C{Scientific.N.array_type}
         @return: the vector in real Cartesian space
         @rtype: C{Scientific.Geometry.Vector}
         """
