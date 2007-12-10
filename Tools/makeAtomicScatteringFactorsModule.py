@@ -3,7 +3,7 @@ from CDTK import Units
 lines = file('/Users/hinsen/Temp/ccp4-6.0.2/lib/data/atomsf.lib').readlines()
 lines = lines[31:]
 
-print """
+print '''
 # Atomic scattering factors in Five-Gaussian approximation.
 # The formula for the atomic scattering factor is
 #   f(s) = N.sum(a*N.exp(-b*s^2))
@@ -11,10 +11,23 @@ print """
 # and s is the length of the scattering vector (in 1/nm).
 #
 
+"""
+Atomic scattering factors for all elements in the Five-Gaussian approximation.
+
+The dictionary atomic_scattering_factors maps lower-case chemical element
+symbols or (element, ionic_charge) tuples to tuples (a, b) containing
+the parameters of the five-Gaussian approximation. a and b are arrays
+of five elements each. The scattering factor for the atom is given by
+
+f(s) = N.sum( a * exp(-b * s**2) )
+
+where s is the length of the scattering vector.
+"""
+
 from Scientific import N
 
 atomic_scattering_factors = {
-"""
+'''
 
 while lines:
 
@@ -57,4 +70,8 @@ print """
 for (element, charge), value in atomic_scattering_factors.items():
     if charge == 0:
        atomic_scattering_factors[element] = value
+
+del element
+del charge
+del value
 """
