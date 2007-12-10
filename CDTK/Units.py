@@ -5,7 +5,7 @@
 #
 
 """This module defines constants and prefactors that convert between
-MMTK's internal unit system and other units. There are also some
+CDTK's internal unit system and other units. There are also some
 common physical constants.
 
 SI Prefixes: ato, femto, pico, nano, micro, milli, centi, deci, deca,
@@ -48,6 +48,7 @@ eps0 = (permittivity of vacuum),
 me = (electron mass)
 """
 
+# Change the name because N stands for Newton in this module
 from Scientific import N as Numeric
 
 # Prefixes
