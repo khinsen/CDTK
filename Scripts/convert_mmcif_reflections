@@ -1,5 +1,11 @@
 #!python
-# *--python-mode--*
+#
+# This file is part of the Crystallographic Data Toolkit and
+# distributed under the CeCILL-C licence. See the file LICENCE
+# for the full text of this licence.
+#
+# Written by Konrad Hinsen.
+#
 
 from Scientific.IO.TextFile import TextFile
 from mmLib.mmCIF import mmCIFFile
@@ -147,3 +153,5 @@ pickle_file = file(file_args[1], 'wb')
 cPickle.dump((reflections, exp_amplitudes, model_sf),
              pickle_file)
 pickle_file.close()
+
+# *--python-mode--*

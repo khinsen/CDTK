@@ -1,3 +1,12 @@
+# Pyrex include file for access to Numeric/NumPy arrays
+#
+# This file is part of the Crystallographic Data Toolkit and
+# distributed under the CeCILL-C licence.See the file LICENCE
+# for the full text of this licence.
+#
+# Written by Konrad Hinsen.
+#
+
 cdef extern from "Scientific/arrayobject.h": 
 
     void import_array()

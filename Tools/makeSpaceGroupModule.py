@@ -1,10 +1,13 @@
-# This script generates the module SpaceGroups.
+# This script generates the module CDTK.SpaceGroups.
 #
 # The space group information is taken from cctbx, which must be
 # available to run this script.
 #
-# Written by Konrad Hinsen
-# last revision: 2007-9-21
+# This file is part of the Crystallographic Data Toolkit and
+# distributed under the CeCILL-C licence. See the file LICENCE
+# for the full text of this licence.
+#
+# Written by Konrad Hinsen.
 #
 
 from cctbx.sgtbx import space_group_info
@@ -46,6 +49,10 @@ def space_group_table_entry(number, symbol, sgi):
 print '''
 # This module has been generated automatically from space group information
 # obtained from the Computational Crystallography Toolbox
+#
+# This file is part of the Crystallographic Data Toolkit and
+# distributed under the CeCILL-C licence. See the file LICENCE
+# for the full text of this licence.
 #
 
 """

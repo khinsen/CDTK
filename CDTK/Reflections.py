@@ -1,5 +1,11 @@
 # Reflections and data defined on reflections
 #
+# This file is part of the Crystallographic Data Toolkit and
+# distributed under the CeCILL-C licence. See the file LICENCE
+# for the full text of this licence.
+#
+# Written by Konrad Hinsen.
+#
 
 """
 Reflections and reflection data

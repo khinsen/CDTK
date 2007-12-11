@@ -4,6 +4,11 @@ modules for working with crystallographic data on biomolecules.
 For more information, see the tutorial (Doc/tutorial.pdf) and the
 reference manual (Doc/reference/index.html).
 
+CDTK is distributed under the CeCILL-C licence. See the file
+LICENCE (in English) or LICENSE (in French) for the details of this
+licence.
+
+
 Konrad Hinsen
 Centre de Biophysique MolÅÈculaire (CNRS)
 and Synchrotron Soleil
@@ -14,12 +19,22 @@ E-Mail: hinsen@cnrs-orleans.fr
 Installation:
 -------------
 
-Required: 
-- Python 2.5 or higher 
-- Numerical Python or its successor NumPy
-- ScientificPython 2.7 or higher
-- pymmLib (http://pymmlib.sourceforge.net/) if reading mmCIF files
-  is required
+Prerequisites: 
+
+- Python 2.5 or higher: 
+      http://www.python.org/
+
+- Numerical Python or its successor NumPy:
+      http://numpy.scipy.org/
+
+- ScientificPython 2.7 or higher:
+      http://dirac.cnrs-orleans.fr/ScientificPython/
+
+- FFTW3:
+      http://www.fftw.org/
+
+- pymmLib (if reading mmCIF files is required):
+      http://pymmlib.sourceforge.net/
 
 CDTK will use Numeric or NumPy depending on how ScientificPython has been
 configured.

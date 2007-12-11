@@ -1,7 +1,10 @@
 # Define unit conversion factors and physical constants
 #
-# Written by Konrad Hinsen
-# last revision: 2007-9-11
+# This file is part of the Crystallographic Data Toolkit and
+# distributed under the CeCILL-C licence. See the file LICENCE
+# for the full text of this licence.
+#
+# Written by Konrad Hinsen.
 #
 
 """This module defines constants and prefactors that convert between

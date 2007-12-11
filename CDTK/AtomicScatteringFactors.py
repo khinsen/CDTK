@@ -4,6 +4,10 @@
 # where (a, b) are the two arrays stored in atomic_scattering_factors
 # and s is the length of the scattering vector (in 1/nm).
 #
+# This file is part of the Crystallographic Data Toolkit and
+# distributed under the CeCILL-C licence. See the file LICENCE
+# for the full text of this licence.
+#
 
 """
 Atomic scattering factors for all elements in the Five-Gaussian approximation.

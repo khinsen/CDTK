@@ -1,5 +1,12 @@
-# Test cased for methods that require MMTK.
+# Test cases for methods that require MMTK.
 # This test script will fail if MMTK is not installed.
+#
+# This file is part of the Crystallographic Data Toolkit and
+# distributed under the CeCILL-C licence. See the file LICENCE
+# for the full text of this licence.
+#
+# Written by Konrad Hinsen.
+#
 
 import unittest
 

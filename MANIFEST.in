@@ -1,4 +1,4 @@
-include README
+include README LICENCE LICENSE
 include Src/*.pyx Src/*.c
 include Tests/*.py Tests/*.gz Tests/run_all_tests
 include Scripts/*

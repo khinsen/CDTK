@@ -79,7 +79,7 @@ can also be used independently.
        author = "Konrad Hinsen",
        author_email = "hinsen@cnrs-orleans.fr",
        url = "http://dirac.cnrs-orleans.fr/CDTK/",
-       license = "CeCILL",
+       license = "CeCILL-C",
 
        packages = ['CDTK'],
  

@@ -1,6 +1,10 @@
 # This module has been generated automatically from space group information
 # obtained from the Computational Crystallography Toolbox
 #
+# This file is part of the Crystallographic Data Toolkit and
+# distributed under the CeCILL-C licence. See the file LICENCE
+# for the full text of this licence.
+#
 
 """
 Space groups in crystallography

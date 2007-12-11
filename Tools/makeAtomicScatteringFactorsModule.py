@@ -1,3 +1,13 @@
+# Generate the module CDTK.AtomicScatteringFactors
+# The parameters are taken from the CCP4 distribution.
+#
+# This file is part of the Crystallographic Data Toolkit and
+# distributed under the CeCILL-C licence. See the file LICENCE
+# for the full text of this licence.
+#
+# Written by Konrad Hinsen.
+#
+
 from CDTK import Units
 
 lines = file('/Users/hinsen/Temp/ccp4-6.0.2/lib/data/atomsf.lib').readlines()
@@ -9,6 +19,10 @@ print '''
 #   f(s) = N.sum(a*N.exp(-b*s^2))
 # where (a, b) are the two arrays stored in atomic_scattering_factors
 # and s is the length of the scattering vector (in 1/nm).
+#
+# This file is part of the Crystallographic Data Toolkit and
+# distributed under the CeCILL-C licence. See the file LICENCE
+# for the full text of this licence.
 #
 
 """
