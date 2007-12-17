@@ -81,13 +81,11 @@ def map_to_sf(array_type map_array, sf, double factor):
             if k > 0: k = ny-k
             l = -l
             imag_sign = -imag_sign
-        if h >= nx or k >= ny or l >= nz/2+1:
-            raise ValueError("Insufficient map resolution "
-                             "for Miller indices %d, %d, %d" % (r.h, r.k, r.l))
-        real_part = out_data[(h*ny+k)*(nz/2+1)+l][0]
-        imag_part = out_data[(h*ny+k)*(nz/2+1)+l][1]
-        sf.array[r.index] = sf.array[r.index] + \
-                     complex(factor*real_part, factor*imag_sign*imag_part)
+        if h < nx and k < ny and l < nz/2+1:
+            real_part = out_data[(h*ny+k)*(nz/2+1)+l][0]
+            imag_part = out_data[(h*ny+k)*(nz/2+1)+l][1]
+            sf.array[r.index] = sf.array[r.index] + \
+                         complex(factor*real_part, factor*imag_sign*imag_part)
 
 #
 # Convert structure factors or intensities to density/Patterson map
