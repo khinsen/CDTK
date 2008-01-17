@@ -10,13 +10,12 @@
 import unittest
 import operator
 
-from mmLib.mmCIF import mmCIFFile
-
 from Scientific.IO.TextFile import TextFile
 from Scientific.IO.PDB import Structure
 from Scientific.Geometry import Tensor
 from Scientific import N
 
+from CDTK.mmCIF import mmCIFFile
 from CDTK.SpaceGroups import space_groups
 from CDTK.Crystal import UnitCell
 from CDTK.Reflections import ReflectionSet, \

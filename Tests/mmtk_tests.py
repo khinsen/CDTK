@@ -10,12 +10,11 @@
 
 import unittest
 
-from mmLib.mmCIF import mmCIFFile
-
 from MMTK import *
 from MMTK.PDB import PDBConfiguration
 from MMTK.PDBMoleculeFactory import PDBMoleculeFactory
 
+from CDTK.mmCIF import mmCIFFile
 from CDTK.SpaceGroups import space_groups
 from CDTK.Crystal import UnitCell
 from CDTK.Maps import ElectronDensityMap

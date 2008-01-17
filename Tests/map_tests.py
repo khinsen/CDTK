@@ -9,12 +9,11 @@
 
 import unittest
 
-from mmLib.mmCIF import mmCIFFile
-
 from Scientific.IO.TextFile import TextFile
 from Scientific.IO.PDB import Structure
 from Scientific import N
 
+from CDTK.mmCIF import mmCIFFile
 from CDTK.SpaceGroups import space_groups
 from CDTK.Crystal import UnitCell
 from CDTK.Maps import ElectronDensityMap

@@ -5,6 +5,10 @@
 # Written by Konrad Hinsen.
 #
 
+"""
+@undocumented: mmCIF
+"""
+
 #
 # Package information
 #
