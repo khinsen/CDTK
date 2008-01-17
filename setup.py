@@ -4,6 +4,7 @@
 
 build_from = 'pyrex'
 fftw_prefix = None
+ccp4_prefix = None
 
 assert build_from in ['c', 'pyrex']
 
@@ -57,6 +58,13 @@ else:
     fftw_include = os.path.join(fftw_prefix, 'include')
     fftw_lib = os.path.join(fftw_prefix, 'lib')
 
+if ccp4_prefix is None:
+    try:
+        ccp4_prefix = os.environ['CCP4']
+    except KeyError:
+        sys.stderr.write('CCP4 library not found, '
+                         'the MTZ module will not be built.\n')
+
 map_module_source = {
     'c': 'Src/CDTK_sf_fft.c',
     'pyrex': 'Src/CDTK_sf_fft.pyx'
@@ -65,6 +73,32 @@ sfcalc_module_source = {
     'c': 'Src/CDTK_sfcalc.c',
     'pyrex': 'Src/CDTK_sfcalc.pyx'
     }
+mtz_module_source = {
+    'c': 'Src/CDTK_MTZ.c',
+    'pyrex': 'Src/CDTK_MTZ.pyx'
+    }
+
+extension_modules = [Extension('CDTK_sf_fft',
+                                [map_module_source[build_from]],
+                                include_dirs = include_dirs+[fftw_include],
+                                library_dirs = [fftw_lib],
+                                libraries = ['fftw3', 'm'],
+                                extra_compile_args = compile_args),
+                      Extension('CDTK_sfcalc',
+                                [sfcalc_module_source[build_from]],
+                                include_dirs = include_dirs,
+                                libraries = ['m'],
+                                extra_compile_args = compile_args)]
+if ccp4_prefix is not None:
+    extension_modules.append(
+        Extension('CDTK_MTZ',
+                  [mtz_module_source[build_from]],
+                  include_dirs = include_dirs+[os.path.join(ccp4_prefix,
+                                                            'include', 'ccp4')],
+                  library_dirs = [os.path.join(ccp4_prefix, 'lib')],
+                  libraries = ['ccp4c'],
+                  extra_compile_args = compile_args)
+        )
 
 setup (name = "CDTK",
        version = pkginfo.__version__,
@@ -84,19 +118,10 @@ can also be used independently.
        packages = ['CDTK'],
  
        ext_package = 'CDTK.'+sys.platform,
-       ext_modules = [Extension('CDTK_sf_fft',
-                                [map_module_source[build_from]],
-                                include_dirs = include_dirs+[fftw_include],
-                                library_dirs = [fftw_lib],
-                                libraries = ['fftw3', 'm'],
-                                extra_compile_args = compile_args),
-                      Extension('CDTK_sfcalc',
-                                [sfcalc_module_source[build_from]],
-                                include_dirs = include_dirs,
-                                libraries = ['m'],
-                                extra_compile_args = compile_args)],
+       ext_modules = extension_modules,
 
-       scripts = ['Scripts/convert_mmcif_reflections'],
+       scripts = ['Scripts/convert_mmcif_reflections',
+                  'Scripts/convert_mtz_reflections'],
  
        cmdclass = {'build_ext': build_ext}
        )

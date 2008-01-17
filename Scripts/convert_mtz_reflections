@@ -1,0 +1,105 @@
+#!python
+#
+# This file is part of the Crystallographic Data Toolkit and
+# distributed under the CeCILL-C licence. See the file LICENCE
+# for the full text of this licence.
+#
+# Written by Konrad Hinsen.
+#
+
+from CDTK.MTZ import MTZFile
+from CDTK.Reflections import ReflectionSet, \
+                             ExperimentalAmplitudes, StructureFactor
+from CDTK.SpaceGroups import space_groups
+from CDTK.Crystal import UnitCell
+from CDTK import Units
+from Scientific.Geometry import Vector
+from Scientific import N
+import cPickle
+import os
+import sys
+
+usage = """Usage: convert_mtz_reflections mtz_sf_file pickle_file
+
+mtz_sf_file must be an MTZ file containing structure factors.
+pickle_file is the name of the output file, which will be a cPickle
+dump of a tuple of three objects: a ReflectionSet object, an
+ExperimentalAmplitudes object containing the experimental scattering
+amplitudes (read from columns FP/SIGFP or F/SIGF), and a
+StructureFactor object containing the structure factor
+calculated from the fitted model (read from columns FC and PHIC).
+"""
+
+if len(sys.argv) != 3:
+    sys.stderr.write(usage)
+    raise SystemExit
+    
+
+sf_file = MTZFile(sys.argv[1])
+
+datasets = sum([c.datasets for c in sf_file.crystals], [])
+columns = datasets[0].columns
+for d in datasets[1:]:
+    columns.update(d.columns)
+
+a, b, c, alpha, beta, gamma = sf_file.crystals[0].cell
+cell = UnitCell(a*Units.Ang, b*Units.Ang, c*Units.Ang,
+                alpha*Units.deg, beta*Units.deg, gamma*Units.deg)
+r1, r2, r3 = cell.reciprocal_basis
+
+h = columns['H'].values
+k = columns['K'].values
+l = columns['L'].values
+try:
+    f = columns['FP'].values
+    sigf = columns['SIGFP'].values
+    missing_f = columns['FP'].missing_number_flag
+except KeyError:
+    f = columns['F'].values
+    sigf = columns['SIGF'].values
+    missing_f = columns['F'].missing_number_flag
+fc = columns['FC'].values
+phic = columns['PHIC'].values
+
+s = h[:, N.NewAxis]*r1.array[N.NewAxis, :] + \
+    k[:, N.NewAxis]*r2.array[N.NewAxis, :] + \
+    l[:, N.NewAxis]*r3.array[N.NewAxis, :]
+
+s_len = N.sqrt(N.sum(s*s, axis=-1))
+
+select = s_len <= 1./(17.*Units.Ang)
+select = 1
+h = N.repeat(h, select)
+k = N.repeat(k, select)
+l = N.repeat(l, select)
+s = N.repeat(s, select)
+s_len = N.repeat(s_len, select)
+f = N.repeat(f, select)
+missing_f = N.repeat(missing_f, select)
+sigf = N.repeat(sigf, select)
+fc = N.repeat(fc, select)
+phic = N.repeat(phic, select)
+
+min_resolution = 1./N.minimum.reduce(s_len)
+max_resolution = 1./N.maximum.reduce(s_len)
+
+print "Resolution range (1/Ang): %f - %f" % (max_resolution/Units.Ang,
+                                             min_resolution/Units.Ang)
+
+
+reflections = ReflectionSet(cell,
+                            space_groups[sf_file.symmetry.space_group_number],
+                            max_resolution, min_resolution)
+
+exp_amplitudes = ExperimentalAmplitudes(reflections)
+exp_amplitudes.setFromArrays(h, k, l, f, sigf, missing=missing_f)
+
+model_sf = StructureFactor(reflections)
+model_sf.setFromArrays(h, k, l, fc, phic*Units.deg)
+
+pickle_file = file(sys.argv[2], 'wb')
+cPickle.dump((reflections, exp_amplitudes, model_sf),
+             pickle_file)
+pickle_file.close()
+
+# *--python-mode--*
