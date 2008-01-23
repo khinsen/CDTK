@@ -11,8 +11,9 @@ from Scientific.IO.TextFile import TextFile
 from CDTK.mmCIF import mmCIFFile
 from CDTK.SpaceGroups import space_groups
 from CDTK.Crystal import UnitCell
-from CDTK.Reflections import ReflectionSet, \
-     ExperimentalAmplitudes, ExperimentalIntensities, StructureFactor
+from CDTK.Reflections import ReflectionSet
+from CDTK.ReflectionData import ExperimentalAmplitudes, \
+                                ExperimentalIntensities, StructureFactor
 from CDTK import Units
 from Scientific import N
 import cPickle

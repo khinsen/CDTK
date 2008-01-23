@@ -8,8 +8,8 @@
 #
 
 from CDTK.MTZ import MTZFile
-from CDTK.Reflections import ReflectionSet, \
-                             ExperimentalAmplitudes, StructureFactor
+from CDTK.Reflections import ReflectionSet
+from CDTK.ReflectionData import ExperimentalAmplitudes, StructureFactor
 from CDTK.SpaceGroups import space_groups
 from CDTK.Crystal import UnitCell
 from CDTK import Units

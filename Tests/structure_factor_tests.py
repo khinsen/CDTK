@@ -18,8 +18,8 @@ from Scientific import N
 from CDTK.mmCIF import mmCIFFile
 from CDTK.SpaceGroups import space_groups
 from CDTK.Crystal import UnitCell
-from CDTK.Reflections import ReflectionSet, \
-     ExperimentalAmplitudes, StructureFactor
+from CDTK.Reflections import ReflectionSet
+from CDTK.ReflectionData import ExperimentalAmplitudes, StructureFactor
 from CDTK import Units
 
 class StructureFactorTests2ONX(unittest.TestCase):

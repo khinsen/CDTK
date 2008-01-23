@@ -11,7 +11,7 @@
 include "numeric.pxi"
 
 from Scientific import N
-from CDTK.Reflections import StructureFactor
+from CDTK.ReflectionData import StructureFactor
 
 cdef extern from "fftw3.h":
 

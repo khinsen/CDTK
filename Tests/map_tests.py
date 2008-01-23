@@ -17,7 +17,8 @@ from CDTK.mmCIF import mmCIFFile
 from CDTK.SpaceGroups import space_groups
 from CDTK.Crystal import UnitCell
 from CDTK.Maps import ElectronDensityMap
-from CDTK.Reflections import ReflectionSet, StructureFactor
+from CDTK.Reflections import ReflectionSet
+from CDTK.ReflectionData import StructureFactor
 from CDTK import Units
 
 class ElectronDensityMapTests(unittest.TestCase):

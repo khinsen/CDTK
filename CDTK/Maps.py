@@ -174,7 +174,7 @@ class ElectronDensityMap(Map):
         @type sf: L{CDTK.Reflections.StructureFactor}
         """
         from CDTK_sf_fft import reflections_to_map
-        from CDTK.Reflections import StructureFactor
+        from CDTK.ReflectionData import StructureFactor
         if not isinstance(sf, StructureFactor):
             raise TypeError("%s is not a StructureFactor instance" % str(sf))
         m_cf = self.cell.cartesianToFractionalMatrix()
@@ -206,7 +206,7 @@ class PattersonMap(Map):
         @type intensities: L{CDTK.Reflections.IntensityData}
         """
         from CDTK_sf_fft import reflections_to_map
-        from CDTK.Reflections import IntensityData
+        from CDTK.ReflectionData import IntensityData
         if not isinstance(intensities, IntensityData):
             raise TypeError("%s is not an IntensityData instance"
                             % str(intensities))
