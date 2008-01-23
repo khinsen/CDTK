@@ -3,6 +3,7 @@ syntax: glob
 *~
 **.pyc
 **.pyo
+**.pdfsync
 build
 dist
 epydoc
