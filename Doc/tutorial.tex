@@ -4,6 +4,7 @@
 
 \documentclass[12pt]{article}
 \usepackage{a4}
+\usepackage{pdfsync}
 
 \newcommand{\vect}[1]{{\bf #1}}
 \newcommand{\mat}[1]{{\bf #1}}
@@ -177,7 +178,6 @@ symmetry operations is called an \textit{asymmetric unit}. This subset
 is of course not unique. The atom records in a PDB file describe an
 asymmetric unit.
 
-
 \section{Structure factors}
 
 The central quantity in the description of X-ray scattering from
@@ -237,12 +237,12 @@ I(\vs_{hkl}) = \left| F(\vs_{hkl}) \right|^2,
 which is called the \textit{intensity} of the reflection $\vs_{hkl}$.
 
 The quantity $d_{hkl}=1/|\vs_{hkl}|$ is called the \textit{resolution}
-of a reflection. When a crystal structure is described as ``at $2 \AA$
+of a reflection. When a crystal structure is described as ``at 2~\AA\ 
 resolution'', this means that there were observable reflections up to
-$|\vs|=0.5 \AA^{-1}$.
+$|\vs|=0.5 \mbox{ \AA}^{-1}$.
 \begin{quote}
 \textbf{Watch out: ``high resolution'' means large $|\vs|$ and thus small $d$;
-a resolution of $1 \AA$ is higher than a resolution of $2 \AA$!}
+a resolution of 1~\AA\ is higher than a resolution of 2~\AA!}
 \end{quote}
 
 In practice there is also a lower limit to the resolution of the
@@ -465,8 +465,160 @@ linear least-squares problem. With the default of \verb/iterations=0/,
 this is the return value. Otherwise, the indicated number of iterations
 are performed to solve the non-linear least-squares problem.
 
-%\begin{equation}
-%\end{equation}
+
+\section{Structure refinement}
+
+The iterative procedure (partly automatic, partly manual) of
+constructing a model of the type given by Eq.~(\ref{eq:model_sf}) and
+fitting it to the experimental data is known as \textit{structure
+refinement}. The main difficulty in this procedure is the lack of
+experimental information about the phase of the structure factor. If
+the phase were known, a simple Fourier transform of the measured
+structure factor would yield an electronic density map from which an
+initial model could easily be constructed. This problem and various
+approaches to a solution are discussed in the crystallographic
+literature. In the following, we describe only the final stages of
+structure refinement (a reasonably good model is supposed to be known
+already), for which CDTK contains some functionality.
+
+\subsection{Bayesian inference}
+
+The most suitable theoretical framework for structure refinement is
+Bayesian inference. This approach is based on a specific
+interpretation of probability: probability measures the degree of
+belief in a hypothesis, on a scale from~0 to~1. In the case of
+structure refinement, a hypothesis consists of a specific combination
+of parameters in a model.
+
+Bayesian inference consists of a series of steps in which the
+probability distribution of the hypotheses is improved by considering
+more and more available information. The starting point is a
+\textit{prior probability} distribution $P_{\mbox{prior}}(X)$ that
+reflects basic knowledge (or assumptions) about the model, e.g. the
+size of the unit cell, the symmetry of the crystal, the sequence of
+the peptide chains, the structure of amino acids, etc. $X$ stands for
+all the parameters of the model. New evidence, in the form of experimental
+observations, is integrated through Bayes' theorem,
+\begin{equation}
+P_{\mbox{posterior}}(X|D) = \frac{P(D|X)}{\int dX\,P(D|X)} P_{\mbox{prior}}(X)
+\end{equation}
+which gives the \textit{posterior} probability in view of the data
+$D$, $P_{\mbox{posterior}}(X|D)$, as a function of the prior probability
+$P_{\mbox{prior}}(X)$ and the \textit{conditional probability} $P(D|X)$
+that the data $D$ are observed if the parameters are known to be $X$.
+This conditional probability is also called the \textit{likelihood}
+of $X$ given the data $D$, denoted by $L(X|D)$.
+
+In general, the posterior probability is the most accurate description
+of the available information about the paramters $X$. If it is a
+sufficiently narrow distribution around a single maximum $X_0$, the
+parameter set $X_0$ can be considered the ``best'' one. If furthermore
+$P_{\mbox{prior}}(X)$ takes the form of restraints that are either
+fulfilled or not, then the ``best'' solution is given by the maximum
+of the likelihood function subject to the restraints. This approach is
+known as the maximum-likelihood method.
+
+\subsection{Structure factor likelihoods}
+
+The two central inputs to the Bayesian method applied to
+crystallographic data are the prior probability (which can involve
+restraints on the structure, or be written as a Boltzmann distribution
+based on a force field) and the likelihood function. The latter
+describes the probability density of the observables for a given set
+of parameters. For the standard crystallographic model given by
+Eq.~(\ref{eq:model_sf}), the parameters are average positions and ADPs
+of the atoms, and the observables are the structure factor amplitudes
+for the Bragg reflections. The likelihood function must of course
+include the model given Eq.~(\ref{eq:model_sf}), but in addition it
+contains an error model that describes the distribution of deviations
+from the ideal relation (\ref{eq:model_sf}). These deviations can take
+the form of errors in the parameters or errors in the structure factor
+values.
+
+The most popular likelihood function used in crystallographic structure
+refinement is based on the following assumptions:
+\begin{itemize}
+\item The structure factor values $F(\vs_k)$ for different reflections
+  $\vs_k$ are independent. This assumption is certainly wrong, but
+  introduced because it greatly simplifies the mathematical treatment.
+\item The error model contains two forms of error: (1) errors in the
+  parameters that are independent for each atom and (2) incompleteness
+  of the model in that only a subset of the atoms are represented,
+  the parameters of the remaining ones being assumed unknown.
+\item The distributions of the errors fulfill the conditions of the
+  central limit theorem.
+\end{itemize}
+
+The last assumption allows to conclude that the probability
+distribution for each complex structure factor value $F(\vs_k)$ is a
+two-dimensional Gaussian in the absence of symmetry constraints on
+$F(\vs_k)$ (so-called \textit{acentric} reflections). For
+\textit{centric} reflections, defined as those $\vs_k$ for which at
+least one symmetry operation of the space group yields
+$\mat{D}^T\cdot\vs_k = -\vs_k$, the phase can take only two values
+(given by $\phi_1 = \pi \vs_k\cdot\vt$ and $\phi_2 = \phi_1+\pi$) and
+the distribution of $F(\vs_k)$ is a one-dimensional Gaussian.
+The probability distributions for the structure factor amplitudes
+are obtained by integrating over the phases (for acentric reflections)
+or by summing over the two possible phases (for centric reflections),
+yielding the \textit{Rice distribution},
+\begin{equation}
+P(A; A_0, \sigma) = \frac{A}{\sigma}
+                      \exp\left(-\frac{A^2+A_0^2}{2\sigma}\right)
+                      I_0\left(\frac{A A_0}{\sigma}\right)
+\end{equation}
+for acentric reflections and
+\begin{equation}
+P(A; A_0, \sigma) = \sqrt{\frac{2}{\pi\sigma}}
+                      \exp\left(-\frac{A^2+A_0^2}{2\sigma}\right)
+                      \cosh\left(\frac{A A_0}{\sigma}\right)
+\end{equation}
+for centric reflections, where $A$ is the measured structure factor
+amplitude. The parameters $A_0$ and $\sigma$ can be expressed as
+\begin{eqnarray}
+A_0 &=& \alpha A^{\mbox{model}}, \\
+\sigma &=& \left\{
+  \begin{array}{cl}
+    \frac{1}{2} \epsilon \beta & \mbox{(acentric)} \\
+    \epsilon \beta &\mbox{(centric)}
+  \end{array}
+\right. ,
+\end{eqnarray}
+where $A^{\mbox{model}}$ is the model structure factor amplitude and
+$\epsilon$ is equal to the number of symmetry relations that map the
+reflection vector $\vs_k$ onto itself. The new parameters $\alpha$ and
+$\beta$ are functions of $|\vs|$ that depend on the distributions of
+the errors in the atomic positions and ADPs as well as on the number
+of atoms that are missing in the model. The unknown scale factor
+between the measured amplitudes and the model amplitudes is also taken
+into account by $\alpha$. In practice, $\alpha$ and $\beta$ are
+unknown and must be determined from the data, together with the
+parameters of the model.
+
+The total likelihood function can thus be written as
+\begin{eqnarray}
+L(A^{\mbox{model}}, \alpha(|\vs|), \beta(|\vs|) | A) 
+ &=&   P(A | A^{\mbox{model}}, \alpha(|\vs|), \beta(|\vs|)) \nonumber \\
+ &=&  \prod_{k} P_k(A_k | A_k^{\mbox{model}}, \alpha(|\vs_k|), \beta(|\vs_k|))
+\end{eqnarray}
+with
+\begin{equation}
+P_k(A_k | A_k^{\mbox{model}}, \alpha_k, \beta_k) =
+  \frac{2 A_k}{\epsilon_k\beta_k}
+  \exp\left(-\frac{A_k^2+\left(\alpha_k A_k^{\mbox{model}}\right)^2}
+                  {\epsilon_k \beta_k}\right)
+  I_0\left(\frac{2 \alpha_k A_k A_k^{\mbox{model}}}{\epsilon_k \beta_k}\right)
+\end{equation}
+for acentric reflections and
+\begin{equation}
+P_k(A_k | A_k^{\mbox{model}}, \alpha_k, \beta_k) =
+  \sqrt{\frac{2}{\pi\epsilon_k\beta_k}}
+  \exp\left(-\frac{A_k^2+\left(\alpha_k A_k^{\mbox{model}}\right)^2}
+                  {2\epsilon_k \beta_k}\right)
+  \cosh\left(\frac{\alpha_k A_k A_k^{\mbox{model}}}{\epsilon_k \beta_k}\right)
+\end{equation}
+for centric reflections.
+
 
 \end{sloppy}
 \end{document}
