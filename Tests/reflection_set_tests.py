@@ -9,7 +9,7 @@
 
 import unittest
 from CDTK.Crystal import UnitCell
-from CDTK.Reflections import ReflectionSet
+from CDTK.Reflections import ReflectionSet, ResolutionShell
 from CDTK.SpaceGroups import space_groups
 from CDTK import Units
 from Scientific.Geometry import Vector
@@ -17,6 +17,23 @@ from Scientific import N
 import cPickle
 
 class ReflectionSetTests(unittest.TestCase):
+
+    def _shellTest(self, reflections, shells):
+        nr = 0
+        for rmin, rmax in shells:
+            subset = ResolutionShell(reflections, rmin, rmax)
+            nr += len(subset)
+        self.assertEqual(len(reflections.minimal_reflection_list), nr)
+
+    def _subsetTest(self, reflections):
+        subsets = reflections.randomlyAssignedSubsets([0.1, 0.5, 0.4])
+        for r in reflections:
+            r.in_subset = False
+        for s in subsets:
+            for r in s:
+                r.in_subset = True
+        for r in reflections:
+            self.assert_(r.in_subset)
 
     def test_P1(self):
         cell = UnitCell(Vector(1., 0., 0.),
@@ -35,6 +52,8 @@ class ReflectionSetTests(unittest.TestCase):
             self.assert_(res_max <= r.resolution() <= res_min)
             self.assert_(not r.isCentric())
             self.assert_(r.symmetryFactor() == 1)
+        self._shellTest(reflections, [(0.5, 1.), (1., 5.), (5., 11.)])
+        self._subsetTest(reflections)
 
     def test_P31(self):
         cell = UnitCell(3., 3., 4.,
@@ -58,6 +77,8 @@ class ReflectionSetTests(unittest.TestCase):
             self.assertEqual(r.h, 0)
             self.assertEqual(r.k, 0)
             self.assertNotEqual(r.l % 3, 0)
+        self._shellTest(reflections, [(0.5, 1.), (1., 5.), (5., 11.)])
+        self._subsetTest(reflections)
 
     def test_P43212(self):
         cell = UnitCell(Vector(1., 0., 0.),
@@ -97,6 +118,8 @@ class ReflectionSetTests(unittest.TestCase):
                 self.assertEqual(r.k % 2, 1)
             if r.l != 0:
                 self.assertNotEqual(r.l % 4, 0)
+        self._shellTest(reflections, [(0.1, 1.), (1., 5.), (5., 11.)])
+        self._subsetTest(reflections)
 
     def test_pickle(self):
         cell = UnitCell(3., 3., 4.,

@@ -429,3 +429,82 @@ class ReflectionSet(object):
             r = Reflection(h, k, l, self, None)
             self.systematic_absences.add(r)
             self.reflection_map[(h, k, l)] = r
+
+    def randomlyAssignedSubsets(self, fractions):
+        """
+        Partition the reflection set into several subsets of
+        given (approximate) sizes by a random choice algorithm.
+
+        @param fractions: a sequence of fractions (between 0. and 1.)
+                          that specify the size that each subset should have
+        @type fractions: sequence of C{int}
+        @return: subsets of approximately the requested sizes
+        @rtype: sequence of L{ReflectionSubset}
+        """
+        if N.sum(fractions) > 1.:
+            raise ValueError("Sum of fractions > 1")
+        import random
+        fractions = N.add.accumulate(fractions)
+        subsets = []
+        for i in range(len(fractions)):
+            subsets.append([])
+        for r in self:
+            index = N.sum(random.uniform(0., 1.) > fractions)
+            if index < len(subsets):
+                subsets[index].append(r)
+        return [ReflectionSubset(self, s) for s in subsets]
+
+#
+# A ReflectionSubset object is an iterator over a subset of a
+# ReflectionSet.
+#
+class ReflectionSubset(object):
+
+    """
+    Iterator over a subset of reflections
+    """
+
+    def __init__(self, reflection_set, reflection_list):
+        """
+        @param reflection_set: complete reflection set
+        @type reflection_set: L{ReflectionSet}
+        @param reflection_list: the reflections to be included in the subset
+        @type reflection_list: C{list}
+        """
+        self.reflection_set = reflection_set
+        self.reflection_list = reflection_list
+
+    def __len__(self):
+        return len(self.reflection_list)
+
+    def __iter__(self):
+        """
+        @return: a generator yielding the reflections of the subset
+        @rtype: generator
+        """
+        for r in self.reflection_list:
+            yield r
+
+#
+# A ResolutionShell object is an iterator over the reflections in
+# a given resolution shell.
+#
+class ResolutionShell(ReflectionSubset):
+
+    """
+    Iterator over reflections in a resolution shell
+    """
+
+    def __init__(self, reflection_set, min_resolution, max_resolution):
+        """
+        @param reflection_set: complete reflection set
+        @type reflection_set: L{ReflectionSet}
+        @param min_resolution: the lower limit of the resolution range
+        @type min_resolution: C{float}
+        @param max_resolution: the upper limit of the resolution range
+        @type max_resolution: C{float}
+        """
+        subset = [r for r in reflection_set
+                  if min_resolution <= r.resolution() < max_resolution]
+        ReflectionSubset.__init__(self, reflection_set, subset)
+
