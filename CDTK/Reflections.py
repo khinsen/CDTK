@@ -430,6 +430,56 @@ class ReflectionSet(object):
             self.systematic_absences.add(r)
             self.reflection_map[(h, k, l)] = r
 
+    def sVectorArray(self, cell=None):
+        """
+        @param cell: a unit cell, which defaults to the unit cell for
+                     which the reflection set is defined.
+        @type cell: L{CDTK.Crystal.UnitCell}
+        @return: an array containing the s vectors for all reflections
+        @rtype: C{N.array}
+        """
+        sv = N.zeros((len(self.minimal_reflection_list), 3), N.Float)
+        for r in self:
+            sv[r.index] = r.sVector(cell).array
+        return sv
+
+    def sVectorArrayAndPhasesForASU(self, cell=None):
+        """
+        Calculates the transformed s vectors and phases that are used
+        for calculating the structure factor from the atoms in the
+        asymmetric unit.
+        @param cell: a unit cell, which defaults to the unit cell for
+                     which the reflection set is defined.
+        @type cell: L{CDTK.Crystal.UnitCell}
+        @return: a tuple (s, p), where s is an array containing the s vectors
+                 for all reflections and space group operations and p is an
+                 array with the corresponding phases
+        @rtype: C{N.array}
+        """
+        if cell is None:
+            cell = self.cell
+        sg = self.space_group
+        ntrans = len(sg)
+        sv = N.zeros((ntrans, len(self.minimal_reflection_list), 3), N.Float)
+        p = N.zeros((ntrans, len(self.minimal_reflection_list)), N.Complex)
+        twopii = 2.j*N.pi
+        r1, r2, r3 = cell.reciprocalBasisVectors()
+        for r in self:
+            hkl_list = sg.symmetryEquivalentMillerIndices(r.array)[0]
+            for i in range(ntrans):
+                h, k, l = hkl_list[i]
+                sv[i, r.index] = (h*r1+k*r2+l*r3).array
+                tr_num, tr_den = sg.transformations[i][1:]
+                st = r.h*float(tr_num[0])/float(tr_den[0]) \
+                     + r.k*float(tr_num[1])/float(tr_den[1]) \
+                     + r.l*float(tr_num[2])/float(tr_den[2])
+                p[i, r.index] = N.exp(twopii*st)
+        return sv, p
+
+        sv = N.zeros((len(self.minimal_reflection_list), 3), N.Float)
+        for r in self:
+            sv[r.index] = r.sVector(cell).array
+
     def randomlyAssignedSubsets(self, fractions):
         """
         Partition the reflection set into several subsets of

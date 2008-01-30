@@ -257,9 +257,7 @@ class ReflectionData(object):
 
     def _debyeWallerFactor(self, adp_or_scalar):
         twopisq = -2.*N.pi**2
-        sv = N.zeros((self.number_of_reflections, 3), N.Float)
-        for r in self.reflection_set:
-            sv[r.index] = r.sVector(self.reflection_set.cell).array
+        sv = self.reflection_set.sVectorArray()
         if isinstance(adp_or_scalar, float):
             dwf = N.exp(twopisq*adp_or_scalar*N.sum(sv*sv, axis=-1))
         else:
@@ -866,9 +864,7 @@ class StructureFactor(ReflectionData, AmplitudeData):
 
         cell = universe.__class__()
         cell.setCellParameters(conf.cell_parameters)
-        sv = N.zeros((self.number_of_reflections, 3), N.Float)
-        for r in self.reflection_set:
-            sv[r.index] = r.sVector(cell).array
+        sv = self.reflection_set.sVectorArray(cell)
         ssq = N.sum(sv*sv, axis=-1)
 
         f_atom = {}
@@ -901,21 +897,12 @@ class StructureFactor(ReflectionData, AmplitudeData):
                               the unit tensor).
         @type atom_iterator: iterable
         @param cell: a unit cell, which defaults to the unit cell for
-                     which the map object is defined. If a different
-                     unit cell is given, the map is calculated for
-                     this cell in fractional coordinates and converted
-                     to Cartesian coordinates using the unit cell of
-                     the map object. This is meaningful only if the two
-                     unit cells are very similar, such as for unit cells
-                     corresponding to different steps in a constant-pressure
-                     Molecular Dynamics simulation.
+                     which the reflection set is defined.
         @type cell: L{CDTK.Crystal.UnitCell}
         """
         from AtomicScatteringFactors import atomic_scattering_factors
         from CDTK_sfcalc import sfTerm
-        sv = N.zeros((self.number_of_reflections, 3), N.Float)
-        for r in self.reflection_set:
-            sv[r.index] = r.sVector(cell).array
+        sv = self.reflection_set.sVectorArray(cell)
         ssq = N.sum(sv*sv, axis=-1)
         self.array[:] = 0j
         twopii = 2.j*N.pi
@@ -944,36 +931,13 @@ class StructureFactor(ReflectionData, AmplitudeData):
                               the unit tensor).
         @type atom_iterator: iterable
         @param cell: a unit cell, which defaults to the unit cell for
-                     which the map object is defined. If a different
-                     unit cell is given, the map is calculated for
-                     this cell in fractional coordinates and converted
-                     to Cartesian coordinates using the unit cell of
-                     the map object. This is meaningful only if the two
-                     unit cells are very similar, such as for unit cells
-                     corresponding to different steps in a constant-pressure
-                     Molecular Dynamics simulation.
+                     which the reflection set is defined.
         @type cell: L{CDTK.Crystal.UnitCell}
         """
         from AtomicScatteringFactors import atomic_scattering_factors
-        if cell is None:
-            cell = self.reflection_set.cell
         twopii = 2.j*N.pi
         twopisq = -2.*N.pi**2
-        sg = self.reflection_set.space_group
-        ntrans = len(sg)
-        sv = N.zeros((ntrans, self.number_of_reflections, 3), N.Float)
-        p = N.zeros((ntrans, self.number_of_reflections), N.Complex)
-        r1, r2, r3 = cell.reciprocalBasisVectors()
-        for r in self.reflection_set:
-            hkl_list = sg.symmetryEquivalentMillerIndices(r.array)[0]
-            for i in range(ntrans):
-                h, k, l = hkl_list[i]
-                sv[i, r.index] = (h*r1+k*r2+l*r3).array
-                tr_num, tr_den = sg.transformations[i][1:]
-                st = r.h*float(tr_num[0])/float(tr_den[0]) \
-                     + r.k*float(tr_num[1])/float(tr_den[1]) \
-                     + r.l*float(tr_num[2])/float(tr_den[2])
-                p[i, r.index] = N.exp(twopii*st)
+        sv, p = self.reflection_set.sVectorArrayAndPhasesForASU(cell)
         ssq = N.sum(sv[0]*sv[0], axis=-1)
         self.array[:] = 0j
         for element, position, adp, occupancy in atom_iterator:
@@ -986,7 +950,7 @@ class StructureFactor(ReflectionData, AmplitudeData):
                 dwf = N.exp(twopisq*adp*ssq)
             else:
                 dwf = None
-            for i in range(ntrans):
+            for i in range(len(p)):
                 if isinstance(adp, Tensor):
                     dwf = N.exp(twopisq*N.sum(N.dot(sv[i], adp.array)*sv[i],
                                               axis=-1))
@@ -1074,12 +1038,11 @@ class ModelIntensities(ReflectionData,
         @type atom_count: C{dict}
         """
         from AtomicScatteringFactors import atomic_scattering_factors
-        sv = N.zeros((self.number_of_reflections, 3), N.Float)
+        sv = self.reflection_set.sVectorArray()
+        ssq = N.sum(sv*sv, axis=-1)
         epsilon = N.zeros((self.number_of_reflections,), N.Int)
         for r in self.reflection_set:
-            sv[r.index] = r.sVector().array
             epsilon[r.index] = r.symmetryFactor()
-        ssq = N.sum(sv*sv, axis=-1)
         sum_f_sq = N.zeros((self.number_of_reflections,), N.Float)
         for element, count in atom_count.items():
             a, b = atomic_scattering_factors[element.lower()]
