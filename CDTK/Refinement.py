@@ -88,11 +88,7 @@ class RefinementEngine(object):
         """
         self.calculateModelAmplitudes()
 
-    def calculateModelAmplitudes(self):
-        """
-        Calculate the structure factor amplitudes for the model using the
-        current paramters.
-        """
+    def _evaluateModel(self, sf, pd, adpd, deriv):
         from CDTK.AtomicScatteringFactors import atomic_scattering_factors
         twopii = 2.j*N.pi
         twopisq = -2.*N.pi**2
@@ -102,7 +98,6 @@ class RefinementEngine(object):
                            [[0, 0, 0], [0, 0, 1], [0, 1, 0,]],
                            [[0, 0, 1], [0, 0, 0], [1, 0, 0,]],
                            [[0, 1, 0], [1, 0, 0], [0, 0, 0,]] ])
-        sf = N.zeros(self.ssq.shape, N.Complex)
         for i in range(self.natoms):
             a, b = atomic_scattering_factors[self.elements[i]]
             f_atom = N.sum(a[:, N.NewAxis]
@@ -111,8 +106,32 @@ class RefinementEngine(object):
             for j in range(len(self.p)):
                 sv = self.sv[j]
                 dwf = N.exp(twopisq*N.sum(N.dot(sv, adp)*sv, axis=-1))
-                sf += self.occupancies[i]*self.p[j]*f_atom*dwf \
-                         * N.exp(twopii*(N.dot(sv, self.positions[i])))
+                pf = N.exp(twopii*(N.dot(sv, self.positions[i])))
+                sfi = self.occupancies[i]*self.p[j]*f_atom * dwf * pf
+                if sf is not None:
+                    sf[:] += sfi
+                if pd is not None:
+                    pd[i] += N.sum(((N.conjugate(twopii*sfi)
+                                     * self.structure_factor).real * deriv
+                                     / self.model_amplitudes)[:, N.NewAxis]
+                                     * sv)
+                if adpd is not None:
+                    ssq = N.transpose([sv[:, 0]**2, sv[:, 1]**2, sv[:, 2]**2,
+                                       2.*sv[:,1]*sv[:,2],
+                                       2.*sv[:,0]*sv[:,2],
+                                       2.*sv[:,0]*sv[:,1]])
+                    adpd[i] += N.sum(((N.conjugate(sfi)
+                                       * self.structure_factor).real * deriv
+                                       / self.model_amplitudes)[:, N.NewAxis]
+                                       * ssq)
+
+    def calculateModelAmplitudes(self):
+        """
+        Calculate the structure factor amplitudes for the model using the
+        current paramters.
+        """
+        sf = N.zeros(self.ssq.shape, N.Complex)
+        self._evaluateModel(sf, None, None, None)
         self.structure_factor = sf
         self.model_amplitudes = N.absolute(sf)
 
@@ -134,32 +153,9 @@ class RefinementEngine(object):
         @return: (target, derivatives)
         @rtype: (C{float}, C{N.array_type}) 
         """
-        from CDTK.AtomicScatteringFactors import atomic_scattering_factors
         target, deriv = self.targetFunctionAndAmplitudeDerivatives()
-        twopii = 2.j*N.pi
-        twopisq = -2.*N.pi**2
-        tt = N.transpose([ [[1, 0, 0], [0, 0, 0], [0, 0, 0,]],
-                           [[0, 0, 0], [0, 1, 0], [0, 0, 0,]],
-                           [[0, 0, 0], [0, 0, 0], [0, 0, 1,]],
-                           [[0, 0, 0], [0, 0, 1], [0, 1, 0,]],
-                           [[0, 0, 1], [0, 0, 0], [1, 0, 0,]],
-                           [[0, 1, 0], [1, 0, 0], [0, 0, 0,]] ])
         pd = N.zeros(self.positions.shape, N.Float)
-        adpd = N.zeros(self.adps.shape, N.Float)
-        for i in range(self.natoms):
-            a, b = atomic_scattering_factors[self.elements[i]]
-            f_atom = N.sum(a[:, N.NewAxis]
-                           * N.exp(-b[:, N.NewAxis]*self.ssq[N.NewAxis, :]))
-            adp = N.innerproduct(tt, self.adps[i])
-            for j in range(len(self.p)):
-                sv = self.sv[j]
-                dwf = N.exp(twopisq*N.sum(N.dot(sv, adp)*sv, axis=-1))
-                pf = N.exp(twopii*(N.dot(sv, self.positions[i])))
-                sfi = self.occupancies[i]*self.p[j]*f_atom * dwf * pf
-                pd[i] += N.sum(((N.conjugate(twopii*sfi)
-                                 * self.structure_factor).real
-                                 * deriv / self.model_amplitudes)[:, N.NewAxis]
-                                 * sv)
+        self._evaluateModel(None, pd, None, deriv)
         return target, pd
 
     def targetFunctionAndADPDerivatives(self):
@@ -169,36 +165,10 @@ class RefinementEngine(object):
         @return: (target, derivatives)
         @rtype: (C{float}, C{N.array_type}) 
         """
-        from CDTK.AtomicScatteringFactors import atomic_scattering_factors
         target, deriv = self.targetFunctionAndAmplitudeDerivatives()
-        twopii = 2.j*N.pi
-        twopisq = -2.*N.pi**2
-        tt = N.transpose([ [[1, 0, 0], [0, 0, 0], [0, 0, 0,]],
-                           [[0, 0, 0], [0, 1, 0], [0, 0, 0,]],
-                           [[0, 0, 0], [0, 0, 0], [0, 0, 1,]],
-                           [[0, 0, 0], [0, 0, 1], [0, 1, 0,]],
-                           [[0, 0, 1], [0, 0, 0], [1, 0, 0,]],
-                           [[0, 1, 0], [1, 0, 0], [0, 0, 0,]] ])
-        pd = N.zeros(self.positions.shape, N.Float)
         adpd = N.zeros(self.adps.shape, N.Float)
-        for i in range(self.natoms):
-            a, b = atomic_scattering_factors[self.elements[i]]
-            f_atom = N.sum(a[:, N.NewAxis]
-                           * N.exp(-b[:, N.NewAxis]*self.ssq[N.NewAxis, :]))
-            adp = N.innerproduct(tt, self.adps[i])
-            for j in range(len(self.p)):
-                sv = self.sv[j]
-                dwf = N.exp(twopisq*N.sum(N.dot(sv, adp)*sv, axis=-1))
-                pf = N.exp(twopii*(N.dot(sv, self.positions[i])))
-                sfi = self.occupancies[i]*self.p[j]*f_atom * dwf * pf
-                ssq = N.transpose([sv[:, 0]**2, sv[:, 1]**2, sv[:, 2]**2,
-                                   2.*sv[:,1]*sv[:,2],
-                                   2.*sv[:,0]*sv[:,2],
-                                   2.*sv[:,0]*sv[:,1]])
-                adpd[i] += N.sum(((N.conjugate(sfi)*self.structure_factor).real
-                                 * deriv / self.model_amplitudes)[:, N.NewAxis]
-                                 * ssq)
-        return target, twopisq*adpd
+        self._evaluateModel(None, None, adpd, deriv)
+        return target, -2.*N.pi**2*adpd
 
 #
 # RefinementEngine with a maximum-likelihood target function
