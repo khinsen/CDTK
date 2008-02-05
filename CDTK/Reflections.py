@@ -480,6 +480,18 @@ class ReflectionSet(object):
         for r in self:
             sv[r.index] = r.sVector(cell).array
 
+    def symmetryAndCentricityArrays(self):
+        """
+        @return: an array containing the symmetry factors and centricity flags
+                 for all reflections
+        @rtype: C{N.array}
+        """
+        sm = N.zeros((len(self.minimal_reflection_list), 2), N.Int)
+        for r in self:
+            sm[r.index, 0] = r.symmetryFactor()
+            sm[r.index, 1] = r.isCentric()
+        return sm
+
     def randomlyAssignedSubsets(self, fractions):
         """
         Partition the reflection set into several subsets of
