@@ -73,22 +73,32 @@ sfcalc_module_source = {
     'c': 'Src/CDTK_sfcalc.c',
     'pyrex': 'Src/CDTK_sfcalc.pyx'
     }
+math_module_source = {
+    'c': 'Src/CDTK_math.c',
+    'pyrex': 'Src/CDTK_math.pyx'
+    }
 mtz_module_source = {
     'c': 'Src/CDTK_MTZ.c',
     'pyrex': 'Src/CDTK_MTZ.pyx'
     }
 
 extension_modules = [Extension('CDTK_sf_fft',
-                                [map_module_source[build_from]],
-                                include_dirs = include_dirs+[fftw_include],
-                                library_dirs = [fftw_lib],
-                                libraries = ['fftw3', 'm'],
-                                extra_compile_args = compile_args),
-                      Extension('CDTK_sfcalc',
-                                [sfcalc_module_source[build_from]],
-                                include_dirs = include_dirs,
-                                libraries = ['m'],
-                                extra_compile_args = compile_args)]
+                               [map_module_source[build_from]],
+                               include_dirs = include_dirs+[fftw_include],
+                               library_dirs = [fftw_lib],
+                               libraries = ['fftw3', 'm'],
+                               extra_compile_args = compile_args),
+                     Extension('CDTK_sfcalc',
+                               [sfcalc_module_source[build_from]],
+                               include_dirs = include_dirs,
+                               libraries = ['m'],
+                               extra_compile_args = compile_args),
+                     Extension('CDTK_math',
+                               [math_module_source[build_from]],
+                               include_dirs = include_dirs + ['/usr/local/include'],
+                               library_dirs = ['/usr/local/lib'],
+                               libraries = ['m', 'gsl', 'gslcblas'],
+                               extra_compile_args = compile_args)]
 if ccp4_prefix is not None:
     extension_modules.append(
         Extension('CDTK_MTZ',

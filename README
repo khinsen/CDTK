@@ -38,6 +38,9 @@ Prerequisites:
 - FFTW3:
       http://www.fftw.org/
 
+- GSL:
+      http://www.gnu.org/software/gsl/
+
 CDTK will use Numeric or NumPy depending on how ScientificPython has been
 configured. The MTZ file reader requires the CCP4 library, whose location
 should be indicated by the environment variable 'CCP4'. If this variable

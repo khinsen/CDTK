@@ -10,6 +10,7 @@ epydoc
 Test
 Tests/2ONX.pdb.gz
 Tests/2onx-sf.cif.gz
+Src/CDTK_math.c
 Src/CDTK_sf_fft.c
 Src/CDTK_sfcalc.c
 Src/CDTK_MTZ.c
