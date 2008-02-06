@@ -23,6 +23,9 @@ cdef double twopisq
 twopi = 2.*N.pi
 twopisq = -2.*N.pi**2
 
+#
+# Calculate the structure factor for a single atom.
+#
 def sfTerm(array_type result, array_type s, array_type f_atom,
            array_type r, array_type u, double u_scalar, int use_u):
     cdef int ns
@@ -87,3 +90,104 @@ def sfTerm(array_type result, array_type s, array_type f_atom,
             N.add(result, f_atom*dwf*sf, result)
         else:
             N.add(result, f_atom*sf, result)
+
+#
+# Calculate structure factor and position/ADP derivatives
+# (used by RefinementEngine)
+#
+def sfDeriv(array_type element_indices, array_type f_atom, array_type positions,
+            array_type adps, array_type occupancies, array_type sv,
+            array_type p,
+            array_type sf, array_type pd, array_type adpd,
+            array_type deriv, array_type sf_in, array_type a_in):
+    cdef int natoms, ns, nsg
+    cdef int do_sf, do_pd, do_adpd
+    cdef int *element_indices_d
+    cdef double *f_atom_d, *positions_d, *adps_d, *occupancies_d, *sv_d, *p_d
+    cdef double *sf_d, *pd_d, *adpd_d, *deriv_d, *sf_in_d, *a_in_d
+    cdef double *f_atom_p, *positions_p, *adps_p, occupancy, *sv_p, *p_p
+    cdef double *pd_p, *adpd_p
+    cdef double dwf, pf_arg, pf_r, pf_i, sf_abs, sf_r, sf_i, pd_f, adpd_f
+    cdef int i, j, k
+
+    assert PyArray_ISCONTIGUOUS(element_indices)
+    assert PyArray_ISCONTIGUOUS(f_atom)
+    assert PyArray_ISCONTIGUOUS(positions)
+    assert PyArray_ISCONTIGUOUS(adps)
+    assert PyArray_ISCONTIGUOUS(occupancies)
+    assert PyArray_ISCONTIGUOUS(sv)
+    assert PyArray_ISCONTIGUOUS(p)
+    assert PyArray_ISCONTIGUOUS(sf)
+    assert PyArray_ISCONTIGUOUS(pd)
+    assert PyArray_ISCONTIGUOUS(adpd)
+    assert PyArray_ISCONTIGUOUS(deriv)
+    assert PyArray_ISCONTIGUOUS(sf_in)
+    assert PyArray_ISCONTIGUOUS(a_in)
+
+    natoms = positions.dimensions[0]
+    ns = p.dimensions[1]
+    nsg = p.dimensions[0]
+
+    do_sf = sf.dimensions[0] > 0
+    do_pd = pd.dimensions[0] > 0
+    do_adpd = adpd.dimensions[0] > 0
+    if do_pd or do_adpd:
+        assert deriv.dimensions[0] > 0
+
+    element_indices_d = <int *>element_indices.data
+    f_atom_d = <double *>f_atom.data
+    positions_d = <double *>positions.data
+    adps_d = <double *>adps.data
+    occupancies_d = <double *>occupancies.data
+    sv_d = <double *>sv.data
+    p_d = <double *>p.data
+    sf_d = <double *>sf.data
+    pd_d = <double *>pd.data
+    adpd_d = <double *>adpd.data
+    deriv_d = <double *>deriv.data
+    sf_in_d = <double *>sf_in.data
+    a_in_d = <double *>a_in.data
+
+    for i from 0 <= i < natoms:
+        f_atom_p = f_atom_d + ns*element_indices_d[i]
+        positions_p = positions_d + 3*i
+        adps_p = adps_d + 6*i
+        occupancy = occupancies_d[i]
+        pd_p = pd_d + 3*i
+        adpd_p = adpd_d + 6*i
+        for j from 0 <= j < nsg:
+            sv_p = sv_d + 3*ns*j
+            p_p = p_d + 2*ns*j
+            for k from 0 <= k < ns:
+                dwf = exp(twopisq*(adps_p[0]*sv_p[3*k]*sv_p[3*k] +
+                                   adps_p[1]*sv_p[3*k+1]*sv_p[3*k+1] +
+                                   adps_p[2]*sv_p[3*k+2]*sv_p[3*k+2] +
+                                   2.*adps_p[3]*sv_p[3*k+1]*sv_p[3*k+2] +
+                                   2.*adps_p[4]*sv_p[3*k]*sv_p[3*k+2] +
+                                   2.*adps_p[5]*sv_p[3*k]*sv_p[3*k+1]))
+                pf_arg = twopi*(sv_p[3*k]*positions_p[0] +
+                                sv_p[3*k+1]*positions_p[1] +
+                                sv_p[3*k+2]*positions_p[2])
+                pf_r = cos(pf_arg)
+                pf_i = sin(pf_arg)
+                sf_abs = occupancy*f_atom_p[k]*dwf
+                sf_r = sf_abs*(pf_r*p_p[2*k]-pf_i*p_p[2*k+1])
+                sf_i = sf_abs*(pf_i*p_p[2*k]+pf_r*p_p[2*k+1])
+                if do_sf:
+                    sf_d[2*k] = sf_d[2*k] + sf_r
+                    sf_d[2*k+1] = sf_d[2*k+1] + sf_i
+                if do_pd:
+                    pd_f = twopi*deriv_d[k] * \
+                         (sf_in_d[2*k+1]*sf_r - sf_in_d[2*k]*sf_i)/a_in_d[k]
+                    pd_p[0] = pd_p[0] + pd_f*sv_p[3*k]
+                    pd_p[1] = pd_p[1] + pd_f*sv_p[3*k+1]
+                    pd_p[2] = pd_p[2] + pd_f*sv_p[3*k+2]
+                if do_adpd:
+                    adpd_f = (sf_in_d[2*k]*sf_r + sf_in_d[2*k+1]*sf_i) \
+                               * deriv_d[k] / a_in_d[k]
+                    adpd_p[0] = adpd_p[0] + adpd_f*sv_p[3*k]*sv_p[3*k]
+                    adpd_p[1] = adpd_p[1] + adpd_f*sv_p[3*k+1]*sv_p[3*k+1]
+                    adpd_p[2] = adpd_p[2] + adpd_f*sv_p[3*k+2]*sv_p[3*k+2]
+                    adpd_p[3] = adpd_p[3] + 2.*adpd_f*sv_p[3*k+1]*sv_p[3*k+2]
+                    adpd_p[4] = adpd_p[4] + 2.*adpd_f*sv_p[3*k+0]*sv_p[3*k+2]
+                    adpd_p[5] = adpd_p[5] + 2.*adpd_f*sv_p[3*k+0]*sv_p[3*k+1]

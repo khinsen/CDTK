@@ -114,6 +114,25 @@ class RefinementEngine(object):
         self.calculateModelAmplitudes()
 
     def _evaluateModel(self, sf, pd, adpd, deriv):
+        from CDTK_sfcalc import sfDeriv
+        dummy_array = N.zeros((0,), N.Int)
+        if sf is None: sf = dummy_array
+        if pd is None: pd = dummy_array
+        if adpd is None: adpd = dummy_array
+        if deriv is None:
+            deriv = dummy_array
+            sf_in = dummy_array
+            a_in = dummy_array
+        else:
+            sf_in = self.structure_factor
+            a_in = self.model_amplitudes
+        sfDeriv(self.element_indices, self.f_atom, self.positions,
+                self.adps, self.occupancies, self.sv, self.p,
+                sf, pd, adpd, deriv, sf_in, a_in)
+
+    def _evaluateModel_python(self, sf, pd, adpd, deriv):
+        # This is the first implementation of _evaluateModel()
+        # in pure Python. It is left as a documentation and for testing.
         twopii = 2.j*N.pi
         twopisq = -2.*N.pi**2
         tt = N.transpose([ [[1, 0, 0], [0, 0, 0], [0, 0, 0,]],
