@@ -47,9 +47,7 @@ class RefinementEngine(object):
                              of this atom.
         @type asu_iterator: iterator
         """
-        mask = exp_amplitudes.data_available
-        self.reflection_set = exp_amplitudes.reflection_set
-        self.exp_amplitudes = N.repeat(exp_amplitudes.array[:, 0], mask)
+        # Store the atomic model
         ids = []
         id_dict = {}
         elements = []
@@ -72,14 +70,41 @@ class RefinementEngine(object):
         self.adps = N.array(adps)
         self.occupancies = N.array(occupancies)
         self.natoms = len(self.elements)
+
+        # Store the experimental structure factor amplitudes
+        mask = exp_amplitudes.data_available
+        self.reflection_set = exp_amplitudes.reflection_set
+        self.exp_amplitudes = N.repeat(exp_amplitudes.array[:, 0], mask)
+    
+        # Precompute arrays that are used frequently later
+        self._precomputeArrays(mask)
+        self.signalParameterUpdate()
+
+    def _precomputeArrays(self, mask):
+        # S vectors, their squared length, and the phase factors for
+        # structure calculation.
         sv, p = self.reflection_set.sVectorArrayAndPhasesForASU()
         self.sv = N.repeat(sv, mask, axis=1)
         self.p = N.repeat(p, mask, axis=1)
         self.ssq = N.add.reduce(self.sv[0]*self.sv[0], axis=1)
+        # Symmetry factors and centricity for all reflections
         sm = self.reflection_set.symmetryAndCentricityArrays()
         self.epsilon = N.repeat(sm[:, 0], mask)
         self.centric = N.repeat(sm[:, 1], mask)
-        self.signalParameterUpdate()
+        # Atomic scattering factors for the atoms in the model
+        from CDTK.AtomicScatteringFactors import atomic_scattering_factors
+        e_indices = {}
+        for i in range(self.natoms):
+            e_indices.setdefault(self.elements[i], len(e_indices))
+        self.element_indices = N.array([e_indices[self.elements[i]]
+                                        for i in range(self.natoms)])
+        f_atom = N.zeros((len(e_indices), len(self.ssq)), N.Float)
+        for i in range(self.natoms):
+            a, b = atomic_scattering_factors[self.elements[i]]
+            f_atom[self.element_indices[i], :] = \
+                  N.sum(a[:, N.NewAxis] * N.exp(-b[:, N.NewAxis]
+                                                * self.ssq[N.NewAxis, :]))
+        self.f_atom = f_atom
 
     def signalParameterUpdate(self):
         """
@@ -89,7 +114,6 @@ class RefinementEngine(object):
         self.calculateModelAmplitudes()
 
     def _evaluateModel(self, sf, pd, adpd, deriv):
-        from CDTK.AtomicScatteringFactors import atomic_scattering_factors
         twopii = 2.j*N.pi
         twopisq = -2.*N.pi**2
         tt = N.transpose([ [[1, 0, 0], [0, 0, 0], [0, 0, 0,]],
@@ -98,10 +122,9 @@ class RefinementEngine(object):
                            [[0, 0, 0], [0, 0, 1], [0, 1, 0,]],
                            [[0, 0, 1], [0, 0, 0], [1, 0, 0,]],
                            [[0, 1, 0], [1, 0, 0], [0, 0, 0,]] ])
+
         for i in range(self.natoms):
-            a, b = atomic_scattering_factors[self.elements[i]]
-            f_atom = N.sum(a[:, N.NewAxis]
-                           * N.exp(-b[:, N.NewAxis]*self.ssq[N.NewAxis, :]))
+            f_atom = self.f_atom[self.element_indices[i]]
             adp = N.innerproduct(tt, self.adps[i])
             for j in range(len(self.p)):
                 sv = self.sv[j]
