@@ -12,6 +12,7 @@ Description of a crystal
 """
 
 from Scientific.Geometry import Vector, isVector
+from Scientific.Geometry.Transformation import Rotation, Translation, Shear
 from Scientific import N, LA
 
 class UnitCell(object):
@@ -127,3 +128,21 @@ class UnitCell(object):
             if (other_basis[i]-self.basis[i]).length() > precision:
                 return False
         return True
+
+    def cartesianCoordinateSymmetryOperations(self, space_group):
+        """
+        @param space_group: a space group
+        @type space_group: L{CDTK.SpaceGroups.SpaceGroup}
+        @return: a list of transformation objects representing the symmetry
+                 operations of the space group in the Cartesian coordinates
+                 of the unit cell
+        @rtype: C{list} of C{Scientific.Geometry.Transformation.Transformation}
+        """
+        transformations = []
+        to_fract = Shear(self.cartesianToFractionalMatrix())
+        from_fract = Shear(self.fractionalToCartesianMatrix())
+        for rot, trans_num, trans_den in space_group.transformations:
+            trans = Vector((1.*trans_num)/trans_den)
+            tr_fract = Translation(trans)*Rotation(rot)
+            transformations.append(from_fract*tr_fract*to_fract)
+        return transformations
