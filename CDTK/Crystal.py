@@ -113,6 +113,19 @@ class UnitCell(object):
         """
         return N.transpose(self.basis)
 
+    def minimumImageDistanceVector(self, point1, point2):
+        """
+        @param point1: a point in the unit cell
+        @type point1: C{Scientific.Geometry.Vector}
+        @param point2: a point in the unit cell
+        @type point2: C{Scientific.Geometry.Vector}
+        @return: the minimum-image vector from point1 to point2
+        @rtype: C{Scientific.Geometry.Vector}
+        """
+        d = self.cartesianToFractional(point2-point1)
+        d = d - (d > 0.5) + (d <= -0.5)
+        return self.fractionalToCartesian(d)
+        
     def isCompatibleWith(self, other_cell, precision=1.e-5):
         """
         @param other_cell: a unit cell
