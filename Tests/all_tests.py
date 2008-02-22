@@ -9,6 +9,7 @@
 
 import unittest
 
+import utility_tests
 import unit_cell_tests
 import reflection_set_tests
 import structure_factor_tests
@@ -18,6 +19,7 @@ import mmtk_tests
 
 def suite():
     test_suite = unittest.TestSuite()
+    test_suite.addTests(utility_tests.suite())
     test_suite.addTests(unit_cell_tests.suite())
     test_suite.addTests(reflection_set_tests.suite())
     test_suite.addTests(structure_factor_tests.suite())

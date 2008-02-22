@@ -10,6 +10,7 @@
 import unittest
 from CDTK.Crystal import UnitCell
 from CDTK.SpaceGroups import space_groups
+from CDTK.Utility import largestAbsoluteElement
 from Scientific.Geometry import Vector, delta
 from Scientific import N
 
@@ -113,11 +114,11 @@ class UnitCellTests(unittest.TestCase):
             for x in fractional_coordinates:
                 r = cell.fractionalToCartesian(x)
                 rr = N.dot(m_fc, x)
-                self.assert_(N.maximum.reduce(N.fabs(r.array-rr)) < 1.e-15)
+                self.assert_(largestAbsoluteElement(r.array-rr) < 1.e-15)
                 xx = cell.cartesianToFractional(r)
-                self.assert_(N.maximum.reduce(N.fabs(x-xx)) < 1.e-15)
+                self.assert_(largestAbsoluteElement(x-xx) < 1.e-15)
                 xx = N.dot(m_cf, rr)
-                self.assert_(N.maximum.reduce(N.fabs(x-xx)) < 1.e-15)
+                self.assert_(largestAbsoluteElement(x-xx) < 1.e-15)
 
     def test_symmetry_ops(self):
         for params, rb, sg in datasets:
@@ -134,8 +135,8 @@ class UnitCellTests(unittest.TestCase):
                 ntimes = t
                 for i in range(1, len(sg)):
                     ntimes = ntimes*t
-                self.assert_(N.maximum.reduce(
-                    N.fabs(N.ravel((ntimes.tensor-delta).array))) < 1.e-12)
+                self.assert_(largestAbsoluteElement(
+                               (ntimes.tensor-delta).array) < 1.e-12)
 
 def suite():
     return unittest.TestLoader().loadTestsFromTestCase(UnitCellTests)

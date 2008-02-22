@@ -14,6 +14,7 @@ from Scientific.IO.TextFile import TextFile
 from Scientific.IO.PDB import Structure
 from Scientific.Geometry import Tensor
 from Scientific import N
+from CDTK.Utility import largestAbsoluteElement
 
 from CDTK.mmCIF import mmCIFFile
 from CDTK.SpaceGroups import space_groups
@@ -92,9 +93,9 @@ class StructureFactorTests2ONX(unittest.TestCase):
         # Tests on addition/subtraction
         twice_model_sf = self.model_sf+self.model_sf
         d = twice_model_sf.array-2.*self.model_sf.array
-        self.assert_(N.maximum.reduce(N.absolute(d)) < 1.e-14)
+        self.assert_(largestAbsoluteElement(d) < 1.e-14)
         zero_sf = self.model_sf-self.model_sf
-        self.assert_(N.maximum.reduce(N.absolute(zero_sf.array)) < 1.e-14)
+        self.assert_(largestAbsoluteElement(zero_sf.array) < 1.e-14)
         self.assertRaises(AssertionError, operator.add,
                           self.model_sf, self.exp_amplitudes)
         self.assertRaises(AssertionError, operator.sub,
@@ -103,10 +104,10 @@ class StructureFactorTests2ONX(unittest.TestCase):
         # Tests on multiplication/division
         squared_model_sf = self.model_sf*self.model_sf
         d = squared_model_sf/self.model_sf - self.model_sf
-        self.assert_(N.maximum.reduce(N.absolute(d.array)) < 1.e-12)
+        self.assert_(largestAbsoluteElement(d.array) < 1.e-12)
         squared_amplitudes = self.exp_amplitudes*self.exp_amplitudes
         d = squared_amplitudes/self.exp_amplitudes - self.exp_amplitudes
-        self.assert_(N.maximum.reduce(N.absolute(d.array[:, 0])) < 1.e-12)
+        self.assert_(largestAbsoluteElement(d.array[:, 0]) < 1.e-12)
         
         # Tests on structure factor calculations
         asu_atoms = sum(([atom for atom in residue] for residue in self.s), [])
@@ -151,18 +152,15 @@ class StructureFactorTests2ONX(unittest.TestCase):
         test_sf = k*self.model_sf.applyDebyeWallerFactor(u)
         scaled, k_fit, u_fit = self.model_sf.scaleTo(test_sf, 0)
         self.assertAlmostEqual(k_fit, k, 12)
-        self.assert_(N.maximum.reduce(N.fabs(N.ravel((u-u_fit).array)))
-                     < 1.e-14)
+        self.assert_(largestAbsoluteElement((u-u_fit).array) < 1.e-14)
         scaled, k_fit, u_fit = test_sf.scaleTo(self.model_sf, 0)
         self.assertAlmostEqual(k_fit, 1./k, 12)
-        self.assert_(N.maximum.reduce(N.fabs(N.ravel((u+u_fit).array)))
-                     < 1.e-14)
+        self.assert_(largestAbsoluteElement((u+u_fit).array) < 1.e-14)
 
         test_sf = k*self.model_sf.applyDebyeWallerFactor(-u)
         sf_scaled, k_fit, u_fit = test_sf.scaleTo(self.exp_amplitudes, 5)
         self.assert_(abs(k_fit-1./k) < 2.e-2)
-        self.assert_(N.maximum.reduce(N.fabs(N.ravel((u-u_fit).array)))
-                     < 1.5e-4)
+        self.assert_(largestAbsoluteElement((u-u_fit).array) < 1.5e-4)
         self.assert_(self.exp_amplitudes.rFactor(sf_scaled) < 0.185)
 
 
