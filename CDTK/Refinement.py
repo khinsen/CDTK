@@ -17,8 +17,10 @@ no minimization algorithm and no support for restraints of any kind.
 """
 
 from CDTK.Reflections import ResolutionShell
+from CDTK.Utility import compactSymmetricTensor, fullSymmetricTensor
 from CDTK_math import I1divI0, logI0, logcosh
 from Scientific.Functions.Interpolation import InterpolatingFunction
+from Scientific.Geometry import Vector, Tensor
 from Scientific import N
 
 #
@@ -59,9 +61,7 @@ class RefinementEngine(object):
             id_dict[id] = len(id_dict)
             elements.append(element.lower())
             positions.append(position.array)
-            adpa = adp.array
-            adps.append([adpa[0,0], adpa[1,1], adpa[2,2],
-                         adpa[1,2], adpa[0,2], adpa[0,1]])
+            adps.append(compactSymmetricTensor(adp.array))
             occupancies.append(occupancy)
         self.ids = ids
         self.id_dict = id_dict
@@ -78,7 +78,10 @@ class RefinementEngine(object):
     
         # Precompute arrays that are used frequently later
         self._precomputeArrays(mask)
-        self.signalParameterUpdate()
+        
+        # Mark the internal state as invalid because the model amplitudes
+        # have not yet been calculated
+        self.state_valid = False
 
     def _precomputeArrays(self, mask):
         # S vectors, their squared length, and the phase factors for
@@ -106,13 +109,18 @@ class RefinementEngine(object):
                                                 * self.ssq[N.NewAxis, :]))
         self.f_atom = f_atom
 
-    def signalParameterUpdate(self):
+    def updateInternalState(self):
         """
         Recalculate all internally stored data that depends on the
         model parameters.
         """
-        self.calculateModelAmplitudes()
+        if not self.state_valid:
+            self._updateInternalState()
+        self.state_valid = True
 
+    def _updateInternalState(self):
+        self.calculateModelAmplitudes()
+        
     def _evaluateModel(self, sf, pd, adpd, deriv):
         from CDTK_sfcalc import sfDeriv
         dummy_array = N.zeros((0,), N.Int)
@@ -135,16 +143,9 @@ class RefinementEngine(object):
         # in pure Python. It is left as a documentation and for testing.
         twopii = 2.j*N.pi
         twopisq = -2.*N.pi**2
-        tt = N.transpose([ [[1, 0, 0], [0, 0, 0], [0, 0, 0,]],
-                           [[0, 0, 0], [0, 1, 0], [0, 0, 0,]],
-                           [[0, 0, 0], [0, 0, 0], [0, 0, 1,]],
-                           [[0, 0, 0], [0, 0, 1], [0, 1, 0,]],
-                           [[0, 0, 1], [0, 0, 0], [1, 0, 0,]],
-                           [[0, 1, 0], [1, 0, 0], [0, 0, 0,]] ])
-
         for i in range(self.natoms):
             f_atom = self.f_atom[self.element_indices[i]]
-            adp = N.innerproduct(tt, self.adps[i])
+            adp = fullSymmetricTensor(self.adps[i])
             for j in range(len(self.p)):
                 sv = self.sv[j]
                 dwf = N.exp(twopisq*N.sum(N.dot(sv, adp)*sv, axis=-1))
@@ -176,6 +177,11 @@ class RefinementEngine(object):
         self._evaluateModel(sf, None, None, None)
         self.structure_factor = sf
         self.model_amplitudes = N.absolute(sf)
+
+    def rFactor(self):
+        self.updateInternalState()
+        return N.sum(N.fabs(self.model_amplitudes-self.exp_amplitudes)) \
+               / N.sum(self.exp_amplitudes)
 
     def targetFunctionAndAmplitudeDerivatives(self):
         """
@@ -227,6 +233,7 @@ class MaximumLikelihoodRefinementEngine(RefinementEngine):
         self.res_shells = None
         RefinementEngine.__init__(self, exp_amplitudes, asu_iterator)
         nrefl_per_shell = min(50, max(3, len(self.ssq)/10))
+        self.calculateModelAmplitudes()
         while True:
             self.defineResolutionShells(nrefl_per_shell)
             try:
@@ -237,6 +244,7 @@ class MaximumLikelihoodRefinementEngine(RefinementEngine):
 
 
     def targetFunctionAndAmplitudeDerivatives(self):
+        self.updateInternalState()
         eps_beta_inv = 1./(self.epsilon 
                            * N.array([self.beta(sq) for sq in self.ssq]))
         alpha = N.array([self.alpha(sq) for sq in self.ssq])
@@ -263,8 +271,8 @@ class MaximumLikelihoodRefinementEngine(RefinementEngine):
                 dllk[ri] = -(darg1[ri]+2.*I1divI0(2*arg2[ri])*darg2[ri])
         return llk, dllk
 
-    def signalParameterUpdate(self):
-        self.calculateModelAmplitudes()
+    def _rupdateInternalState(self):
+        RefinementEngine._updateInternalState(self)
         self.findAlphaBeta()
 
     def findAlphaBeta(self):
