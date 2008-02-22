@@ -11,8 +11,9 @@ import unittest
 
 from Scientific.IO.TextFile import TextFile
 from Scientific.IO.PDB import Structure
-from Scientific.Geometry import delta
+from Scientific.Geometry import Vector, Tensor, delta
 from Scientific import N
+from CDTK.Utility import largestAbsoluteElement
 
 from CDTK.mmCIF import mmCIFFile
 from CDTK.SpaceGroups import space_groups
@@ -63,6 +64,7 @@ class RefinementTests2ONX(unittest.TestCase):
 
         s = Structure('2ONX.pdb.gz')
         asu_atoms = sum(([atom for atom in residue] for residue in s), [])
+        self.atom_ids = [atom['serial_number'] for atom in asu_atoms]
         self.re = MaximumLikelihoodRefinementEngine(self.exp_amplitudes,
                   ((atom['serial_number'], atom['element'],
                     atom['position']*Units.Ang,
@@ -87,36 +89,44 @@ class RefinementTests2ONX(unittest.TestCase):
     def test_position_derivatives(self):
         llk, pd = self.re.targetFunctionAndPositionDerivatives()
         dp = 0.0001
-        max_deviation = 0.
-        for i in range(len(self.re.positions)):
-            for xyz in range(3):
-                p = self.re.positions[i, xyz]
-                self.re.positions[i, xyz] = p+dp
-                self.re.calculateModelAmplitudes()
+        num_pd = []
+        for atom_id in self.atom_ids:
+            p = self.re.getPosition(atom_id)
+            num_deriv = []
+            for v in [Vector(1.,0.,0.), Vector(0.,1.,0.), Vector(0.,0.,1.)]:
+                self.re.setPosition(atom_id, p+dp*v)
                 llk_p, dummy = self.re.targetFunctionAndPositionDerivatives()
-                self.re.positions[i, xyz] = p-dp
-                self.re.calculateModelAmplitudes()
+                self.re.setPosition(atom_id, p-dp*v)
                 llk_m, dummy = self.re.targetFunctionAndPositionDerivatives()
-                self.re.positions[i, xyz] = p
-                deviation = pd[i, xyz] - (llk_p-llk_m)/(2.*dp)
-                self.assert_(abs(deviation/pd[i, xyz]) < 7.e-5)
+                num_deriv.append((llk_p-llk_m)/(2.*dp))
+            num_pd.append(num_deriv)
+            self.re.setPosition(atom_id, p)
+        error = largestAbsoluteElement((N.array(num_pd)-pd)/pd)
+        self.assert_(error < 7.e-5)
 
     def test_ADP_derivatives(self):
         llk, adpd = self.re.targetFunctionAndADPDerivatives()
         dp = 0.00001
-        max_deviation = 0.
-        for i in range(len(self.re.positions)):
-            for el in range(6):
-                p = self.re.adps[i, el]
-                self.re.adps[i, el] = p+dp
-                self.re.calculateModelAmplitudes()
+        num_adpd = []
+        for atom_id in self.atom_ids:
+            adp = self.re.getADP(atom_id)
+            num_deriv = []
+            for t in [Tensor([[1., 0., 0.], [0., 0., 0.], [0., 0., 0.]]),
+                      Tensor([[0., 0., 0.], [0., 1., 0.], [0., 0., 0.]]),
+                      Tensor([[0., 0., 0.], [0., 0., 0.], [0., 0., 1.]]),
+                      Tensor([[0., 0., 0.], [0., 0., 1.], [0., 1., 0.]]),
+                      Tensor([[0., 0., 1.], [0., 0., 0.], [1., 0., 0.]]),
+                      Tensor([[0., 1., 0.], [1., 0., 0.], [0., 0., 0.]])]:
+                self.re.setADP(atom_id, adp+dp*t)
                 llk_p, dummy = self.re.targetFunctionAndADPDerivatives()
-                self.re.adps[i, el] = p-dp
-                self.re.calculateModelAmplitudes()
+                self.re.setADP(atom_id, adp-dp*t)
                 llk_m, dummy = self.re.targetFunctionAndADPDerivatives()
-                self.re.adps[i, el] = p
-                deviation = adpd[i, el] - (llk_p-llk_m)/(2.*dp)
-                self.assert_(abs(deviation/adpd[i, el]) < 2.e-3)
+                num_deriv.append((llk_p-llk_m)/(2.*dp))
+            num_adpd.append(num_deriv)
+            self.re.setADP(atom_id, adp)
+        error = largestAbsoluteElement((N.array(num_adpd)-adpd)/adpd)
+        self.assert_(error < 2.e-3)
+
 
 def suite():
     loader = unittest.TestLoader()

@@ -109,6 +109,58 @@ class RefinementEngine(object):
                                                 * self.ssq[N.NewAxis, :]))
         self.f_atom = f_atom
 
+    def getPosition(self, atom_id):
+        """
+        @param atom_id: id of the atom whose position is requested
+        @return: the position of the atom
+        @rtype: C{Scientific.Geometry.Vector}
+        """
+        return Vector(self.positions[self.id_dict[atom_id]])
+
+    def getADP(self, atom_id):
+        """
+        @param atom_id: id of the atom whose ADP tensor is requested
+        @return: the ADP tensor of the atom
+        @rtype: C{Scientific.Geometry.Tensor}
+        """
+        return Tensor(fullSymmetricTensor(self.adps[self.id_dict[atom_id]]))
+
+    def getOccupancy(self, atom_id):
+        """
+        @param atom_id: id of the atom whose occupancy is requested
+        @return: the occupancy the atom
+        @rtype: C{float}
+        """
+        return self.occupancies[self.id_dict[atom_id]]
+
+    def setPosition(self, atom_id, position):
+        """
+        @param atom_id: id of the atom whose position is changed
+        @param position: the new position for the atom
+        @type position: C{Scientific.Geometry.Vector}
+        """
+        self.positions[self.id_dict[atom_id]] = position.array
+        self.state_valid = False
+
+    def setADP(self, atom_id, adp):
+        """
+        @param atom_id: id of the atom whose ADP tensor is changed
+        @param adp: the new ADP tensor for the atom
+        @type adp: C{Scientific.Geometry.Tensor}
+        """
+        self.adps[self.id_dict[atom_id]] = compactSymmetricTensor(adp.array)
+        self.state_valid = False
+
+    def setOccupancy(self, atom_id, occupancy):
+        """
+        @param atom_id: id of the atom whose position is changed
+        @param occupancy: the new position for the atom
+        @type occupancy: C{float}
+        """
+        assert occupancy >= 0. and occupancy <= 1.
+        self.occupancies[self.id_dict[atom_id]] = occupancy
+        self.state_valid = False
+
     def updateInternalState(self):
         """
         Recalculate all internally stored data that depends on the
