@@ -13,16 +13,24 @@ from Scientific.IO.TextFile import TextFile
 from Scientific.IO.PDB import Structure
 from Scientific.Geometry import Vector, Tensor, delta
 from Scientific import N
-from CDTK.Utility import largestAbsoluteElement
+from CDTK.Utility import largestAbsoluteElement, compactSymmetricTensor
 
 from CDTK.mmCIF import mmCIFFile
 from CDTK.SpaceGroups import space_groups
 from CDTK.Crystal import UnitCell
 from CDTK.Reflections import ReflectionSet
 from CDTK.ReflectionData import ExperimentalAmplitudes, StructureFactor
-from CDTK.Refinement import MaximumLikelihoodRefinementEngine
+from CDTK.Refinement import RefinementEngine, MaximumLikelihoodRefinementEngine
 from CDTK import Units
 
+# The tests for derivatives with respect to positions and ADPs work
+# correctly only for this slightly modified maximum-likelihood refinement
+# engine which doesn't recompute the optimal alpha/beta values after each
+# parameter update. In fact, the derivatives computed by the ML refinement
+# engine are approximates ones that do not take into account the contribution
+# to the change of the target function due to the change of alpha and beta.
+class ModifiedMLRefinementEngine(MaximumLikelihoodRefinementEngine):
+    _updateInternalState = RefinementEngine._updateInternalState
 
 class RefinementTests2ONX(unittest.TestCase):
 
@@ -65,7 +73,7 @@ class RefinementTests2ONX(unittest.TestCase):
         s = Structure('2ONX.pdb.gz')
         asu_atoms = sum(([atom for atom in residue] for residue in s), [])
         self.atom_ids = [atom['serial_number'] for atom in asu_atoms]
-        self.re = MaximumLikelihoodRefinementEngine(self.exp_amplitudes,
+        self.re = ModifiedMLRefinementEngine(self.exp_amplitudes,
                   ((atom['serial_number'], atom['element'],
                     atom['position']*Units.Ang,
                     atom['temperature_factor']*Units.Ang**2*delta/(8.*N.pi**2),
@@ -89,20 +97,18 @@ class RefinementTests2ONX(unittest.TestCase):
     def test_position_derivatives(self):
         llk, pd = self.re.targetFunctionAndPositionDerivatives()
         dp = 0.0001
-        num_pd = []
         for atom_id in self.atom_ids:
             p = self.re.getPosition(atom_id)
-            num_deriv = []
+            gradient = Vector(0., 0., 0.)
             for v in [Vector(1.,0.,0.), Vector(0.,1.,0.), Vector(0.,0.,1.)]:
                 self.re.setPosition(atom_id, p+dp*v)
                 llk_p, dummy = self.re.targetFunctionAndPositionDerivatives()
                 self.re.setPosition(atom_id, p-dp*v)
                 llk_m, dummy = self.re.targetFunctionAndPositionDerivatives()
-                num_deriv.append((llk_p-llk_m)/(2.*dp))
-            num_pd.append(num_deriv)
+                gradient += (llk_p-llk_m)/(2.*dp) * v
             self.re.setPosition(atom_id, p)
-        error = largestAbsoluteElement((N.array(num_pd)-pd)/pd)
-        self.assert_(error < 7.e-5)
+            error = (gradient-pd[atom_id]).length()/pd[atom_id].length()
+            self.assert_(error < 1.5e-5)
 
     def test_ADP_derivatives(self):
         llk, adpd = self.re.targetFunctionAndADPDerivatives()
@@ -110,7 +116,7 @@ class RefinementTests2ONX(unittest.TestCase):
         num_adpd = []
         for atom_id in self.atom_ids:
             adp = self.re.getADP(atom_id)
-            num_deriv = []
+            gradient = N.zeros((6,), N.Float)
             for t in [Tensor([[1., 0., 0.], [0., 0., 0.], [0., 0., 0.]]),
                       Tensor([[0., 0., 0.], [0., 1., 0.], [0., 0., 0.]]),
                       Tensor([[0., 0., 0.], [0., 0., 0.], [0., 0., 1.]]),
@@ -121,10 +127,11 @@ class RefinementTests2ONX(unittest.TestCase):
                 llk_p, dummy = self.re.targetFunctionAndADPDerivatives()
                 self.re.setADP(atom_id, adp-dp*t)
                 llk_m, dummy = self.re.targetFunctionAndADPDerivatives()
-                num_deriv.append((llk_p-llk_m)/(2.*dp))
-            num_adpd.append(num_deriv)
+                gradient += (llk_p-llk_m)/(2.*dp) \
+                             * compactSymmetricTensor(t.array)
+            num_adpd.append(gradient)
             self.re.setADP(atom_id, adp)
-        error = largestAbsoluteElement((N.array(num_adpd)-adpd)/adpd)
+        error = largestAbsoluteElement((N.array(num_adpd)-adpd.array)/adpd.array)
         self.assert_(error < 2.e-3)
 
 

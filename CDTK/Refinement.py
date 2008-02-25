@@ -254,7 +254,7 @@ class RefinementEngine(object):
         target, deriv = self.targetFunctionAndAmplitudeDerivatives()
         pd = N.zeros(self.positions.shape, N.Float)
         self._evaluateModel(None, pd, None, deriv)
-        return target, pd
+        return target, AtomPositionDataArray(self, pd)
 
     def targetFunctionAndADPDerivatives(self):
         """
@@ -266,7 +266,25 @@ class RefinementEngine(object):
         target, deriv = self.targetFunctionAndAmplitudeDerivatives()
         adpd = N.zeros(self.adps.shape, N.Float)
         self._evaluateModel(None, None, adpd, deriv)
-        return target, -2.*N.pi**2*adpd
+        return target, AtomDataArray(self, -2.*N.pi**2*adpd)
+
+#
+# Thin wrapper around arrays representing per-atom positions, ADPs,
+# or derivatives. They permit indexing with atom id objects.
+#
+class AtomDataArray(object):
+    
+    def __init__(self, refinement_engine, array):
+        self.re = refinement_engine
+        self.array = array
+
+    def __getitem__(self, atom_id):
+        return self.array[self.re.id_dict[atom_id]]
+
+class AtomPositionDataArray(AtomDataArray):
+
+    def __getitem__(self, atom_id):
+        return Vector(self.array[self.re.id_dict[atom_id]])
 
 #
 # RefinementEngine with a maximum-likelihood target function
