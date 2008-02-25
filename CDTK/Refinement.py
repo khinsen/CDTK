@@ -171,7 +171,7 @@ class RefinementEngine(object):
         self.state_valid = True
 
     def _updateInternalState(self):
-        self.calculateModelAmplitudes()
+        self._calculateModelAmplitudes()
         
     def _evaluateModel(self, sf, pd, adpd, deriv):
         from CDTK_sfcalc import sfDeriv
@@ -220,11 +220,9 @@ class RefinementEngine(object):
                                        / self.model_amplitudes)[:, N.NewAxis]
                                        * ssq)
 
-    def calculateModelAmplitudes(self):
-        """
-        Calculate the structure factor amplitudes for the model using the
-        current paramters.
-        """
+    def _calculateModelAmplitudes(self):
+        # Calculate the structure factor amplitudes for the model using the
+        # current parameters.
         sf = N.zeros(self.ssq.shape, N.Complex)
         self._evaluateModel(sf, None, None, None)
         self.structure_factor = sf
@@ -285,7 +283,7 @@ class MaximumLikelihoodRefinementEngine(RefinementEngine):
         self.res_shells = None
         RefinementEngine.__init__(self, exp_amplitudes, asu_iterator)
         nrefl_per_shell = min(50, max(3, len(self.ssq)/10))
-        self.calculateModelAmplitudes()
+        self._calculateModelAmplitudes()
         while True:
             self.defineResolutionShells(nrefl_per_shell)
             try:
@@ -323,7 +321,7 @@ class MaximumLikelihoodRefinementEngine(RefinementEngine):
                 dllk[ri] = -(darg1[ri]+2.*I1divI0(2*arg2[ri])*darg2[ri])
         return llk, dllk
 
-    def _rupdateInternalState(self):
+    def _updateInternalState(self):
         RefinementEngine._updateInternalState(self)
         self.findAlphaBeta()
 
