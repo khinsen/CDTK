@@ -230,7 +230,9 @@ class RefinementEngine(object):
 
     def rFactor(self):
         self.updateInternalState()
-        return N.sum(N.fabs(self.model_amplitudes-self.exp_amplitudes)) \
+        scale = N.sum(self.model_amplitudes*self.exp_amplitudes) \
+                / N.sum(self.model_amplitudes**2)
+        return N.sum(N.fabs(scale*self.model_amplitudes-self.exp_amplitudes)) \
                / N.sum(self.exp_amplitudes)
 
     def targetFunctionAndAmplitudeDerivatives(self):
