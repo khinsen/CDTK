@@ -21,6 +21,7 @@ from CDTK.Crystal import UnitCell
 from CDTK.Reflections import ReflectionSet
 from CDTK.ReflectionData import ExperimentalAmplitudes, StructureFactor
 from CDTK.Refinement import RefinementEngine, MaximumLikelihoodRefinementEngine
+from CDTK.SubsetRefinement import AtomSubsetRefinementEngine
 from CDTK import Units
 
 # The tests for derivatives with respect to positions and ADPs work
@@ -32,9 +33,9 @@ from CDTK import Units
 class ModifiedMLRefinementEngine(MaximumLikelihoodRefinementEngine):
     _updateInternalState = RefinementEngine._updateInternalState
 
-class RefinementTests2ONX(unittest.TestCase):
+class CommonRefinementTests2ONX(unittest.TestCase):
 
-    def setUp(self):
+    def _setUp(self):
         cif_file = mmCIFFile()
         cif_file.load_file(TextFile('2onx-sf.cif.gz'))
         cif_data = cif_file[0]
@@ -71,16 +72,15 @@ class RefinementTests2ONX(unittest.TestCase):
                                                    float(r['f_meas_sigma_au'])])
 
         s = Structure('2ONX.pdb.gz')
-        asu_atoms = sum(([atom for atom in residue] for residue in s), [])
-        self.atom_ids = [atom['serial_number'] for atom in asu_atoms]
+        self.asu_atoms = sum(([atom for atom in residue] for residue in s), [])
         self.re = ModifiedMLRefinementEngine(self.exp_amplitudes,
                   ((atom['serial_number'], atom['element'],
                     atom['position']*Units.Ang,
                     atom['temperature_factor']*Units.Ang**2*delta/(8.*N.pi**2),
                     atom['occupancy'])
-                    for atom in asu_atoms))
+                    for atom in self.asu_atoms))
 
-    def test_amplitude_derivatives(self):
+    def _test_amplitude_derivatives(self):
         llk, dllk = self.re.targetFunctionAndAmplitudeDerivatives()
         self.assertAlmostEqual(llk, 685.75243727)
         da = 0.01*N.minimum.reduce(self.re.model_amplitudes)
@@ -94,7 +94,7 @@ class RefinementTests2ONX(unittest.TestCase):
             deviation = dllk[ri] - (llk_p-llk_m)/(2.*da)
             self.assert_(deviation/dllk[ri] < 2.e-6)
 
-    def test_position_derivatives(self):
+    def _test_position_derivatives(self):
         llk, pd = self.re.targetFunctionAndPositionDerivatives()
         dp = 0.0001
         for atom_id in self.atom_ids:
@@ -110,7 +110,7 @@ class RefinementTests2ONX(unittest.TestCase):
             error = (gradient-pd[atom_id]).length()/pd[atom_id].length()
             self.assert_(error < 1.5e-5)
 
-    def test_ADP_derivatives(self):
+    def _test_ADP_derivatives(self):
         llk, adpd = self.re.targetFunctionAndADPDerivatives()
         dp = 0.00001
         num_adpd = []
@@ -134,11 +134,34 @@ class RefinementTests2ONX(unittest.TestCase):
         error = largestAbsoluteElement((N.array(num_adpd)-adpd.array)/adpd.array)
         self.assert_(error < 2.e-3)
 
+class AllAtomRefinementTests2ONX(CommonRefinementTests2ONX):
+
+    def setUp(self):
+        CommonRefinementTests2ONX._setUp(self)
+        self.atom_ids = [atom['serial_number'] for atom in self.asu_atoms]
+
+    test_amplitude_derivatives = CommonRefinementTests2ONX._test_amplitude_derivatives
+    test_position_derivatives = CommonRefinementTests2ONX._test_position_derivatives
+    test_ADP_derivatives = CommonRefinementTests2ONX._test_ADP_derivatives
+
+class CalphaRefinementTests2ONX(CommonRefinementTests2ONX):
+
+    def setUp(self):
+        CommonRefinementTests2ONX._setUp(self)
+        self.aa_re = self.re
+        self.atom_ids = [atom['serial_number']
+                         for atom in self.asu_atoms
+                         if atom.name == 'CA']
+        self.re = AtomSubsetRefinementEngine(self.aa_re, self.atom_ids)
+
+    test_position_derivatives = CommonRefinementTests2ONX._test_position_derivatives
+    test_ADP_derivatives = CommonRefinementTests2ONX._test_ADP_derivatives
 
 def suite():
     loader = unittest.TestLoader()
     s = unittest.TestSuite()
-    s.addTest(loader.loadTestsFromTestCase(RefinementTests2ONX))
+    s.addTest(loader.loadTestsFromTestCase(AllAtomRefinementTests2ONX))
+    s.addTest(loader.loadTestsFromTestCase(CalphaRefinementTests2ONX))
     return s
 
 if __name__ == '__main__':
