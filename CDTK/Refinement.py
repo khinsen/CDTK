@@ -288,6 +288,33 @@ class AtomPositionDataArray(AtomDataArray):
     def __getitem__(self, atom_id):
         return Vector(self.array[self.re.id_dict[atom_id]])
 
+    
+#
+# RefinementEngine with a least-squares-likelihood target function
+#
+class LeastSquaresRefinementEngine(RefinementEngine):
+
+    """
+    A RefinementEngine whose target function is the sum over all reflections
+    of the squared deviation of the model structure factor amplitudes from
+    the experimental ones, after multiplication of the model amplitudes by
+    an optimized scale factor.
+    """
+
+    def targetFunctionAndAmplitudeDerivatives(self):
+        self.updateInternalState()
+        me = self.model_amplitudes*self.exp_amplitudes
+        s_me = N.sum(me)
+        mm = self.model_amplitudes**2
+        s_mm = N.sum(mm)
+        scale = s_me/s_mm
+        sderiv = self.exp_amplitudes/s_mm-2.*self.model_amplitudes*s_me/s_mm**2
+        df = scale*self.model_amplitudes - self.exp_amplitudes
+        sum_sq = N.sum(df*df)
+        deriv = 2.*df*scale + N.sum(2.*df*self.model_amplitudes)*sderiv
+        return sum_sq, deriv
+
+
 #
 # RefinementEngine with a maximum-likelihood target function
 #
@@ -432,4 +459,3 @@ class MaximumLikelihoodRefinementEngine(RefinementEngine):
 #
 class ParameterError(Exception):
     pass
-
