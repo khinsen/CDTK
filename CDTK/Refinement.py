@@ -75,7 +75,8 @@ class RefinementEngine(object):
         mask = exp_amplitudes.data_available
         self.reflection_set = exp_amplitudes.reflection_set
         self.exp_amplitudes = N.repeat(exp_amplitudes.array[:, 0], mask)
-    
+        self.nreflections = len(self.exp_amplitudes)
+
         # Precompute arrays that are used frequently later
         self._precomputeArrays(mask)
         
@@ -101,7 +102,7 @@ class RefinementEngine(object):
             e_indices.setdefault(self.elements[i], len(e_indices))
         self.element_indices = N.array([e_indices[self.elements[i]]
                                         for i in range(self.natoms)])
-        f_atom = N.zeros((len(e_indices), len(self.ssq)), N.Float)
+        f_atom = N.zeros((len(e_indices), self.nreflections), N.Float)
         for i in range(self.natoms):
             a, b = atomic_scattering_factors[self.elements[i]]
             f_atom[self.element_indices[i], :] = \
@@ -312,7 +313,7 @@ class LeastSquaresRefinementEngine(RefinementEngine):
         df = scale*self.model_amplitudes - self.exp_amplitudes
         sum_sq = N.sum(df*df)
         deriv = 2.*df*scale + N.sum(2.*df*self.model_amplitudes)*sderiv
-        return sum_sq, deriv
+        return sum_sq/self.nreflections, deriv/self.nreflections
 
 
 #
@@ -329,7 +330,7 @@ class MaximumLikelihoodRefinementEngine(RefinementEngine):
     def __init__(self, exp_amplitudes, asu_iterator):
         self.res_shells = None
         RefinementEngine.__init__(self, exp_amplitudes, asu_iterator)
-        nrefl_per_shell = min(50, max(3, len(self.ssq)/10))
+        nrefl_per_shell = min(50, max(3, self.nreflections/10))
         self._calculateModelAmplitudes()
         while True:
             self.defineResolutionShells(nrefl_per_shell)
@@ -353,7 +354,7 @@ class MaximumLikelihoodRefinementEngine(RefinementEngine):
 
         llk = 0.
         dllk = 0.*self.ssq
-        for ri in range(len(self.ssq)):
+        for ri in range(self.nreflections):
             if self.centric[ri]:
                 llk -= 0.5*arg1[ri]+logcosh(arg2[ri]) \
                        + 0.5*N.log(2*eps_beta_inv[ri]/N.pi)
@@ -366,7 +367,7 @@ class MaximumLikelihoodRefinementEngine(RefinementEngine):
                 # I0(x)' = I1(x)
                 # log(I0(x))' = I1(x)/I0(x)
                 dllk[ri] = -(darg1[ri]+2.*I1divI0(2*arg2[ri])*darg2[ri])
-        return llk, dllk
+        return llk/self.nreflections, dllk/self.nreflections
 
     def _updateInternalState(self):
         RefinementEngine._updateInternalState(self)
@@ -441,7 +442,7 @@ class MaximumLikelihoodRefinementEngine(RefinementEngine):
                                            N.array([beta[0]]+beta+[beta[-1]]))
 
     def defineResolutionShells(self, nrefl_per_shell):
-        assert nrefl_per_shell <= len(self.ssq)
+        assert nrefl_per_shell <= self.nreflections
         indices = N.argsort(self.ssq)
         self.res_shells = []
         for first in range(0, len(indices), nrefl_per_shell/2):

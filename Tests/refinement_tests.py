@@ -129,9 +129,8 @@ class AllAtomLSQRefinementTests2ONX(CommonRefinementTests2ONX):
 
     def test_amplitude_derivatives(self):
         sum_sq, deriv = self.re.targetFunctionAndAmplitudeDerivatives()
-        self.assertAlmostEqual(sum_sq, 5139.0490226304819)
+        self.assertAlmostEqual(sum_sq, 20.4742988949)
         da = 0.01*N.minimum.reduce(self.re.model_amplitudes)
-        me = 0.
         for ri in range(len(self.re.ssq)):
             a = self.re.model_amplitudes[ri]
             self.re.model_amplitudes[ri] = a + da
@@ -140,7 +139,7 @@ class AllAtomLSQRefinementTests2ONX(CommonRefinementTests2ONX):
             sum_sq_m, dummy = self.re.targetFunctionAndAmplitudeDerivatives()
             self.re.model_amplitudes[ri] = a
             deviation = deriv[ri] - (sum_sq_p-sum_sq_m)/(2.*da)
-            self.assert_(abs(deviation/deriv[ri]) < 4.e-8)
+            self.assert_(abs(deviation/deriv[ri]) < 5.e-8)
 
     test_position_derivatives = CommonRefinementTests2ONX._test_position_derivatives
     test_ADP_derivatives = CommonRefinementTests2ONX._test_ADP_derivatives
@@ -159,7 +158,7 @@ class AllAtomMLRefinementTests2ONX(CommonRefinementTests2ONX):
 
     def test_amplitude_derivatives(self):
         llk, dllk = self.re.targetFunctionAndAmplitudeDerivatives()
-        self.assertAlmostEqual(llk, 685.75243727)
+        self.assertAlmostEqual(llk, 2.73208142338)
         da = 0.01*N.minimum.reduce(self.re.model_amplitudes)
         for ri in range(len(self.re.ssq)):
             a = self.re.model_amplitudes[ri]
