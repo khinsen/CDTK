@@ -1,5 +1,5 @@
 include README LICENCE LICENSE
-include Src/*.pyx Src/*.c
+include Src/*.pyx Src/*.c Src/*.pxi
 include Tests/*.py Tests/*.gz Tests/run_all_tests
 include Scripts/*
 include Doc/*.tex Doc/*.pdf
