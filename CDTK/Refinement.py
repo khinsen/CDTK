@@ -101,7 +101,8 @@ class RefinementEngine(object):
         for i in range(self.natoms):
             e_indices.setdefault(self.elements[i], len(e_indices))
         self.element_indices = N.array([e_indices[self.elements[i]]
-                                        for i in range(self.natoms)])
+                                        for i in range(self.natoms)],
+                                       N.Int32)
         f_atom = N.zeros((len(e_indices), self.nreflections), N.Float)
         for i in range(self.natoms):
             a, b = atomic_scattering_factors[self.elements[i]]
