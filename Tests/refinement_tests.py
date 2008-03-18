@@ -18,7 +18,7 @@ from CDTK.Utility import largestAbsoluteElement, compactSymmetricTensor
 from CDTK.mmCIF import mmCIFFile
 from CDTK.SpaceGroups import space_groups
 from CDTK.Crystal import UnitCell
-from CDTK.Reflections import ReflectionSet
+from CDTK.Reflections import ReflectionSet, ReflectionSubset
 from CDTK.ReflectionData import ExperimentalAmplitudes, StructureFactor
 from CDTK.Refinement import RefinementEngine, LeastSquaresRefinementEngine, \
                             MaximumLikelihoodRefinementEngine
@@ -62,6 +62,10 @@ class CommonRefinementTests2ONX(unittest.TestCase):
         self.reflections.fillResolutionSphere(max_resolution, min_resolution)
 
         self.exp_amplitudes = ExperimentalAmplitudes(self.reflections)
+
+        all = [r for r in self.reflections]
+        self.work = ReflectionSubset(self.reflections, all[:200])
+        self.free = ReflectionSubset(self.reflections, all[200:])
 
         for r in cif_data['refln']:
             h = int(r['index_h'])
@@ -113,7 +117,7 @@ class CommonRefinementTests2ONX(unittest.TestCase):
             num_adpd.append(gradient)
             self.re.setADP(atom_id, adp)
         error = largestAbsoluteElement((N.array(num_adpd)-adpd.array)/adpd.array)
-        self.assert_(error < 2.e-3)
+        self.assert_(error < 5.e-3)
 
 class AllAtomLSQRefinementTests2ONX(CommonRefinementTests2ONX):
 
@@ -124,22 +128,31 @@ class AllAtomLSQRefinementTests2ONX(CommonRefinementTests2ONX):
                     atom['position']*Units.Ang,
                     atom['temperature_factor']*Units.Ang**2*delta/(8.*N.pi**2),
                     atom['occupancy'])
-                    for atom in self.asu_atoms))
+                    for atom in self.asu_atoms),
+                  self.work, self.free)
         self.atom_ids = [atom['serial_number'] for atom in self.asu_atoms]
 
     def test_amplitude_derivatives(self):
         sum_sq, deriv = self.re.targetFunctionAndAmplitudeDerivatives()
-        self.assertAlmostEqual(sum_sq, 20.4742988949)
+        self.assertAlmostEqual(sum_sq, 24.811433398928738)
         da = 0.01*N.minimum.reduce(self.re.model_amplitudes)
         for ri in range(len(self.re.ssq)):
             a = self.re.model_amplitudes[ri]
             self.re.model_amplitudes[ri] = a + da
+            self.re.working_model_amplitudes = \
+                N.repeat(self.re.model_amplitudes, self.re.working_set)
             sum_sq_p, dummy = self.re.targetFunctionAndAmplitudeDerivatives()
             self.re.model_amplitudes[ri] = a - da
+            self.re.working_model_amplitudes = \
+                N.repeat(self.re.model_amplitudes, self.re.working_set)
             sum_sq_m, dummy = self.re.targetFunctionAndAmplitudeDerivatives()
             self.re.model_amplitudes[ri] = a
             deviation = deriv[ri] - (sum_sq_p-sum_sq_m)/(2.*da)
-            self.assert_(abs(deviation/deriv[ri]) < 5.e-8)
+            if deriv[ri] == 0.:
+                self.assert_(self.re.working_set[ri] == 0)
+                self.assert_(deviation == 0.)
+            else:
+                self.assert_(abs(deviation/deriv[ri]) < 5.e-8)
 
     test_position_derivatives = CommonRefinementTests2ONX._test_position_derivatives
     test_ADP_derivatives = CommonRefinementTests2ONX._test_ADP_derivatives
@@ -153,22 +166,31 @@ class AllAtomMLRefinementTests2ONX(CommonRefinementTests2ONX):
                     atom['position']*Units.Ang,
                     atom['temperature_factor']*Units.Ang**2*delta/(8.*N.pi**2),
                     atom['occupancy'])
-                    for atom in self.asu_atoms))
+                    for atom in self.asu_atoms),
+                  self.work, self.free)
         self.atom_ids = [atom['serial_number'] for atom in self.asu_atoms]
 
     def test_amplitude_derivatives(self):
         llk, dllk = self.re.targetFunctionAndAmplitudeDerivatives()
-        self.assertAlmostEqual(llk, 2.73208142338)
+        self.assertAlmostEqual(llk, 2.8111087496577025)
         da = 0.01*N.minimum.reduce(self.re.model_amplitudes)
         for ri in range(len(self.re.ssq)):
             a = self.re.model_amplitudes[ri]
             self.re.model_amplitudes[ri] = a + da
+            self.re.working_model_amplitudes = \
+                N.repeat(self.re.model_amplitudes, self.re.working_set)
             llk_p, dummy = self.re.targetFunctionAndAmplitudeDerivatives()
             self.re.model_amplitudes[ri] = a - da
+            self.re.working_model_amplitudes = \
+                N.repeat(self.re.model_amplitudes, self.re.working_set)
             llk_m, dummy = self.re.targetFunctionAndAmplitudeDerivatives()
             self.re.model_amplitudes[ri] = a
             deviation = dllk[ri] - (llk_p-llk_m)/(2.*da)
-            self.assert_(abs(deviation/dllk[ri]) < 2.e-6)
+            if dllk[ri] == 0.:
+                self.assert_(self.re.working_set[ri] == 0)
+                self.assert_(deviation == 0.)
+            else:
+                self.assert_(abs(deviation/dllk[ri]) < 2.e-6)
 
     test_position_derivatives = CommonRefinementTests2ONX._test_position_derivatives
     test_ADP_derivatives = CommonRefinementTests2ONX._test_ADP_derivatives
@@ -182,7 +204,8 @@ class CalphaRefinementTests2ONX(CommonRefinementTests2ONX):
                     atom['position']*Units.Ang,
                     atom['temperature_factor']*Units.Ang**2*delta/(8.*N.pi**2),
                     atom['occupancy'])
-                    for atom in self.asu_atoms))
+                    for atom in self.asu_atoms),
+                  self.work, self.free)
         self.aa_re = self.re
         self.atom_ids = [atom['serial_number']
                          for atom in self.asu_atoms

@@ -126,9 +126,13 @@ class AtomSubsetRefinementEngine(RefinementEngine):
         self.position_updates[:] = 0.
         self.re.state_valid = False
 
-    def rFactor(self):
+    def rFactors(self):
         self.updateInternalState()
-        return self.re.rFactor()
+        return self.re.rFactors()
+
+    def targetFunction(self):
+        self.updateInternalState()
+        return self.re.targetFunction()
 
     def targetFunctionAndAmplitudeDerivatives(self):
         self.updateInternalState()

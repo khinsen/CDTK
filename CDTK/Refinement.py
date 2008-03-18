@@ -35,7 +35,8 @@ class RefinementEngine(object):
     corresponds to the ideal refined state.
     """
 
-    def __init__(self, exp_amplitudes, asu_iterator):
+    def __init__(self, exp_amplitudes, asu_iterator, working_subset=None,
+                 validation_subset=None):
         """
         @param exp_amplitudes: experimental structure factor amplitudes
         @type exp_amplitudes: L{CDTK.ReflectionData.ExperimentalAmplitudes}
@@ -48,6 +49,13 @@ class RefinementEngine(object):
                              later for updating or retrieving the parameters
                              of this atom.
         @type asu_iterator: iterator
+        @param working_subset: a subset of the reflections used in the
+                               calculation of the target function. If None,
+                               all reflections are used.
+        @type working_subset: L{CDTK.Reflection.ReflectionSubset}
+        @param validation_subset: a subset of the reflections used for
+                                  validation. If None, all reflections are used.
+        @type validation_subset: L{CDTK.Reflection.ReflectionSubset}
         """
         # Store the atomic model
         ids = []
@@ -76,6 +84,28 @@ class RefinementEngine(object):
         self.reflection_set = exp_amplitudes.reflection_set
         self.exp_amplitudes = N.repeat(exp_amplitudes.array[:, 0], mask)
         self.nreflections = len(self.exp_amplitudes)
+
+        # Define masks for the working and validation subsets
+        working_set = 0*exp_amplitudes.data_available
+        if working_subset is None:
+            working_set[:] = 1
+        else:
+            for r in working_subset:
+                working_set[r.index] = 1
+        self.working_set = N.repeat(working_set, mask)
+        self.nwreflections = N.int_sum(self.working_set)
+        validation_set = 0*exp_amplitudes.data_available
+        if validation_subset is None:
+            validation_set[:] = 1
+        else:
+            for r in validation_subset:
+                validation_set[r.index] = 1
+        self.validation_set = N.repeat(validation_set, mask)
+        self.nvreflections = N.int_sum(self.validation_set)
+        self.working_exp_amplitudes = \
+                N.repeat(self.exp_amplitudes, self.working_set)
+        self.validation_exp_amplitudes = \
+                N.repeat(self.exp_amplitudes, self.validation_set)
 
         # Precompute arrays that are used frequently later
         self._precomputeArrays(mask)
@@ -229,20 +259,34 @@ class RefinementEngine(object):
         self._evaluateModel(sf, None, None, None)
         self.structure_factor = sf
         self.model_amplitudes = N.absolute(sf)
+        self.working_model_amplitudes = \
+                N.repeat(self.model_amplitudes, self.working_set)
+        self.validation_model_amplitudes = \
+                N.repeat(self.model_amplitudes, self.validation_set)
 
-    def rFactor(self):
+    def rFactors(self):
+        """
+        @return: the R factors for the working and the validation subset
+        @rtype: C{(float, float)}
+        """
         self.updateInternalState()
-        scale = N.sum(self.model_amplitudes*self.exp_amplitudes) \
-                / N.sum(self.model_amplitudes**2)
-        return N.sum(N.fabs(scale*self.model_amplitudes-self.exp_amplitudes)) \
-               / N.sum(self.exp_amplitudes)
+        scale = N.sum(self.working_model_amplitudes
+                      * self.working_exp_amplitudes) \
+                  / N.sum(self.working_model_amplitudes**2)
+        r_work = N.sum(N.fabs(scale*self.working_model_amplitudes
+                              - self.working_exp_amplitudes)) \
+                   / N.sum(self.working_exp_amplitudes)
+        r_free = N.sum(N.fabs(scale*self.validation_model_amplitudes
+                              - self.validation_exp_amplitudes)) \
+                   / N.sum(self.validation_exp_amplitudes)
+        return r_work, r_free
 
     def targetFunction(self):
         """
         Calculate the target function of the refinement (the function whose
         global minimum corresponds to the ideal refined model).
         @return: target
-        @rtype: C{float}) 
+        @rtype: C{float}
         """
         return self.targetFunctionAndAmplitudeDerivatives()[0]
 
@@ -314,24 +358,29 @@ class LeastSquaresRefinementEngine(RefinementEngine):
 
     def targetFunction(self):
         self.updateInternalState()
-        me = self.model_amplitudes*self.exp_amplitudes
-        mm = self.model_amplitudes**2
+        me = self.working_model_amplitudes*self.working_exp_amplitudes
+        mm = self.working_model_amplitudes**2
         scale = N.sum(me)/N.sum(mm)
-        df = scale*self.model_amplitudes - self.exp_amplitudes
-        return N.sum(df*df)/self.nreflections
+        df = scale*self.working_model_amplitudes - self.working_exp_amplitudes
+        return N.sum(df*df)/self.nwreflections
 
     def targetFunctionAndAmplitudeDerivatives(self):
         self.updateInternalState()
-        me = self.model_amplitudes*self.exp_amplitudes
+        me = self.working_model_amplitudes*self.working_exp_amplitudes
         s_me = N.sum(me)
-        mm = self.model_amplitudes**2
+        mm = self.working_model_amplitudes**2
         s_mm = N.sum(mm)
         scale = s_me/s_mm
-        sderiv = self.exp_amplitudes/s_mm-2.*self.model_amplitudes*s_me/s_mm**2
-        df = scale*self.model_amplitudes - self.exp_amplitudes
+        df = scale*self.working_model_amplitudes - self.working_exp_amplitudes
         sum_sq = N.sum(df*df)
-        deriv = 2.*df*scale + N.sum(2.*df*self.model_amplitudes)*sderiv
-        return sum_sq/self.nreflections, deriv/self.nreflections
+        df = scale*self.model_amplitudes - self.exp_amplitudes
+        sderiv = self.exp_amplitudes/s_mm \
+                 - 2.*self.model_amplitudes*s_me/s_mm**2
+        deriv = 2.*df*scale + \
+                N.sum(N.repeat(2.*df*self.model_amplitudes, self.working_set)) \
+                 * sderiv
+        return sum_sq/self.nwreflections, \
+               deriv*self.working_set/self.nwreflections
 
 #
 # RefinementEngine with a maximum-likelihood target function
@@ -344,9 +393,11 @@ class MaximumLikelihoodRefinementEngine(RefinementEngine):
     coefficients and uncorrelated errors for the atomic model parameters.
     """
 
-    def __init__(self, exp_amplitudes, asu_iterator):
+    def __init__(self, exp_amplitudes, asu_iterator, working_subset=None,
+                 validation_subset=None):
         self.res_shells = None
-        RefinementEngine.__init__(self, exp_amplitudes, asu_iterator)
+        RefinementEngine.__init__(self, exp_amplitudes, asu_iterator,
+                                  working_subset, validation_subset)
         nrefl_per_shell = min(50, max(3, self.nreflections/10))
         self._calculateModelAmplitudes()
         while True:
@@ -372,19 +423,20 @@ class MaximumLikelihoodRefinementEngine(RefinementEngine):
         llk = 0.
         dllk = 0.*self.ssq
         for ri in range(self.nreflections):
-            if self.centric[ri]:
-                llk -= 0.5*arg1[ri]+logcosh(arg2[ri]) \
-                       + 0.5*N.log(2*eps_beta_inv[ri]/N.pi)
-                # cosh(x)' = sinh(x)
-                # log(cosh(x))' = tanh(x)
-                dllk[ri] = -(0.5*darg1[ri]+N.tanh(arg2[ri])*darg2[ri])
-            else:
-                llk -= arg1[ri]+logI0(2.*arg2[ri]) \
-                       + N.log(2.*self.exp_amplitudes[ri]*eps_beta_inv[ri])
-                # I0(x)' = I1(x)
-                # log(I0(x))' = I1(x)/I0(x)
-                dllk[ri] = -(darg1[ri]+2.*I1divI0(2*arg2[ri])*darg2[ri])
-        return llk/self.nreflections, dllk/self.nreflections
+            if self.working_set[ri]:
+                if self.centric[ri]:
+                    llk -= 0.5*arg1[ri]+logcosh(arg2[ri]) \
+                           + 0.5*N.log(2*eps_beta_inv[ri]/N.pi)
+                    # cosh(x)' = sinh(x)
+                    # log(cosh(x))' = tanh(x)
+                    dllk[ri] = -(0.5*darg1[ri]+N.tanh(arg2[ri])*darg2[ri])
+                else:
+                    llk -= arg1[ri]+logI0(2.*arg2[ri]) \
+                           + N.log(2.*self.exp_amplitudes[ri]*eps_beta_inv[ri])
+                    # I0(x)' = I1(x)
+                    # log(I0(x))' = I1(x)/I0(x)
+                    dllk[ri] = -(darg1[ri]+2.*I1divI0(2*arg2[ri])*darg2[ri])
+        return llk/self.nwreflections, dllk/self.nwreflections
 
     def _updateInternalState(self):
         RefinementEngine._updateInternalState(self)
