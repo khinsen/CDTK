@@ -445,19 +445,23 @@ class MaximumLikelihoodRefinementEngine(RefinementEngine):
     def findAlphaBeta(self):
         if self.res_shells is None:
             return
-        w = 2-self.centric
         p = self.model_amplitudes*self.exp_amplitudes/self.epsilon
         t = None
         alpha = []
         beta = []
-        for rs in self.res_shells:
-            a = b = c = d = tw = 0.
-            for ri in rs:
-                a += w[ri]*self.model_amplitudes[ri]**2/self.epsilon[ri]
-                b += w[ri]*self.exp_amplitudes[ri]**2/self.epsilon[ri]
-                c += w[ri]*p[ri]
-                d += w[ri]*p[ri]*p[ri]
-                tw += w[ri]
+        for rsc, rsa in self.res_shells:
+            a = b = c = d = 0.
+            tw = len(rsc) + 2.*len(rsa)
+            for ri in rsc:
+                a += self.model_amplitudes[ri]**2/self.epsilon[ri]
+                b += self.exp_amplitudes[ri]**2/self.epsilon[ri]
+                c += p[ri]
+                d += p[ri]*p[ri]
+            for ri in rsa:
+                a += 2.*self.model_amplitudes[ri]**2/self.epsilon[ri]
+                b += 2.*self.exp_amplitudes[ri]**2/self.epsilon[ri]
+                c += 2.*p[ri]
+                d += 2.*p[ri]*p[ri]
             a /= tw
             b /= tw
             c /= tw
@@ -469,16 +473,7 @@ class MaximumLikelihoodRefinementEngine(RefinementEngine):
                 raise ParameterError()
             else:
                 def g(t):
-                    l = 0.
-                    for ri in rs:
-                        if self.centric[ri]:
-                            h = N.tanh(t*p[ri])
-                        else:
-                            x = 2.*t*p[ri]
-                            h = I1divI0(x)
-                        l += w[ri]*p[ri]*h
-                    l /= tw
-                    return N.sqrt(1.+4.*a*b*t*t)-2.*t*l-1.
+                    return N.sqrt(1.+4.*a*b*t*t)-2.*t*l(t, p, rsc, rsa)-1.
                 if t is None:
                     t = 1.
                 while g(t) > 0.:
@@ -523,9 +518,32 @@ class MaximumLikelihoodRefinementEngine(RefinementEngine):
                                     [N.sum(N.take(self.ssq, rs))/len(rs)
                                      for rs in self.res_shells] + \
                                      [1.001*N.maximum.reduce(self.ssq)])
+        # Separate each list into centric and acentric reflections
+        self.res_shells = [(N.array([ri for ri in rs
+                                     if self.centric[ri]], N.Int32),
+                            N.array([ri for ri in rs
+                                     if not self.centric[ri]], N.Int32))
+                           for rs in self.res_shells]
 
 #
 # An exception used by the maximum-likelihood target function
 #
 class ParameterError(Exception):
     pass
+
+#
+# A time-critical function used by the maximum-likelihood target function
+#
+try:
+    from CDTK_refinement import l
+except ImportError:
+    import sys
+    sys.error.write("Module CDTK_refinement is missing\n")
+    def l(t, p, rsc, rsa):
+        lv = 0.
+        for ri in rsc:
+            lv += p[ri]*N.tanh(t*p[ri])
+        for ri in rsa:
+            p2 = 2.*p[ri]
+            lv += p2*I1divI0(t*p2)
+        return lv / (len(rsc) + 2.*len(rsa))

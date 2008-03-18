@@ -77,6 +77,10 @@ math_module_source = {
     'c': 'Src/CDTK_math.c',
     'pyrex': 'Src/CDTK_math.pyx'
     }
+refinement_module_source = {
+    'c': 'Src/CDTK_refinement.c',
+    'pyrex': 'Src/CDTK_refinement.pyx'
+    }
 mtz_module_source = {
     'c': 'Src/CDTK_MTZ.c',
     'pyrex': 'Src/CDTK_MTZ.pyx'
@@ -92,6 +96,12 @@ extension_modules = [Extension('CDTK_sf_fft',
                                [sfcalc_module_source[build_from]],
                                include_dirs = include_dirs,
                                libraries = ['m'],
+                               extra_compile_args = compile_args),
+                     Extension('CDTK_refinement',
+                               [refinement_module_source[build_from]],
+                               include_dirs = include_dirs + ['/usr/local/include'],
+                               library_dirs = ['/usr/local/lib'],
+                               libraries = ['m', 'gsl', 'gslcblas'],
                                extra_compile_args = compile_args),
                      Extension('CDTK_math',
                                [math_module_source[build_from]],
