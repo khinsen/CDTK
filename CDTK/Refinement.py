@@ -237,6 +237,15 @@ class RefinementEngine(object):
         return N.sum(N.fabs(scale*self.model_amplitudes-self.exp_amplitudes)) \
                / N.sum(self.exp_amplitudes)
 
+    def targetFunction(self):
+        """
+        Calculate the target function of the refinement (the function whose
+        global minimum corresponds to the ideal refined model).
+        @return: target
+        @rtype: C{float}) 
+        """
+        return self.targetFunctionAndAmplitudeDerivatives()[0]
+
     def targetFunctionAndAmplitudeDerivatives(self):
         """
         Calculate the target function of the refinement (the function whose
@@ -303,6 +312,14 @@ class LeastSquaresRefinementEngine(RefinementEngine):
     an optimized scale factor.
     """
 
+    def targetFunction(self):
+        self.updateInternalState()
+        me = self.model_amplitudes*self.exp_amplitudes
+        mm = self.model_amplitudes**2
+        scale = N.sum(me)/N.sum(mm)
+        df = scale*self.model_amplitudes - self.exp_amplitudes
+        return N.sum(df*df)/self.nreflections
+
     def targetFunctionAndAmplitudeDerivatives(self):
         self.updateInternalState()
         me = self.model_amplitudes*self.exp_amplitudes
@@ -315,7 +332,6 @@ class LeastSquaresRefinementEngine(RefinementEngine):
         sum_sq = N.sum(df*df)
         deriv = 2.*df*scale + N.sum(2.*df*self.model_amplitudes)*sderiv
         return sum_sq/self.nreflections, deriv/self.nreflections
-
 
 #
 # RefinementEngine with a maximum-likelihood target function
