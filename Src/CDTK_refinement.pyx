@@ -29,6 +29,9 @@ def l(double t, array_type p, array_type rsc, array_type rsa):
     assert PyArray_ISCONTIGUOUS(p)
     assert PyArray_ISCONTIGUOUS(rsc)
     assert PyArray_ISCONTIGUOUS(rsa)
+    assert p.descr.elsize == sizeof(double)
+    assert rsc.descr.elsize == sizeof(int)
+    assert rsa.descr.elsize == sizeof(int)
     nc = rsc.dimensions[0]
     rsc_p = <int *>rsc.data
     na = rsa.dimensions[0]

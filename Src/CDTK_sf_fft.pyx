@@ -58,6 +58,8 @@ def map_to_sf(array_type map_array, sf, double factor):
     cdef double imag_part
     if not isinstance(sf, StructureFactor):
         raise TypeError("%s is not a StructureFactor instance" % str(sf))
+    assert PyArray_ISCONTIGUOUS(map_array)
+    assert map_array.descr.elsize == sizeof(double)
     in_data = <double *>map_array.data
     nx, ny, nz = map_array.shape
     sf_array = N.zeros((nx, ny, nz/2+1), N.Complex)

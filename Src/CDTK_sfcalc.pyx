@@ -43,13 +43,20 @@ def sfTerm(array_type result, array_type s, array_type f_atom,
 
     if PyArray_ISCONTIGUOUS(result) and PyArray_ISCONTIGUOUS(s) \
            and PyArray_ISCONTIGUOUS(f_atom) \
-           and PyArray_ISCONTIGUOUS(r) and PyArray_ISCONTIGUOUS(u):
+           and PyArray_ISCONTIGUOUS(r):
 
         ns = result.dimensions[0]
         assert result.nd == 1
         assert s.nd == 2 and s.dimensions[0] == ns and s.dimensions[1] == 3
         assert f_atom.nd == 1 and f_atom.dimensions[0] == ns
         assert r.nd == 1 and r.dimensions[0] == 3
+        assert result.descr.elsize == 2*sizeof(double)
+        assert s.descr.elsize == sizeof(double)
+        assert f_atom.descr.elsize == sizeof(double)
+        assert r.descr.elsize == sizeof(double)
+        if use_u == 2:
+            assert PyArray_ISCONTIGUOUS(u)
+            assert u.descr.elsize == sizeof(double)
         resp = <double *>result.data
         sp = <double *>s.data
         rp = <double *>r.data
@@ -111,18 +118,19 @@ def sfDeriv(array_type element_indices, array_type f_atom, array_type positions,
     cdef int i, j, k
 
     assert PyArray_ISCONTIGUOUS(element_indices)
+    assert element_indices.descr.elsize == sizeof(int)
     assert PyArray_ISCONTIGUOUS(f_atom)
+    assert f_atom.descr.elsize == sizeof(double)
     assert PyArray_ISCONTIGUOUS(positions)
+    assert positions.descr.elsize == sizeof(double)
     assert PyArray_ISCONTIGUOUS(adps)
+    assert adps.descr.elsize == sizeof(double)
     assert PyArray_ISCONTIGUOUS(occupancies)
+    assert occupancies.descr.elsize == sizeof(double)
     assert PyArray_ISCONTIGUOUS(sv)
+    assert sv.descr.elsize == sizeof(double)
     assert PyArray_ISCONTIGUOUS(p)
-    assert PyArray_ISCONTIGUOUS(sf)
-    assert PyArray_ISCONTIGUOUS(pd)
-    assert PyArray_ISCONTIGUOUS(adpd)
-    assert PyArray_ISCONTIGUOUS(deriv)
-    assert PyArray_ISCONTIGUOUS(sf_in)
-    assert PyArray_ISCONTIGUOUS(a_in)
+    assert p.descr.elsize == 2*sizeof(double)
 
     natoms = positions.dimensions[0]
     ns = p.dimensions[1]
@@ -131,8 +139,23 @@ def sfDeriv(array_type element_indices, array_type f_atom, array_type positions,
     do_sf = sf.dimensions[0] > 0
     do_pd = pd.dimensions[0] > 0
     do_adpd = adpd.dimensions[0] > 0
+    if do_sf:
+        assert PyArray_ISCONTIGUOUS(sf)
+        assert sf.descr.elsize == 2*sizeof(double)
     if do_pd or do_adpd:
         assert deriv.dimensions[0] > 0
+        assert PyArray_ISCONTIGUOUS(deriv)
+        assert deriv.descr.elsize == sizeof(double)
+        assert PyArray_ISCONTIGUOUS(sf_in)
+        assert sf_in.descr.elsize == 2*sizeof(double)
+        assert PyArray_ISCONTIGUOUS(a_in)
+        assert a_in.descr.elsize == sizeof(double)
+    if do_pd:
+        assert PyArray_ISCONTIGUOUS(pd)
+        assert pd.descr.elsize == sizeof(double)
+    if do_adpd:
+        assert PyArray_ISCONTIGUOUS(adpd)
+        assert adpd.descr.elsize == sizeof(double)
 
     element_indices_d = <int *>element_indices.data
     f_atom_d = <double *>f_atom.data
