@@ -79,12 +79,6 @@ class RefinementEngine(object):
         self.occupancies = N.array(occupancies)
         self.natoms = len(self.elements)
 
-        # Store the experimental structure factor amplitudes
-        mask = exp_amplitudes.data_available
-        self.reflection_set = exp_amplitudes.reflection_set
-        self.exp_amplitudes = N.repeat(exp_amplitudes.array[:, 0], mask)
-        self.nreflections = len(self.exp_amplitudes)
-
         # Define masks for the working and validation subsets
         working_set = 0*exp_amplitudes.data_available
         if working_subset is None:
@@ -92,16 +86,25 @@ class RefinementEngine(object):
         else:
             for r in working_subset:
                 working_set[r.index] = 1
-        self.working_set = N.repeat(working_set, mask)
-        self.nwreflections = N.int_sum(self.working_set)
         validation_set = 0*exp_amplitudes.data_available
         if validation_subset is None:
             validation_set[:] = 1
         else:
             for r in validation_subset:
                 validation_set[r.index] = 1
+
+        # Choose the reflections to keep
+        mask = N.logical_and(exp_amplitudes.data_available,
+                             N.logical_or(working_set, validation_set))
+        self.nreflections = N.sum(mask)
+        self.working_set = N.repeat(working_set, mask)
+        self.nwreflections = N.int_sum(self.working_set)
         self.validation_set = N.repeat(validation_set, mask)
         self.nvreflections = N.int_sum(self.validation_set)
+        
+        # Store the experimental structure factor amplitudes
+        self.reflection_set = exp_amplitudes.reflection_set
+        self.exp_amplitudes = N.repeat(exp_amplitudes.array[:, 0], mask)
         self.working_exp_amplitudes = \
                 N.repeat(self.exp_amplitudes, self.working_set)
         self.validation_exp_amplitudes = \
