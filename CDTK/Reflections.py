@@ -492,6 +492,17 @@ class ReflectionSet(object):
             sm[r.index, 1] = r.isCentric()
         return sm
 
+    def select(self, condition):
+        """
+        @param condition: a function that returns C{True} for each reflection
+                          to be selected.
+        @type condition: function taking a L{Reflection} argument
+                         and returning C{bool}
+        @return: the subset of the reflections that satisfy the condition
+        @rtype: L{ReflectionSubset}
+        """
+        return ReflectionSubset(self, [r for r in self if condition(r)])
+
     def randomlyAssignedSubsets(self, fractions):
         """
         Partition the reflection set into several subsets of
@@ -546,6 +557,17 @@ class ReflectionSubset(object):
         """
         for r in self.reflection_list:
             yield r
+
+    def select(self, condition):
+        """
+        @param condition: a function that returns C{True} for each reflection
+                          to be selected.
+        @type condition: function taking a L{Reflection} argument
+                         and returning C{bool}
+        @return: the subset of the reflections that satisfy the condition
+        @rtype: L{ReflectionSubset}
+        """
+        return ReflectionSubset(self, [r for r in self if condition(r)])
 
 #
 # A ResolutionShell object is an iterator over the reflections in
