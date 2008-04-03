@@ -44,8 +44,8 @@ class ReflectionSetTests(unittest.TestCase):
         reflections = ReflectionSet(cell, space_groups['P 1'], res_max, res_min)
         nr = sum([r.n_symmetry_equivalents for r in reflections]) + \
              len(reflections.systematic_absences)
-        self.assertEqual(len(reflections), nr)
-        self.assert_(len(reflections) ==
+        self.assertEqual(len(reflections.reflection_map), nr)
+        self.assert_(len(reflections.reflection_map) ==
                      2*len(reflections.minimal_reflection_list))
         for r in reflections:
             self.assert_(r.n_symmetry_equivalents == 2)
@@ -64,7 +64,7 @@ class ReflectionSetTests(unittest.TestCase):
                                     res_max, res_min)
         nr = sum([r.n_symmetry_equivalents for r in reflections]) + \
              len(reflections.systematic_absences)
-        self.assertEqual(len(reflections), nr)
+        self.assertEqual(len(reflections.reflection_map), nr)
         for r in reflections:
             self.assert_(res_max <= r.resolution() <= res_min)
             sg = reflections.space_group
@@ -90,7 +90,7 @@ class ReflectionSetTests(unittest.TestCase):
                                     res_max, res_min)
         nr = sum([r.n_symmetry_equivalents for r in reflections]) + \
              len(reflections.systematic_absences)
-        self.assertEqual(len(reflections), nr)
+        self.assertEqual(len(reflections.reflection_map), nr)
         for r in reflections:
             self.assert_(res_max <= r.resolution() <= res_min)
             is_centric = r.isCentric()
@@ -133,6 +133,8 @@ class ReflectionSetTests(unittest.TestCase):
         self.assertEqual(len(reflections), len(unpickled))
         self.assertEqual(len(reflections.minimal_reflection_list),
                          len(unpickled.minimal_reflection_list))
+        self.assertEqual(len(reflections.reflection_map),
+                         len(unpickled.reflection_map))
         self.assertEqual(len(reflections.systematic_absences),
                          len(unpickled.systematic_absences))
         for r in reflections:

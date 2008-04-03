@@ -64,8 +64,7 @@ class ReflectionData(object):
 
     def __init__(self, reflection_set):
         self.reflection_set = reflection_set
-        self.number_of_reflections = \
-                 len(self.reflection_set.minimal_reflection_list)
+        self.number_of_reflections = len(self.reflection_set)
 
     def __getitem__(self, reflection):
         """

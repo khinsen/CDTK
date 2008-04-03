@@ -362,7 +362,7 @@ class ReflectionSet(object):
         @return: the number of reflections in the reflection set
         @rtype: C{int}
         """
-        return len(self.reflection_map)
+        return len(self.minimal_reflection_list)
 
     def __getitem__(self, item):
         """

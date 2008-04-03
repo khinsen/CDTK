@@ -83,7 +83,7 @@ class StructureFactorTests2ONX(unittest.TestCase):
     def test_sf(self):
 
         # Tests on read-in data
-        self.assert_(len(self.reflections) == 1416)
+        self.assert_(len(self.reflections) == 380)
         self.assert_(self.exp_amplitudes.rFactor(self.exp_amplitudes) == 0.)
         self.assert_(self.model_sf.rFactor(self.model_sf) == 0.)
         self.assert_(N.fabs(self.exp_amplitudes.rFactor(self.model_sf)-0.1842)
