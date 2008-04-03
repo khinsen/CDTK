@@ -7,7 +7,7 @@
 # Written by Konrad Hinsen.
 #
 
-from Scientific import N
+from Scientific import N, LA
 
 # ADP tensors are symmetric; only six of their nine elements are
 # independent. In refinement applications, CDTK uses an internal
@@ -65,6 +65,26 @@ def symmetricTensorRotationMatrix(d):
     dd = dd[:, :6]
     return dd
 
+# Return the independent symmetric tensors (in compact storage) for a given
+# space group and unit cell. Every tensor that is invariant under the rotations
+# of the space group can be written as a linear superposition of these vectors.
+
+def symmetricTensorBasis(space_group, unit_cell):
+    from CDTK.Crystal import UnitCell
+    assert isinstance(unit_cell, UnitCell)
+    subspace = 1.*N.equal.outer(N.arange(6), N.arange(6))
+    for tr in unit_cell.cartesianCoordinateSymmetryOperations(space_group):
+        rot = symmetricTensorRotationMatrix(tr.tensor.array)
+        ev, axes = LA.eigenvectors(rot)
+        new_subspace = []
+        for i in range(6):
+            if abs(ev[i]-1.) < 1.e-12:
+                p = N.dot(N.transpose(subspace), N.dot(subspace, axes[i].real))
+                new_subspace.append(p)
+        m, s, subspace = LA.singular_value_decomposition(N.array(new_subspace))
+        nb = N.sum(s/s[0] > 1.e-12)
+        subspace = subspace[:nb]
+    return subspace
 
 # A utility function used in argument checking and unit tests.
 
