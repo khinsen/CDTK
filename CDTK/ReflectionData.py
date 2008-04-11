@@ -653,26 +653,37 @@ class IntensityData(object):
     values
     """
 
-    def isotropicAverage(self, nbins = 50):
+    def isotropicAverage(self, nbins = 50, s_range = (None, None)):
         """
-        @param nbins: the number of intervals into which the resolution range
+        @param nbins: the number of intervals into which the s range
                       is divided before averaging the intensities within each
                       interval
         @type nbins: C{int}
+        @param s_range: the range of s values for which the average
+                        is calculated. The minimum and/or maximum
+                        value can be C{None}, in which case it is replaced
+                        by the lower/upper limit of the resolution range of
+                        the reflection set.
+        @type s_range: C{(float, float)}
         @return: the averaged intensities for each resolution interval
         @rtype: C{Scientific.Functions.InterpolatingFunction}
         """
         from Scientific.Functions.Interpolation import InterpolatingFunction
-        s_min, s_max = self.reflection_set.sRange()
+        s_min, s_max = s_range
+        if s_min is None or s_max is None:
+            s1, s2 = self.reflection_set.sRange()
+            if s_min is None: s_min = 0.99*s1
+            if s_max is None: s_max = 1.01*s2
         bin_width = (s_max-s_min)/nbins
         reflection_count = N.zeros((nbins,), N.Int)
         intensity_sum = N.zeros((nbins,), N.Float)
         for reflection, intensity in self:
             s = reflection.sVector().length()
-            bin = min(nbins-1, int((s-s_min)/bin_width))
-            n = reflection.n_symmetry_equivalents
-            reflection_count[bin] += n
-            intensity_sum[bin] += n*intensity
+            bin = int((s-s_min)/bin_width)
+            if bin >= 0 and bin < nbins:
+                n = reflection.n_symmetry_equivalents
+                reflection_count[bin] += n
+                intensity_sum[bin] += n*intensity
         intensity_average = intensity_sum / \
                             (reflection_count + (reflection_count==0))
         s = s_min + bin_width*(N.arange(nbins)+0.5)
