@@ -117,6 +117,10 @@ elif 'intensity_meas' in r:
     data = exp_intensities = ExperimentalIntensities(reflections)
     key = 'intensity_meas'
     key_sigma = 'intensity_sigma'
+elif 'f_squared_meas' in r:
+    data = exp_intensities = ExperimentalIntensities(reflections)
+    key = 'f_squared_meas'
+    key_sigma = 'f_squared_sigma'
 else:
     print r.keys()
     raise ValueError("no experimental data found")
@@ -141,14 +145,14 @@ for r in cif_data['refln']:
         if model_sf is not None:
             model_sf[ri] = float(r['f_calc']) \
                            * N.exp(1j*float(r['phase_calc'])*Units.deg)
-        if r[key] != '?' and r['status'] in 'ofhl':
+        if r[key] != '?' and r.get('status', 'o') in 'ofhl':
             try:
                 data[ri] = N.array([float(r[key]), float(r[key_sigma])])
             except ValueError:
                 print ri, " with value", float(r[key]), "should be absent"
 
-if key == 'intensity_meas':
-    exp_amplitudes = exp_intensities.amplitudes()
+if isinstance(data, ExperimentalIntensities):
+    exp_amplitudes = data.amplitudes()
 
 pickle_file = file(file_args[1], 'wb')
 cPickle.dump((reflections, exp_amplitudes, model_sf),
