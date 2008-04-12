@@ -146,4 +146,7 @@ del rot
 del trans_num
 del trans_den
 del sg
+
+space_groups['R 3'] = space_groups['H 3'] = space_groups[146]
+space_groups['R 3 2'] = space_groups['H 3 2'] = space_groups[155]
 """
