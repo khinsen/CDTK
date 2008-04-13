@@ -1,8 +1,12 @@
-# This module was taken from PyMMLib 1.0.0. Except for the addition of
-# this four-line comment, it has not been modified. PyMMLIB is published
+# This module was taken from PyMMLib 1.0.0. PyMMLIB is published
 # under the Artcistic Licence.
 # For more information about PyMMLib, see http://pymmlib.sourceforge.net/
-
+# The following modifications were applied to this module for use in
+# CDTK:
+# 1) An initial comment block (this text) explains the origin of the
+#    code and its licence.
+# 2) The init parameters for class mmCIFSyntaxError were made optional
+#    in order to make its instances picklable.
 
 ## Copyright 2002-2006 by PyMMLib Development Group (see AUTHORS file)
 ## This code is part of the PyMMLib distribution and governed by
@@ -43,7 +47,7 @@ class mmCIFError(Exception):
 class mmCIFSyntaxError(Exception):
     """Base class of errors raised by Structure objects.
     """
-    def __init__(self, line_num, text):
+    def __init__(self, line_num=None, text=None):
         Exception.__init__(self)
         self.line_num = line_num
         self.text = text
