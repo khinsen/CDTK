@@ -16,6 +16,16 @@ respect to the model parameters (positions and ADPs). There is
 no minimization algorithm and no support for restraints of any kind.
 """
 
+#
+# Enable distributed computing support if specified by environment variable.
+#
+import os
+_distributed = os.environ.get("CDTK_DISTRIBUTED_REFINEMENT_TASKS", 0) > 0
+del os
+if _distributed:
+    from CDTK.DistributedComputations import _evaluateModel_distributed, \
+         _distributed_refinement_cleanup
+
 from CDTK.Reflections import ResolutionShell
 from CDTK.Utility import compactSymmetricTensor, fullSymmetricTensor
 from CDTK_math import I1divI0, logI0, logcosh
@@ -207,7 +217,7 @@ class RefinementEngine(object):
 
     def _updateInternalState(self):
         self._calculateModelAmplitudes()
-        
+
     def _evaluateModel(self, sf, pd, adpd, deriv):
         from CDTK_sfcalc import sfDeriv
         dummy_array = N.zeros((0,), N.Int)
@@ -224,6 +234,11 @@ class RefinementEngine(object):
         sfDeriv(self.element_indices, self.f_atom, self.positions,
                 self.adps, self.occupancies, self.sv, self.p,
                 sf, pd, adpd, deriv, sf_in, a_in)
+
+    if _distributed:
+        _evaluateModel = _evaluateModel_distributed
+        _distribution_initialized = False
+        __del__ = _distributed_refinement_cleanup
 
     def _evaluateModel_python(self, sf, pd, adpd, deriv):
         # This is the first implementation of _evaluateModel()
