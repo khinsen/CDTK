@@ -42,11 +42,25 @@ Prerequisites:
       http://www.gnu.org/software/gsl/
 
 CDTK will use Numeric or NumPy depending on how ScientificPython has been
-configured. The MTZ file reader requires the CCP4 library, whose location
-should be indicated by the environment variable 'CCP4'. If this variable
-is not defined the MTZ file reader will not be installed.
+configured.
 
-Installation is as simple as
+The MTZ file reader requires the CCP4 library,
+
+    http://www.ccp4.ac.uk/main.html
+
+whose location should be indicated by the environment variable 'CCP4'.
+
+Alternatively, the freely distributable GPP4 library,
+
+     http://www.bioxray.dk/~mok/node/100
+
+can be used, whose location should be indicated by the environment
+variable 'GPP4'. If neither CCP4 nor GPP4 is defined, the MTZ file
+reader will not be installed.
+
+
+
+Once the prerequisites are available, installation of CDTK is as simple as
 
     python setup.py build
     python setup.py install

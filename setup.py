@@ -5,6 +5,7 @@
 build_from = 'pyrex'
 fftw_prefix = None
 ccp4_prefix = None
+gpp4_prefix = None
 
 assert build_from in ['c', 'pyrex']
 
@@ -59,11 +60,16 @@ else:
     fftw_lib = os.path.join(fftw_prefix, 'lib')
 
 if ccp4_prefix is None:
-    try:
-        ccp4_prefix = os.environ['CCP4']
-    except KeyError:
-        sys.stderr.write('CCP4 library not found, '
-                         'the MTZ module will not be built.\n')
+    ccp4_prefix = os.environ.get('CCP4', None)
+if gpp4_prefix is None:
+    gpp4_prefix = os.environ.get('GPP4', None)
+if ccp4_prefix is not None:
+    print "Using CCP4 installation in ", ccp4_prefix
+elif gpp4_prefix is not None:
+    print "Using GPP4 installation in ", gpp4_prefix
+else:
+    sys.stderr.write('CCP4 library not found, '
+                     'the MTZ module will not be built.\n')
 
 map_module_source = {
     'c': 'Src/CDTK_sf_fft.c',
@@ -117,6 +123,17 @@ if ccp4_prefix is not None:
                                                             'include', 'ccp4')],
                   library_dirs = [os.path.join(ccp4_prefix, 'lib')],
                   libraries = ['ccp4c'],
+                  extra_compile_args = compile_args)
+        )
+elif gpp4_prefix is not None:
+    extension_modules.append(
+        Extension('CDTK_MTZ',
+                  [mtz_module_source[build_from]],
+                  include_dirs = include_dirs+[os.path.join(gpp4_prefix,
+                                                            'include',
+                                                            'gpp4', 'ccp4')],
+                  library_dirs = [os.path.join(gpp4_prefix, 'lib')],
+                  libraries = ['gpp4'],
                   extra_compile_args = compile_args)
         )
 
