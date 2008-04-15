@@ -481,6 +481,19 @@ literature. In the following, we describe only the final stages of
 structure refinement (a reasonably good model is supposed to be known
 already), for which CDTK contains some functionality.
 
+The methods described in this section are implemented in the CDTK
+modules \texttt{Refinement} and \texttt{SubsetRefinement}. These
+modules implement various \textit{refinement engines}. A refinement
+engine stores the current model parameters (which can be modified of
+course) and the structure factor amplitudes to which the model is
+fitted. It calculates a \textit{target function} (the function that
+the refinement process aims to minimize) and its derivatives with
+respect to the amplitudes or with respect to the model parameters.
+There are several refinement engine classes that implement different
+models and target functions. Note that the refinement engines
+do not (at this time) implement minimization or sampling algorithms
+for the model parameters.
+
 \subsection{Bayesian inference}
 
 The most suitable theoretical framework for structure refinement is
@@ -516,7 +529,9 @@ parameter set $X_0$ can be considered the ``best'' one. If furthermore
 $P_{\mbox{prior}}(X)$ takes the form of restraints that are either
 fulfilled or not, then the ``best'' solution is given by the maximum
 of the likelihood function subject to the restraints. This approach is
-known as the maximum-likelihood method.
+known as the maximum-likelihood method. In practice, the condition that
+the posterior probability is localized around a single maximum is
+rarely verified.
 
 \subsection{Structure factor likelihoods}
 
@@ -617,8 +632,34 @@ P_k(A_k | A_k^{\mbox{model}}, \alpha_k, \beta_k) =
                   {2\epsilon_k \beta_k}\right)
   \cosh\left(\frac{\alpha_k A_k A_k^{\mbox{model}}}{\epsilon_k \beta_k}\right)
 \end{equation}
-for centric reflections.
+for centric reflections. The target function for structure refinement,
+as implemented in
+\texttt{CDTK.Refinement.MaximumLikelihoodRefinementEngine}, is the
+negative logarithm of the likelihood summed over all reflections.
 
+\subsection{Least-squares refinement}
+
+Before the popularization of maximum-likelihood refinement in protein
+crystallography, the most common technique was least-squares
+refinement, which is still used occasionally. In least-squares
+refinement, implemented in
+\texttt{CDTK.Refinement.LeastSquaresRefinementEngine},
+the target function is
+\begin{equation}
+\sum_k \left( A_k - f A_k^{\mbox{model}}\right)^2,
+\end{equation}
+where $f$ is a scale factor. The value of $f$ that minimizes the target
+function is given by
+\begin{equation}
+f = \frac{\sum_k A_k  A_k^{\mbox{model}}}
+         {\sum_k \left(A_k^{\mbox{model}}\right)^2}.
+\end{equation}
+Least-squares refinement assumes an error model that assigns a
+Gauss-distributed error to the structure factor amplitudes and zero
+error to the phases. While a Gaussian error distribution can be
+justified for the real and imaginary parts of the structure factor by
+the central limit theorem, there is no physical or mathematical
+justification for its use with the amplitudes.
 
 \end{sloppy}
 \end{document}
