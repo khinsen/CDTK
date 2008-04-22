@@ -106,7 +106,7 @@ class RefinementEngine(object):
         # Choose the reflections to keep
         mask = N.logical_and(exp_amplitudes.data_available,
                              N.logical_or(working_set, validation_set))
-        self.nreflections = N.sum(mask)
+        self.nreflections = int(N.sum(mask))
         self.working_set = N.repeat(working_set, mask)
         self.nwreflections = N.int_sum(self.working_set)
         self.validation_set = N.repeat(validation_set, mask)
