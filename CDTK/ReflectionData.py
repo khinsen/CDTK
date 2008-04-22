@@ -541,6 +541,13 @@ class AmplitudeData(object):
         s = s_min + bin_width*(N.arange(nbins)+0.5)
         return InterpolatingFunction((s,), sum_diff/(sum_self+(sum_self == 0.)))
 
+    def amplitudes(self):
+        """
+        @return: self
+        @rtype: L{ReflectionData} and L{AmplitudeData}
+        """
+        return self
+
     def intensities(self):
         """
         @return: a reflection data set containing the reflection intensities
@@ -715,6 +722,13 @@ class IntensityData(object):
         @rtype: L{ReflectionData} and L{AmplitudeData}
         """
         return ModelAmplitudes(self.reflection_set, N.sqrt(self.array))
+
+    def intensities(self):
+        """
+        @return: self
+        @rtype: L{ReflectionData} and L{IntensityData}
+        """
+        return self
 
     def applyDebyeWallerFactor(self, adp_or_scalar):
         """
