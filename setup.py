@@ -158,6 +158,7 @@ can also be used independently.
        ext_modules = extension_modules,
 
        scripts = ['Scripts/convert_mmcif_reflections',
+                  'Scripts/convert_pdb_reflections',
                   'Scripts/convert_mtz_reflections'],
  
        cmdclass = {'build_ext': build_ext}

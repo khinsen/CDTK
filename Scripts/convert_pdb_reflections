@@ -1,0 +1,36 @@
+#!python
+#
+# This file is part of the Crystallographic Data Toolkit and
+# distributed under the CeCILL-C licence. See the file LICENCE
+# for the full text of this licence.
+#
+# Written by Konrad Hinsen.
+#
+
+from CDTK.PDBRepository import loadReflectionData
+import cPickle
+import sys
+
+usage = """Usage: convert_pdb_reflections pdb_code reflection_file
+
+If a local PDB repository exists and is identified by the environment
+variables PDB_SF_PATH (for the structure factor files) and
+PDB_MMCIF_PATH (for the structure files in mmCIF format), the data
+is taken from there. Otherwise, the required PDB files are downloaded
+from the main PDB server. Note that if the structure factor file does
+not contain the unit cell parameters or the symmetry group, this
+information is taken from the mmCIF structure file.
+"""
+
+if len(sys.argv) != 3:
+    sys.stderr.write(usage)
+    raise SystemExit
+
+pdb_code = sys.argv[1]
+reflection_file = sys.argv[2]
+if len(pdb_code) != 4:
+    sys.stderr.write("%s is not a valid PDB code\n" % repr(pdb_code))
+    raise SystemExit
+
+data = loadReflectionData(pdb_code)
+cPickle.dump(data, file(reflection_file, 'wb'))
