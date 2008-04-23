@@ -20,6 +20,7 @@ no minimization algorithm and no support for restraints of any kind.
 # Enable distributed computing support if specified by environment variable.
 #
 import os
+import copy
 _distributed = os.environ.get("CDTK_DISTRIBUTED_REFINEMENT_TASKS", 0) > 0
 del os
 if _distributed:
@@ -239,6 +240,13 @@ class RefinementEngine(object):
         _evaluateModel = _evaluateModel_distributed
         _distribution_initialized = False
         __del__ = _distributed_refinement_cleanup
+        def __getstate__(self):
+            state = copy.copy(self.__dict__)
+            try:
+                del state['_distribution_initialized']
+            except KeyError:
+                pass
+            return state
 
     def _evaluateModel_python(self, sf, pd, adpd, deriv):
         # This is the first implementation of _evaluateModel()
