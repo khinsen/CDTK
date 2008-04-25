@@ -159,3 +159,20 @@ class UnitCell(object):
             tr_fract = Translation(trans)*Rotation(rot)
             transformations.append(from_fract*tr_fract*to_fract)
         return transformations
+
+
+class Crystal(object):
+
+    """
+    A crystal object defines a unit cell plus a space group
+    """
+
+    def __init__(self, unit_cell, space_group):
+        """
+        @param unit_cell: the unit cell
+        @type unit_cell: L{CDTK.Crystal.UnitCell}
+        @param space_group: the space group
+        @type space_group: L{CDTK.SpaceGroups.SpaceGroup}
+        """
+        self.unit_cell = unit_cell
+        self.space_group = space_group

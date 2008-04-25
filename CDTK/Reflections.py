@@ -26,6 +26,7 @@ Data defined per reflection is handled by the module
 L{CDTK.ReflectionData}.
 """
 
+from CDTK.Crystal import Crystal
 from Scientific import N
 
 #
@@ -41,7 +42,7 @@ class Reflection(object):
     but should not attempt to create their own ones.
     """
 
-    def __init__(self, h, k, l, reflection_set, index):
+    def __init__(self, h, k, l, crystal, index):
         """
         @param h: the first Miller index
         @type h: C{int}
@@ -49,9 +50,8 @@ class Reflection(object):
         @type k: C{int}
         @param l: the third Miller index
         @type l: C{int}
-        @param reflection_set: the reflection set to which
-                               the reflection belongs
-        @type reflection_set: L{ReflectionSet}
+        @param crystal: the crystal to which the reflection belongs
+        @type crystal: L{CDTK.Crystal.Crystal}
         @param index: the corresponding index into the list of
                       minimal reflections of the reflection set.
                       The index is C{None} for systematic absences.
@@ -60,7 +60,7 @@ class Reflection(object):
         self.h = h
         self.k = k
         self.l = l
-        self.reflection_set = reflection_set
+        self.crystal = crystal
         self.index = index
         self.phase_factor = 1.
         self.sf_conjugate = False
@@ -110,7 +110,7 @@ class Reflection(object):
         @rtype: C{Scientific.Geometry.Vector}
         """
         if cell is None:
-            cell = self.reflection_set.cell
+            cell = self.crystal.unit_cell
         r1, r2, r3 = cell.reciprocalBasisVectors()
         return self.h*r1 + self.k*r2 + self.l*r3
 
@@ -140,7 +140,7 @@ class Reflection(object):
         """
         hkl = N.array([self.h, self.k, self.l])
         pf = {}
-        for rot, tn, td in self.reflection_set.space_group.transformations:
+        for rot, tn, td in self.crystal.space_group.transformations:
             hkl_rot = tuple(N.dot(N.transpose(rot), hkl))
             t = (tn*1.)/td
             pf[hkl_rot] = pf.get(hkl_rot, 0.) + N.exp(2j*N.pi*N.dot(hkl, t))
@@ -157,16 +157,16 @@ class Reflection(object):
                  anomalous scattering
         @rtype: C{set}
         """
-        rs = self.reflection_set
-        sg = rs.space_group
+        c = self.crystal
+        sg = c.space_group
         ri = self.index
         unique_reflections = set()
         equivalents, phases = sg.symmetryEquivalentMillerIndices(self.array)
         for (h, k, l), p in zip(equivalents, phases):
-            r = Reflection(h, k, l, rs, ri)
+            r = Reflection(h, k, l, c, ri)
             r.phase_factor = p
             unique_reflections.add(r)
-            r = Reflection(-h, -k, -l, rs, ri)
+            r = Reflection(-h, -k, -l, c, ri)
             r.phase_factor = p
             r.sf_conjugate = True
             unique_reflections.add(r)
@@ -183,7 +183,7 @@ class Reflection(object):
                  to itself.
         @rtype: C{int}
         """
-        sg = self.reflection_set.space_group
+        sg = self.crystal.space_group
         equivalents = sg.symmetryEquivalentMillerIndices(self.array)[0]
         return N.int_sum(N.alltrue(N.array(equivalents) == self.array, axis=1))
 
@@ -194,7 +194,7 @@ class Reflection(object):
                  operations)
         @rtype: C{bool}
         """
-        sg = self.reflection_set.space_group
+        sg = self.crystal.space_group
         equivalents = sg.symmetryEquivalentMillerIndices(self.array)[0]
         return N.int_sum(N.alltrue(N.array(equivalents) == -self.array,
                                    axis=1)) > 0
@@ -235,6 +235,7 @@ class ReflectionSet(object):
         """
         self.cell = cell
         self.space_group = space_group
+        self.crystal = Crystal(cell, space_group)
         self.minimal_reflection_list = []
         self.reflection_map = {}
         self.systematic_absences = set()
@@ -255,7 +256,7 @@ class ReflectionSet(object):
         @param l: the third Miller index
         @type l: C{int}
         """
-        hkl = Reflection(h, k, l, self,
+        hkl = Reflection(h, k, l, self.crystal,
                          len(self.minimal_reflection_list))
         if self.reflection_map.has_key((hkl.h, hkl.k, hkl.l)):
             return
@@ -414,11 +415,12 @@ class ReflectionSet(object):
                     reflections, absences = state
         self.cell = UnitCell(*cell_basis)
         self.space_group = space_groups[space_group_number]
+        self.crystal = Crystal(self.cell, self.space_group)
         self.minimal_reflection_list = []
         self.reflection_map = {}
         self.systematic_absences = set()
         for h, k, l, index in reflections:
-            r = Reflection(h, k, l, self, index)
+            r = Reflection(h, k, l, self.crystal, index)
             for re in r.symmetryEquivalents():
                 hkl = (re.h, re.k, re.l)
                 if hkl == (h, k, l):
@@ -426,7 +428,7 @@ class ReflectionSet(object):
                 self.reflection_map[hkl] = re
             self.minimal_reflection_list.append(r)
         for h, k, l in absences:
-            r = Reflection(h, k, l, self, None)
+            r = Reflection(h, k, l, self.crystal, None)
             self.systematic_absences.add(r)
             self.reflection_map[(h, k, l)] = r
 
