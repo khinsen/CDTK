@@ -12,8 +12,8 @@ Electron density maps and Patterson maps
 """
 
 from CDTK import Units
+from CDTK.Utility import SymmetricTensor, delta
 from Scientific.Geometry import Vector, isVector
-import Scientific.Geometry
 from Scientific import N, LA
 
 class Map(object):
@@ -131,12 +131,13 @@ class ElectronDensityMap(Map):
             dx3 += (dx3 < -0.5).astype(N.Int) - (dx3 >= 0.5).astype(N.Int)
             for i in range(5):
                 if isinstance(adp, float):
-                    sigma = (adp + bdiv[i])*Scientific.Geometry.delta
+                    sigma = (adp + bdiv[i])*delta
                 else:
-                    sigma = adp + bdiv[i]*Scientific.Geometry.delta
-                sigma_inv = LA.inverse(sigma.array)
-                weight = a[i] * N.sqrt(LA.determinant(sigma_inv)) * occupancy
-                m = -0.5*N.dot(N.transpose(m_fc), N.dot(sigma_inv, m_fc))
+                    sigma = SymmetricTensor(adp) + bdiv[i]*delta
+                sigma_inv = sigma.inverse()
+                weight = a[i] * N.sqrt(sigma_inv.determinant()) * occupancy
+                m = -0.5*N.dot(N.transpose(m_fc),
+                               N.dot(sigma_inv.array2d, m_fc))
                 e = N.zeros(self.shape, N.Float)
                 N.add(e, m[0, 0]*(dx1*dx1)[:, N.NewAxis, N.NewAxis], e)
                 N.add(e, m[1, 1]*(dx2*dx2)[N.NewAxis, :, N.NewAxis], e)

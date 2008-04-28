@@ -57,6 +57,8 @@ def sfTerm(array_type result, array_type s, array_type f_atom,
         if use_u == 2:
             assert PyArray_ISCONTIGUOUS(u)
             assert u.descr.elsize == sizeof(double)
+            assert u.nd == 1
+            assert u.dimensions[0] == 6
         resp = <double *>result.data
         sp = <double *>s.data
         rp = <double *>r.data
@@ -73,12 +75,12 @@ def sfTerm(array_type result, array_type s, array_type f_atom,
                                       + sp[3*i+1] * sp[3*i+1]
                                       + sp[3*i+2] * sp[3*i+2])
                 else:
-                    sus = up[3*0+0] * sp[3*i+0] * sp[3*i+0] + \
-                          up[3*1+1] * sp[3*i+1] * sp[3*i+1] + \
-                          up[3*2+2] * sp[3*i+2] * sp[3*i+2] + \
-                          2. * up[3*0+1] * sp[3*i+0] * sp[3*i+1] + \
-                          2. * up[3*0+2] * sp[3*i+0] * sp[3*i+2] + \
-                          2. * up[3*1+2] * sp[3*i+1] * sp[3*i+2]
+                    sus = up[0] * sp[3*i+0] * sp[3*i+0] + \
+                          up[1] * sp[3*i+1] * sp[3*i+1] + \
+                          up[2] * sp[3*i+2] * sp[3*i+2] + \
+                          2. * up[5] * sp[3*i+0] * sp[3*i+1] + \
+                          2. * up[4] * sp[3*i+0] * sp[3*i+2] + \
+                          2. * up[3] * sp[3*i+1] * sp[3*i+2]
                 dwf = exp(twopisq*sus)
                 f_r = f_r*dwf
                 f_i = f_i*dwf

@@ -15,6 +15,7 @@ Src/CDTK_sf_fft.c
 Src/CDTK_sfcalc.c
 Src/CDTK_refinement.c
 Src/CDTK_MTZ.c
+Src/CDTK_symtensor.c
 Doc/*.log
 Doc/*.aux
 Doc/*.pdf

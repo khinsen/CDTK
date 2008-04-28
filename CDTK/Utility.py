@@ -8,38 +8,7 @@
 #
 
 from Scientific import N, LA
-
-# ADP tensors are symmetric; only six of their nine elements are
-# independent. In refinement applications, CDTK uses an internal
-# representation consisting of a set of independent elements arranged
-# in a 1-d array of length six. The order of elements is
-# [xx, yy, zz, yz, xz, xy]. The following routines convert between
-# this representation and the standard representation in terms of
-# a 3x3 array.
-
-def compactSymmetricTensor(t):
-    """
-    @param t: an array or shape (3,3) representing a symmetric tensor
-    @type t: C{Scientific.N.array_type}
-    @return: an array of shape (6,) representing the same tensor by
-             its independent elements [xx, yy, zz, yz, xz, xy]
-    @rtype: C{Scientific.N.array_type}
-    """
-    assert t.shape == (3, 3)
-    assert largestAbsoluteElement(t-N.transpose(t)) == 0.
-    return N.take(N.reshape(t, (9,)), [0, 4, 8, 5, 2, 1])
-
-def fullSymmetricTensor(t):
-    """
-    @param t: an array or shape (6,) representing a symmetric tensor in
-              compact storage
-    @type t: C{Scientific.N.array_type}
-    @return: an array of shape (3,3) representing the same tensor
-    @rtype: C{Scientific.N.array_type}
-    """
-    assert t.shape == (6,)
-    return N.reshape(N.take(t, [0, 5, 4, 5, 1, 3, 4, 3, 2]), (3, 3))
-
+from CDTK_symtensor import SymmetricTensor, delta
 
 # Symmetry operations can be applied to ADP tensors in compact storage
 # by a matrix multiplication with a "tensor rotation matrix" of shape (6,6).
@@ -84,7 +53,7 @@ def symmetricTensorBasis(space_group, unit_cell):
         m, s, subspace = LA.singular_value_decomposition(N.array(new_subspace))
         nb = N.sum(s/s[0] > 1.e-12)
         subspace = subspace[:nb]
-    return subspace
+    return [SymmetricTensor(a) for a in subspace]
 
 # A utility function used in argument checking and unit tests.
 

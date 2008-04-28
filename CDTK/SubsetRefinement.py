@@ -13,8 +13,7 @@ Structure refinement using a subset of representative atoms
 
 from CDTK.Refinement import RefinementEngine, \
                             AtomDataArray, AtomPositionDataArray
-from CDTK.Utility import symmetricTensorRotationMatrix, \
-                         compactSymmetricTensor, fullSymmetricTensor
+from CDTK.Utility import symmetricTensorRotationMatrix
 from Scientific import N
 from Scientific.Geometry import Vector, Tensor
 import itertools

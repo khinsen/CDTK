@@ -28,7 +28,7 @@ if _distributed:
          _distributed_refinement_cleanup
 
 from CDTK.Reflections import ResolutionShell
-from CDTK.Utility import compactSymmetricTensor, fullSymmetricTensor
+from CDTK.Utility import SymmetricTensor
 from CDTK_math import I1divI0, logI0, logcosh
 from Scientific.Functions.Interpolation import InterpolatingFunction
 from Scientific.Geometry import Vector, Tensor
@@ -80,7 +80,7 @@ class RefinementEngine(object):
             id_dict[id] = len(id_dict)
             elements.append(element.lower())
             positions.append(position.array)
-            adps.append(compactSymmetricTensor(adp.array))
+            adps.append(SymmetricTensor(adp).array)
             occupancies.append(occupancy)
         self.ids = ids
         self.id_dict = id_dict
@@ -169,7 +169,7 @@ class RefinementEngine(object):
         @return: the ADP tensor of the atom
         @rtype: C{Scientific.Geometry.Tensor}
         """
-        return Tensor(fullSymmetricTensor(self.adps[self.id_dict[atom_id]]))
+        return SymmetricTensor(self.adps[self.id_dict[atom_id]])
 
     def getOccupancy(self, atom_id):
         """
@@ -192,9 +192,9 @@ class RefinementEngine(object):
         """
         @param atom_id: id of the atom whose ADP tensor is changed
         @param adp: the new ADP tensor for the atom
-        @type adp: C{Scientific.Geometry.Tensor}
+        @type adp: C{CDTK_symtensor.SymmetricTensor}
         """
-        self.adps[self.id_dict[atom_id]] = compactSymmetricTensor(adp.array)
+        self.adps[self.id_dict[atom_id]] = adp.array
         self.state_valid = False
 
     def setOccupancy(self, atom_id, occupancy):
@@ -255,7 +255,7 @@ class RefinementEngine(object):
         twopisq = -2.*N.pi**2
         for i in range(self.natoms):
             f_atom = self.f_atom[self.element_indices[i]]
-            adp = fullSymmetricTensor(self.adps[i])
+            adp = SymmetricTensor(self.adps[i]).array2d
             for j in range(len(self.p)):
                 sv = self.sv[j]
                 dwf = N.exp(twopisq*N.sum(N.dot(sv, adp)*sv, axis=-1))

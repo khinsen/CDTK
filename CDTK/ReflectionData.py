@@ -36,8 +36,9 @@ from an atomic model.
 """
 
 from Scientific import N, LA
-from Scientific.Geometry import Tensor
 from CDTK import Units
+from CDTK.Utility import SymmetricTensor
+from Scientific.Geometry import Tensor
 
 #
 # ReflectionData and its subclasses describe data defined per reflection,
@@ -260,7 +261,7 @@ class ReflectionData(object):
         if isinstance(adp_or_scalar, float):
             dwf = N.exp(twopisq*adp_or_scalar*N.sum(sv*sv, axis=-1))
         else:
-            dwf = N.exp(twopisq*N.sum(N.dot(sv, adp_or_scalar.array)*sv,
+            dwf = N.exp(twopisq*N.sum(N.dot(sv, adp_or_scalar.array2d)*sv,
                                       axis=-1))
         return dwf
 
@@ -560,7 +561,7 @@ class AmplitudeData(object):
         """
         @param adp_or_scalar: a symmetric ADP tensor or a scalar
                               position fluctuation value
-        @type adp_or_scalar: C{Scientific.Geometry.Tensor} or C{float}
+        @type adp_or_scalar: L{CDTK.Utility.SymmetricTensor} or C{float}
         @return: a new reflection data set containing the amplitudes
                  multiplied by the Debye-Waller factor defined by
                  adp_or_scalar
@@ -606,16 +607,7 @@ class AmplitudeData(object):
         fit = LA.linear_least_squares(N.array(mat), N.array(rhs))
         log_k, uxx, uyy, uzz, uyz, uxz, uxy = fit[0]
         k = N.exp(log_k)
-        u = Tensor(N.array([[uxx, uxy, uxz],
-                            [uxy, uyy, uyz],
-                            [uxz, uyz, uzz]]))
-        ev, rot = u.diagonalization()
-        if N.sum(ev) >= 0.:
-            u = Tensor(N.dot(N.transpose(rot.array)*N.maximum(ev, 0.),
-                             rot.array))
-        else:
-            u = Tensor(N.dot(N.transpose(rot.array)*N.minimum(ev, 0.),
-                             rot.array))
+        u = SymmetricTensor(uxx, uyy, uzz, uyz, uxz, uxy).makeDefinite()
 
         while iterations > 0:
             iterations -= 1
@@ -639,16 +631,8 @@ class AmplitudeData(object):
             fit = LA.linear_least_squares(N.array(mat), N.array(rhs))
             dk, duxx, duyy, duzz, duyz, duxz, duxy = fit[0]
             k += dk
-            u += Tensor(N.array([[duxx, duxy, duxz],
-                                 [duxy, duyy, duyz],
-                                 [duxz, duyz, duzz]]))
-            ev, rot = u.diagonalization()
-            if N.sum(ev) >= 0.:
-                u = Tensor(N.dot(N.transpose(rot.array)*N.maximum(ev, 0.),
-                                 rot.array))
-            else:
-                u = Tensor(N.dot(N.transpose(rot.array)*N.minimum(ev, 0.),
-                                 rot.array))
+            u += SymmetricTensor(duxx, duyy, duzz, duyz, duxz, duxy)
+            u = u.makeDefinite()
 
         return k*self.applyDebyeWallerFactor(u), k, u
 
@@ -734,7 +718,7 @@ class IntensityData(object):
         """
         @param adp_or_scalar: a symmetric ADP tensor or a scalar
                               position fluctuation value
-        @type adp_or_scalar: C{Scientific.Geometry.Tensor} or C{float}
+        @type adp_or_scalar: L{CDTK.Utility.SymmetricTensor} or C{float}
         @return: a new reflection data set containing the intensities
                  multiplied by the Debye-Waller factor defined by
                  adp_or_scalar
@@ -906,8 +890,8 @@ class StructureFactor(ReflectionData, AmplitudeData):
                 sfTerm(self.array, sv, f_atom[atom.symbol],
                        conf[atom].array, sv, 0., 0)
             else:
-                sfTerm(self.array, sv, f_atom[atom.symbol],
-                       conf[atom].array, adps[atom].array, 0., 2)
+                sfTerm(self.array, sv, f_atom[atom.symbol], conf[atom].array,
+                       SymmetricTensor(adps[atom]).array, 0., 2)
 
     def calculateFromUnitCellAtoms(self, atom_iterator, cell=None):
         """
@@ -940,8 +924,11 @@ class StructureFactor(ReflectionData, AmplitudeData):
                 sfTerm(self.array, sv, f_atom, position.array, sv, 0., 0)
             elif isinstance(adp, float):
                 sfTerm(self.array, sv, f_atom, position.array, sv, adp, 1)
-            else:
+            elif isinstance(adp, SymmetricTensor):
                 sfTerm(self.array, sv, f_atom, position.array, adp.array, 0., 2)
+            else: # assume rank-2 tensor object
+                sfTerm(self.array, sv, f_atom, position.array,
+                       SymmetricTensor(adp.array).array, 0., 2)
 
     def calculateFromAsymmetricUnitAtoms(self, atom_iterator, cell=None):
         """
@@ -975,7 +962,10 @@ class StructureFactor(ReflectionData, AmplitudeData):
             else:
                 dwf = None
             for i in range(len(p)):
-                if isinstance(adp, Tensor):
+                if isinstance(adp, SymmetricTensor):
+                    dwf = N.exp(twopisq*N.sum(N.dot(sv[i], adp.array2d)*sv[i],
+                                              axis=-1))
+                elif isinstance(adp, Tensor):
                     dwf = N.exp(twopisq*N.sum(N.dot(sv[i], adp.array)*sv[i],
                                               axis=-1))
                 self.array += occupancy*p[i]*f_atom*dwf \

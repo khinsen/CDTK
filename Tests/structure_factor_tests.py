@@ -12,9 +12,8 @@ import operator
 
 from Scientific.IO.TextFile import TextFile
 from Scientific.IO.PDB import Structure
-from Scientific.Geometry import Tensor
 from Scientific import N
-from CDTK.Utility import largestAbsoluteElement
+from CDTK.Utility import largestAbsoluteElement, SymmetricTensor
 
 from CDTK.mmCIF import mmCIFFile
 from CDTK.SpaceGroups import space_groups
@@ -145,9 +144,7 @@ class StructureFactorTests2ONX(unittest.TestCase):
         self.checkSymmetry(self.model_sf)
 
     def test_scaling(self):
-        u = Tensor([[0.1, 0., 0.02],
-                    [0., 0.08, 0.],
-                    [0.02, 0., 0.12]])
+        u = SymmetricTensor(0.1, 0.08, 0.12, 0., 0.02, 0.)
         k = 2.5
         test_sf = k*self.model_sf.applyDebyeWallerFactor(u)
         scaled, k_fit, u_fit = self.model_sf.scaleTo(test_sf, 0)

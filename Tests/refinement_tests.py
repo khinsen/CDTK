@@ -13,7 +13,8 @@ from Scientific.IO.TextFile import TextFile
 from Scientific.IO.PDB import Structure
 from Scientific.Geometry import Vector, Tensor, delta
 from Scientific import N
-from CDTK.Utility import largestAbsoluteElement, compactSymmetricTensor
+from CDTK.Utility import largestAbsoluteElement
+from CDTK_symtensor import SymmetricTensor
 
 from CDTK.mmCIF import mmCIFFile
 from CDTK.SpaceGroups import space_groups
@@ -102,18 +103,17 @@ class CommonRefinementTests2ONX(unittest.TestCase):
         for atom_id in self.atom_ids:
             adp = self.re.getADP(atom_id)
             gradient = N.zeros((6,), N.Float)
-            for t in [Tensor([[1., 0., 0.], [0., 0., 0.], [0., 0., 0.]]),
-                      Tensor([[0., 0., 0.], [0., 1., 0.], [0., 0., 0.]]),
-                      Tensor([[0., 0., 0.], [0., 0., 0.], [0., 0., 1.]]),
-                      Tensor([[0., 0., 0.], [0., 0., 1.], [0., 1., 0.]]),
-                      Tensor([[0., 0., 1.], [0., 0., 0.], [1., 0., 0.]]),
-                      Tensor([[0., 1., 0.], [1., 0., 0.], [0., 0., 0.]])]:
+            for t in [SymmetricTensor(1., 0., 0., 0., 0., 0.),
+                      SymmetricTensor(0., 1., 0., 0., 0., 0.),
+                      SymmetricTensor(0., 0., 1., 0., 0., 0.),
+                      SymmetricTensor(0., 0., 0., 1., 0., 0.),
+                      SymmetricTensor(0., 0., 0., 0., 1., 0.),
+                      SymmetricTensor(0., 0., 0., 0., 0., 1.)]:
                 self.re.setADP(atom_id, adp+dp*t)
                 llk_p, dummy = self.re.targetFunctionAndADPDerivatives()
                 self.re.setADP(atom_id, adp-dp*t)
                 llk_m, dummy = self.re.targetFunctionAndADPDerivatives()
-                gradient += (llk_p-llk_m)/(2.*dp) \
-                             * compactSymmetricTensor(t.array)
+                gradient += (llk_p-llk_m)/(2.*dp) * t.array
             num_adpd.append(gradient)
             self.re.setADP(atom_id, adp)
         error = largestAbsoluteElement((N.array(num_adpd)-adpd.array)/adpd.array)

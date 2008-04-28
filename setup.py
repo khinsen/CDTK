@@ -83,6 +83,10 @@ math_module_source = {
     'c': 'Src/CDTK_math.c',
     'pyrex': 'Src/CDTK_math.pyx'
     }
+symtensor_module_source = {
+    'c': 'Src/CDTK_symtensor.c',
+    'pyrex': 'Src/CDTK_symtensor.pyx'
+    }
 refinement_module_source = {
     'c': 'Src/CDTK_refinement.c',
     'pyrex': 'Src/CDTK_refinement.pyx'
@@ -114,6 +118,12 @@ extension_modules = [Extension('CDTK_sf_fft',
                                include_dirs = include_dirs + ['/usr/local/include'],
                                library_dirs = ['/usr/local/lib'],
                                libraries = ['m', 'gsl', 'gslcblas'],
+                               extra_compile_args = compile_args),
+                     Extension('CDTK_symtensor',
+                               [symtensor_module_source[build_from]],
+                               include_dirs = include_dirs + ['/usr/local/include'],
+                               #library_dirs = ['/usr/local/lib'],
+                               #libraries = [],
                                extra_compile_args = compile_args)]
 if ccp4_prefix is not None:
     extension_modules.append(
