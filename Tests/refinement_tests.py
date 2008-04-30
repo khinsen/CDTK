@@ -94,7 +94,7 @@ class CommonRefinementTests2ONX(unittest.TestCase):
                 gradient += (llk_p-llk_m)/(2.*dp) * v
             self.re.setPosition(atom_id, p)
             error = (gradient-pd[atom_id]).length()/pd[atom_id].length()
-            self.assert_(error < 1.5e-5)
+            self.assert_(error < 2.5e-5)
 
     def _test_ADP_derivatives(self):
         llk, adpd = self.re.targetFunctionAndADPDerivatives()
@@ -172,7 +172,7 @@ class AllAtomMLRefinementTests2ONX(CommonRefinementTests2ONX):
 
     def test_amplitude_derivatives(self):
         llk, dllk = self.re.targetFunctionAndAmplitudeDerivatives()
-        self.assertAlmostEqual(llk, 2.8111087496577025)
+        self.assertAlmostEqual(llk, 2.8110781472911381)
         da = 0.01*N.minimum.reduce(self.re.model_amplitudes)
         for ri in range(len(self.re.ssq)):
             a = self.re.model_amplitudes[ri]

@@ -116,6 +116,8 @@ class RefinementEngine(object):
         # Store the experimental structure factor amplitudes
         self.reflection_set = exp_amplitudes.reflection_set
         self.exp_amplitudes = N.repeat(exp_amplitudes.array[:, 0], mask)
+        self.exp_sigmas = N.repeat(exp_amplitudes.array[:, 1], mask)
+        self.exp_sigmas_sq = self.exp_sigmas*self.exp_sigmas
         self.working_exp_amplitudes = \
                 N.repeat(self.exp_amplitudes, self.working_set)
         self.validation_exp_amplitudes = \
@@ -437,8 +439,9 @@ class MaximumLikelihoodRefinementEngine(RefinementEngine):
 
     def targetFunctionAndAmplitudeDerivatives(self):
         self.updateInternalState()
-        eps_beta_inv = 1./(self.epsilon 
-                           * N.array([self.beta(sq) for sq in self.ssq]))
+        beta = N.array([self.beta(sq) for sq in self.ssq])
+        eps_beta_inv = 1./(self.epsilon*beta +
+                           (2-self.centric)*self.exp_sigmas_sq)
         alpha = N.array([self.alpha(sq) for sq in self.ssq])
         alpha_a = alpha*self.model_amplitudes
         arg1 = -(self.exp_amplitudes**2+alpha_a**2)*eps_beta_inv
