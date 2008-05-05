@@ -117,6 +117,8 @@ class RefinementEngine(object):
         self.reflection_set = exp_amplitudes.reflection_set
         self.exp_amplitudes = N.repeat(exp_amplitudes.array[:, 0], mask)
         self.exp_sigmas = N.repeat(exp_amplitudes.array[:, 1], mask)
+        if N.minimum.reduce(self.exp_sigmas) <= 0.:
+            raise ValueError("Experimental sigmas must be positive")
         self.exp_sigmas_sq = self.exp_sigmas*self.exp_sigmas
         self.working_exp_amplitudes = \
                 N.repeat(self.exp_amplitudes, self.working_set)
@@ -384,28 +386,45 @@ class LeastSquaresRefinementEngine(RefinementEngine):
     an optimized scale factor.
     """
 
+    def __init__(self, *args, **kw_args):
+        RefinementEngine.__init__(self, *args, **kw_args)
+        self.weights = N.ones((self.nreflections,), N.Float)
+        self.calculateWeights()
+        self.working_weights = N.repeat(self.weights, self.working_set)
+        self.validation_weights = N.repeat(self.weights, self.validation_set)
+
+    def calculateWeights(self):
+        """
+        Calculate the statistical weight of each reflection in the
+        array self.weights. Subclasses can override this method to
+        implement different weighting schemes. The default implementation
+        sets the weight to 1/sigma**2.
+        """
+        self.weights[:] = 1./self.exp_sigmas_sq
+
     def targetFunction(self):
         self.updateInternalState()
         me = self.working_model_amplitudes*self.working_exp_amplitudes
         mm = self.working_model_amplitudes**2
-        scale = N.sum(me)/N.sum(mm)
+        scale = N.sum(self.working_weights*me)/N.sum(self.working_weights*mm)
         df = scale*self.working_model_amplitudes - self.working_exp_amplitudes
-        return N.sum(df*df)/self.nwreflections
+        return N.sum(self.working_weights*df*df)/self.nwreflections
 
     def targetFunctionAndAmplitudeDerivatives(self):
         self.updateInternalState()
         me = self.working_model_amplitudes*self.working_exp_amplitudes
-        s_me = N.sum(me)
+        s_me = N.sum(self.working_weights*me)
         mm = self.working_model_amplitudes**2
-        s_mm = N.sum(mm)
+        s_mm = N.sum(self.working_weights*mm)
         scale = s_me/s_mm
         df = scale*self.working_model_amplitudes - self.working_exp_amplitudes
-        sum_sq = N.sum(df*df)
+        sum_sq = N.sum(self.working_weights*df*df)
         df = scale*self.model_amplitudes - self.exp_amplitudes
-        sderiv = self.exp_amplitudes/s_mm \
-                 - 2.*self.model_amplitudes*s_me/s_mm**2
-        deriv = 2.*df*scale + \
-                N.sum(N.repeat(2.*df*self.model_amplitudes, self.working_set)) \
+        sderiv = self.weights*self.exp_amplitudes/s_mm \
+                 - 2.*self.weights*self.model_amplitudes*s_me/s_mm**2
+        deriv = 2.*scale*self.weights*df + \
+                N.sum(N.repeat(2.*self.weights*df*self.model_amplitudes,
+                               self.working_set)) \
                  * sderiv
         return sum_sq/self.nwreflections, \
                deriv*self.working_set/self.nwreflections

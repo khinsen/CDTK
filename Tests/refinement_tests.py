@@ -98,7 +98,7 @@ class CommonRefinementTests2ONX(unittest.TestCase):
 
     def _test_ADP_derivatives(self):
         llk, adpd = self.re.targetFunctionAndADPDerivatives()
-        dp = 0.00001
+        dp = 0.000005
         num_adpd = []
         for atom_id in self.atom_ids:
             adp = self.re.getADP(atom_id)
@@ -117,7 +117,7 @@ class CommonRefinementTests2ONX(unittest.TestCase):
             num_adpd.append(gradient)
             self.re.setADP(atom_id, adp)
         error = largestAbsoluteElement((N.array(num_adpd)-adpd.array)/adpd.array)
-        self.assert_(error < 5.e-3)
+        self.assert_(error < 2.e-3)
 
 class AllAtomLSQRefinementTests2ONX(CommonRefinementTests2ONX):
 
@@ -133,9 +133,11 @@ class AllAtomLSQRefinementTests2ONX(CommonRefinementTests2ONX):
         self.atom_ids = [atom['serial_number'] for atom in self.asu_atoms]
 
     def test_amplitude_derivatives(self):
+        sum_sq_ref = self.re.targetFunction()
         sum_sq, deriv = self.re.targetFunctionAndAmplitudeDerivatives()
-        self.assertAlmostEqual(sum_sq, 24.811433398928738)
-        da = 0.01*N.minimum.reduce(self.re.model_amplitudes)
+        self.assertEqual(sum_sq, sum_sq_ref)
+        self.assertAlmostEqual(sum_sq, 9.9151769565153121)
+        da = 0.005*N.minimum.reduce(self.re.model_amplitudes)
         for ri in range(len(self.re.ssq)):
             a = self.re.model_amplitudes[ri]
             self.re.model_amplitudes[ri] = a + da
