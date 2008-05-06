@@ -430,9 +430,98 @@ class LeastSquaresRefinementEngine(RefinementEngine):
                deriv*self.working_set/self.nwreflections
 
 #
-# RefinementEngine with a maximum-likelihood target function
+# RefinementEngines with a maximum-likelihood target function
 #
-class MaximumLikelihoodRefinementEngine(RefinementEngine):
+class MLRefinementEngine(RefinementEngine):
+
+    """
+    A RefinementEngine whose target function is the negative logarithm of
+    the likelihood for an error model assuming uncorrelated structure factor
+    coefficients and Gaussian errors on the structure factor amplitudes
+    given by the experimental sigma values.
+    """
+
+    def __init__(self, exp_amplitudes, asu_iterator, working_subset=None,
+                 validation_subset=None, undefined_atom_count = {}):
+        RefinementEngine.__init__(self, exp_amplitudes, asu_iterator,
+                                  working_subset, validation_subset)
+        from AtomicScatteringFactors import atomic_scattering_factors
+        self.scale = 1.
+        self.alpha = N.ones((self.nreflections,), N.Float)
+        self.beta = N.zeros((self.nreflections,), N.Float)
+        for element, count in undefined_atom_count.items():
+            a, b = atomic_scattering_factors[element.lower()]
+            f_atom = N.sum(a[:, N.NewAxis]
+                           * N.exp(-b[:, N.NewAxis]*self.ssq[N.NewAxis, :]))
+            self.beta += count*f_atom*f_atom
+
+    def targetFunctionAndAmplitudeDerivatives(self):
+        self.updateInternalState()
+
+        me = self.working_model_amplitudes*self.working_exp_amplitudes
+        mm = self.working_model_amplitudes**2
+        scale = self.scale * N.sum(me)/N.sum(mm)
+        
+        eps_beta_inv = 1./(self.epsilon*self.beta +
+                           (2-self.centric)*self.exp_sigmas_sq)
+        alpha_a = scale*self.alpha*self.model_amplitudes
+        arg1 = -(self.exp_amplitudes**2+alpha_a**2)*eps_beta_inv
+        arg2 = alpha_a*self.exp_amplitudes*eps_beta_inv
+        darg1 = -2.*scale*alpha_a*self.alpha*eps_beta_inv
+        darg2 = scale*self.alpha*self.exp_amplitudes*eps_beta_inv
+
+        llk = 0.
+        dllk = 0.*self.ssq
+        for ri in range(self.nreflections):
+            if self.working_set[ri]:
+                if self.centric[ri]:
+                    llk -= 0.5*arg1[ri]+logcosh(arg2[ri]) \
+                           + 0.5*N.log(2*eps_beta_inv[ri]/N.pi)
+                    # cosh(x)' = sinh(x)
+                    # log(cosh(x))' = tanh(x)
+                    dllk[ri] = -(0.5*darg1[ri]+N.tanh(arg2[ri])*darg2[ri])
+                else:
+                    llk -= arg1[ri]+logI0(2.*arg2[ri]) \
+                           + N.log(2.*self.exp_amplitudes[ri]*eps_beta_inv[ri])
+                    # I0(x)' = I1(x)
+                    # log(I0(x))' = I1(x)/I0(x)
+                    dllk[ri] = -(darg1[ri]+2.*I1divI0(2*arg2[ri])*darg2[ri])
+
+        return llk/self.nwreflections, dllk/self.nwreflections
+
+    def optimizeScaleFactor(self):
+        def g(f):
+            self.scale = f
+            llk, dllk = self.targetFunctionAndAmplitudeDerivatives()
+            return N.sum(N.repeat(dllk, self.working_set) * \
+                         self.working_model_amplitudes)
+        f = self.scale
+        while g(f) > 0.:
+            f = f/1.1
+        f1 = f
+        while g(f) < 0.:
+            f = 1.1*f
+        f2 = f
+        g1 = g(f1)
+        g2 = g(f2)
+        #print f1, g1
+        #print f2, g2
+        while f2-f1 > 1.e-3*f1:
+            f = f1-g1*(f2-f1)/(g2-g1)
+            gf = g(f)
+            #print f, gf
+            if abs(gf) < 1.e-8:
+                break
+            elif gf < 0:
+                f1 = f
+                g1 = gf
+            else:
+                f2 = f
+                g2 = gf
+        self.scale = f
+
+
+class MLWithModelErrorsRefinementEngine(RefinementEngine):
 
     """
     A RefinementEngine whose target function is the negative logarithm of
@@ -447,14 +536,8 @@ class MaximumLikelihoodRefinementEngine(RefinementEngine):
                                   working_subset, validation_subset)
         nrefl_per_shell = min(50, max(3, self.nreflections/10))
         self._calculateModelAmplitudes()
-        while True:
-            self.defineResolutionShells(nrefl_per_shell)
-            try:
-                self.findAlphaBeta()
-                break
-            except ParameterError:
-                nrefl_per_shell += nrefl_per_shell/2
-
+        self.defineResolutionShells(nrefl_per_shell)
+        self.findAlphaBeta()
 
     def targetFunctionAndAmplitudeDerivatives(self):
         self.updateInternalState()
@@ -516,9 +599,6 @@ class MaximumLikelihoodRefinementEngine(RefinementEngine):
             d /= tw
             if d < a*b:
                 t = 0.
-                # This solution corresponds to alpha=0 and doesn't make
-                # physical sense.
-                raise ParameterError()
             else:
                 def g(t):
                     return N.sqrt(1.+4.*a*b*t*t)-2.*t*l(t, p, rsc, rsa)-1.
@@ -572,12 +652,6 @@ class MaximumLikelihoodRefinementEngine(RefinementEngine):
                             N.array([ri for ri in rs
                                      if not self.centric[ri]], N.Int32))
                            for rs in self.res_shells]
-
-#
-# An exception used by the maximum-likelihood target function
-#
-class ParameterError(Exception):
-    pass
 
 #
 # A time-critical function used by the maximum-likelihood target function
