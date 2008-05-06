@@ -15,11 +15,26 @@ cdef extern from "math.h":
 
 cdef extern from "gsl/gsl_sf_bessel.h":
 
-    double gsl_sf_bessel_I0_scaled(double x)
-    double gsl_sf_bessel_I1_scaled(double x)
+    ctypedef struct gsl_sf_result:
+        double val
+        double err
 
+    int gsl_sf_bessel_I0_scaled_e(double x, gsl_sf_result *result)
+    int gsl_sf_bessel_I1_scaled_e(double x, gsl_sf_result *result)
+
+cdef extern from "gsl/gsl_errno.h":
+
+    ctypedef void gsl_error_handler_t
+    int GSL_SUCCESS
+    int GSL_EUNDRFLW
+    char *gsl_strerror(int gsl_errno)
+    gsl_error_handler_t* gsl_set_error_handler_off()
+
+gsl_set_error_handler_off()
 
 def l(double t, array_type p, array_type rsc, array_type rsa):
+    cdef gsl_sf_result result
+    cdef int status
     cdef int nc, na
     cdef int *rsc_p, *rsa_p
     cdef double *p_p
@@ -44,5 +59,13 @@ def l(double t, array_type p, array_type rsc, array_type rsa):
         lv = lv + pv*tanh(t*pv)
     for i from 0 <= i < na:
         pv = 2.*p_p[rsa_p[i]]
-        lv = lv + pv*gsl_sf_bessel_I1_scaled(pv*t)/gsl_sf_bessel_I0_scaled(pv*t)
+        status = gsl_sf_bessel_I1_scaled_e(pv*t, &result)
+        if status != GSL_SUCCESS and status != GSL_EUNDRFLW:
+            raise ValueError(gsl_strerror(status))
+        i1 = result.val
+        status = gsl_sf_bessel_I0_scaled_e(pv*t, &result)
+        if status != GSL_SUCCESS and status != GSL_EUNDRFLW:
+            raise ValueError(gsl_strerror(status))
+        i0 = result.val
+        lv = lv + pv*i1/i0
     return lv / (nc + 2*na)
