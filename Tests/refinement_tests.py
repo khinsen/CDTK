@@ -175,7 +175,7 @@ class AllAtomLSQRefinementTests2ONX(CommonRefinementTests2ONX):
  
     def test_amplitude_derivatives(self):
         CommonRefinementTests2ONX._test_amplitude_derivatives(self,
-                                  9.9151769565153121, 5.e-8)
+                                  9.9151769565153121, 8.e-8)
 
     def test_position_derivatives(self):
         CommonRefinementTests2ONX._test_position_derivatives(self, 2.e-5)

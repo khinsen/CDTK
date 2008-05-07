@@ -144,12 +144,16 @@ class RefinementEngine(object):
         sm = self.reflection_set.symmetryAndCentricityArrays()
         self.epsilon = N.repeat(sm[:, 0], mask)
         self.centric = N.repeat(sm[:, 1], mask)
-        self.working_centric_indices = N.repeat(N.arange(self.nreflections),
-                                                N.logical_and(self.working_set,
-                                                              self.centric))
-        self.working_acentric_indices = N.repeat(N.arange(self.nreflections),
-                                                 N.logical_and(self.working_set,
-                                                               1-self.centric))
+        self.working_centric_indices = \
+               N.array(N.repeat(N.arange(self.nreflections),
+                                N.logical_and(self.working_set,
+                                              self.centric)),
+                       N.Int32)
+        self.working_acentric_indices = \
+               N.array(N.repeat(N.arange(self.nreflections),
+                                N.logical_and(self.working_set,
+                                              1-self.centric)),
+                       N.Int32)
         # Atomic scattering factors for the atoms in the model
         from CDTK.AtomicScatteringFactors import atomic_scattering_factors
         e_indices = {}
