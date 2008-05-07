@@ -124,6 +124,7 @@ class RefinementEngine(object):
                 N.repeat(self.exp_amplitudes, self.working_set)
         self.validation_exp_amplitudes = \
                 N.repeat(self.exp_amplitudes, self.validation_set)
+        self.scale = None
 
         # Precompute arrays that are used frequently later
         self._precomputeArrays(mask)
@@ -143,6 +144,12 @@ class RefinementEngine(object):
         sm = self.reflection_set.symmetryAndCentricityArrays()
         self.epsilon = N.repeat(sm[:, 0], mask)
         self.centric = N.repeat(sm[:, 1], mask)
+        self.working_centric_indices = N.repeat(N.arange(self.nreflections),
+                                                N.logical_and(self.working_set,
+                                                              self.centric))
+        self.working_acentric_indices = N.repeat(N.arange(self.nreflections),
+                                                 N.logical_and(self.working_set,
+                                                               1-self.centric))
         # Atomic scattering factors for the atoms in the model
         from CDTK.AtomicScatteringFactors import atomic_scattering_factors
         e_indices = {}
@@ -355,6 +362,20 @@ class RefinementEngine(object):
         self._evaluateModel(None, None, adpd, deriv)
         return target, AtomDataArray(self, -2.*N.pi**2*adpd)
 
+    def targetFunctionScaleFactorDerivative(self, f):
+        """
+        Calculate the derivative of the target function with respect to the
+        scale factor of the model amplitudes.
+        @param f: the scale factor value
+        @type f: C{float}
+        @return: scale factor derivative
+        @rtype: C{float}
+        """
+        self.scale = f
+        target, deriv = self.targetFunctionAndAmplitudeDerivatives()
+        return N.sum(N.repeat(deriv, self.working_set) * \
+                     self.working_model_amplitudes)
+
 #
 # Thin wrapper around arrays representing per-atom positions, ADPs,
 # or derivatives. They permit indexing with atom id objects.
@@ -407,6 +428,7 @@ class LeastSquaresRefinementEngine(RefinementEngine):
         me = self.working_model_amplitudes*self.working_exp_amplitudes
         mm = self.working_model_amplitudes**2
         scale = N.sum(self.working_weights*me)/N.sum(self.working_weights*mm)
+        self.scale = scale
         df = scale*self.working_model_amplitudes - self.working_exp_amplitudes
         return N.sum(self.working_weights*df*df)/self.nwreflections
 
@@ -417,6 +439,7 @@ class LeastSquaresRefinementEngine(RefinementEngine):
         mm = self.working_model_amplitudes**2
         s_mm = N.sum(self.working_weights*mm)
         scale = s_me/s_mm
+        self.scale = scale
         df = scale*self.working_model_amplitudes - self.working_exp_amplitudes
         sum_sq = N.sum(self.working_weights*df*df)
         df = scale*self.model_amplitudes - self.exp_amplitudes
@@ -445,8 +468,11 @@ class MLRefinementEngine(RefinementEngine):
                  validation_subset=None, undefined_atom_count = {}):
         RefinementEngine.__init__(self, exp_amplitudes, asu_iterator,
                                   working_subset, validation_subset)
+        self._initializeAlphaBeta(undefined_atom_count)
+        self._precomputeModelIndependentTerms()
+
+    def _initializeAlphaBeta(self, undefined_atom_count):
         from AtomicScatteringFactors import atomic_scattering_factors
-        self.scale = 1.
         self.alpha = N.ones((self.nreflections,), N.Float)
         self.beta = N.zeros((self.nreflections,), N.Float)
         for element, count in undefined_atom_count.items():
@@ -455,70 +481,52 @@ class MLRefinementEngine(RefinementEngine):
                            * N.exp(-b[:, N.NewAxis]*self.ssq[N.NewAxis, :]))
             self.beta += count*f_atom*f_atom
 
+    def _precomputeModelIndependentTerms(self):
+        self.eps_beta_inv = 1./(self.epsilon*self.beta +
+                                (2-self.centric)*self.exp_sigmas_sq)
+        self.llk0 = (0.5*N.sum(N.log(2*N.take(self.eps_beta_inv,
+                                              self.working_centric_indices)
+                                     / N.pi))
+                     + N.sum(N.log(2.*N.take(self.exp_amplitudes
+                                             * self.eps_beta_inv,
+                                             self.working_acentric_indices)))
+                     ) / self.nwreflections
+
     def targetFunctionAndAmplitudeDerivatives(self):
         self.updateInternalState()
+        if self.scale is None:
+            self.optimizeScaleFactor()
 
-        me = self.working_model_amplitudes*self.working_exp_amplitudes
-        mm = self.working_model_amplitudes**2
-        scale = self.scale * N.sum(me)/N.sum(mm)
-        
-        eps_beta_inv = 1./(self.epsilon*self.beta +
-                           (2-self.centric)*self.exp_sigmas_sq)
+        alpha_a = self.scale*self.alpha*self.model_amplitudes
+        arg1 = -(self.exp_amplitudes**2+alpha_a**2)*self.eps_beta_inv
+        darg1 = -self.scale*alpha_a*self.alpha*self.eps_beta_inv
+        darg2 = self.scale*self.alpha*self.exp_amplitudes*self.eps_beta_inv
+        arg2 = darg2*self.model_amplitudes
+
+        llk, dllk = _llkwd(arg1, arg2, darg1, darg2, 0.*self.ssq,
+                           self.working_centric_indices,
+                           self.working_acentric_indices)
+        return llk-self.llk0, dllk
+
+    def targetFunctionScaleFactorDerivative(self, scale):
+        # A more efficient reimplementation.
+        self.updateInternalState()
         alpha_a = scale*self.alpha*self.model_amplitudes
-        arg1 = -(self.exp_amplitudes**2+alpha_a**2)*eps_beta_inv
-        arg2 = alpha_a*self.exp_amplitudes*eps_beta_inv
-        darg1 = -2.*scale*alpha_a*self.alpha*eps_beta_inv
-        darg2 = scale*self.alpha*self.exp_amplitudes*eps_beta_inv
-
-        llk = 0.
-        dllk = 0.*self.ssq
-        for ri in range(self.nreflections):
-            if self.working_set[ri]:
-                if self.centric[ri]:
-                    llk -= 0.5*arg1[ri]+logcosh(arg2[ri]) \
-                           + 0.5*N.log(2*eps_beta_inv[ri]/N.pi)
-                    # cosh(x)' = sinh(x)
-                    # log(cosh(x))' = tanh(x)
-                    dllk[ri] = -(0.5*darg1[ri]+N.tanh(arg2[ri])*darg2[ri])
-                else:
-                    llk -= arg1[ri]+logI0(2.*arg2[ri]) \
-                           + N.log(2.*self.exp_amplitudes[ri]*eps_beta_inv[ri])
-                    # I0(x)' = I1(x)
-                    # log(I0(x))' = I1(x)/I0(x)
-                    dllk[ri] = -(darg1[ri]+2.*I1divI0(2*arg2[ri])*darg2[ri])
-
-        return llk/self.nwreflections, dllk/self.nwreflections
+        p = -alpha_a*alpha_a*self.eps_beta_inv
+        q = alpha_a*self.exp_amplitudes*self.eps_beta_inv
+        return _llkdf(p, q, self.working_centric_indices,
+                     self.working_acentric_indices)
 
     def optimizeScaleFactor(self):
-        def g(f):
-            self.scale = f
-            llk, dllk = self.targetFunctionAndAmplitudeDerivatives()
-            return N.sum(N.repeat(dllk, self.working_set) * \
-                         self.working_model_amplitudes)
-        f = self.scale
-        while g(f) > 0.:
-            f = f/1.1
-        f1 = f
-        while g(f) < 0.:
-            f = 1.1*f
-        f2 = f
-        g1 = g(f1)
-        g2 = g(f2)
-        #print f1, g1
-        #print f2, g2
-        while f2-f1 > 1.e-3*f1:
-            f = f1-g1*(f2-f1)/(g2-g1)
-            gf = g(f)
-            #print f, gf
-            if abs(gf) < 1.e-8:
-                break
-            elif gf < 0:
-                f1 = f
-                g1 = gf
-            else:
-                f2 = f
-                g2 = gf
-        self.scale = f
+        self.updateInternalState()
+        # As a first approximation, calculate the optimal scale factor
+        # for a least-squares residual.
+        me = self.working_model_amplitudes*self.working_exp_amplitudes
+        mm = self.working_model_amplitudes**2
+        self.scale = N.sum(me)/N.sum(mm)
+        # Find the exact optimum using the likelihood function.
+        self.scale = _findZero(self.targetFunctionScaleFactorDerivative,
+                               self.scale)
 
 
 class MLWithModelErrorsRefinementEngine(RefinementEngine):
@@ -601,7 +609,7 @@ class MLWithModelErrorsRefinementEngine(RefinementEngine):
                 t = 0.
             else:
                 def g(t):
-                    return N.sqrt(1.+4.*a*b*t*t)-2.*t*l(t, p, rsc, rsa)-1.
+                    return N.sqrt(1.+4.*a*b*t*t)-2.*t*_l(t, p, rsc, rsa)-1.
                 if t is None:
                     t = 1.
                 while g(t) > 0.:
@@ -654,14 +662,34 @@ class MLWithModelErrorsRefinementEngine(RefinementEngine):
                            for rs in self.res_shells]
 
 #
-# A time-critical function used by the maximum-likelihood target function
+# Time-critical functions used by the maximum-likelihood target functions
 #
 try:
-    from CDTK_refinement import l
+    from CDTK_refinement import _llkwd, _llkdf, _l
 except ImportError:
     import sys
     sys.error.write("Module CDTK_refinement is missing\n")
-    def l(t, p, rsc, rsa):
+
+    def _llkwd(arg1, arg2, darg1, darg2, dllk, rc, ra):
+        llk = 0.
+        for ri in rc:
+            llk -= 0.5*arg1[ri]+logcosh(arg2[ri])
+            dllk[ri] = -darg1[ri]-N.tanh(arg2[ri])*darg2[ri]
+        for ri in ra:
+            llk -= arg1[ri]+logI0(2.*arg2[ri])
+            dllk[ri] = -2.*(darg1[ri]+I1divI0(2*arg2[ri])*darg2[ri])
+        nwreflections = len(rc) + len(ra)
+        return llk/nwreflections, dllk/nwreflections
+
+    def _llkdf(p, q, rc, ra):
+        d = 0.
+        for ri in rc:
+            d -= p[ri] + q[ri]*N.tanh(q[ri])
+        for ri in ra:
+            d -= 2.*p[ri] + 2.*q[ri]*I1divI0(2.*q[ri])
+        return d/(len(rc)+len(ra))
+
+    def _l(t, p, rsc, rsa):
         lv = 0.
         for ri in rsc:
             lv += p[ri]*N.tanh(t*p[ri])
@@ -669,3 +697,30 @@ except ImportError:
             p2 = 2.*p[ri]
             lv += p2*I1divI0(t*p2)
         return lv / (len(rsc) + 2.*len(rsa))
+
+#
+# Find a zero of a function by bisection.
+# Note: this is not a good algorithm for general functions, but it is
+# OK for the functions used in this module.
+#
+def _findZero(g, t):
+    while g(t) > 0.:
+        t = t/1.2
+    t1 = t
+    while g(t) < 0.:
+        t = 1.2*t
+    t2 = t
+    g1 = g(t1)
+    g2 = g(t2)
+    while t2-t1 > 1.e-4*t1:
+        t = t1-g1*(t2-t1)/(g2-g1)
+        gt = g(t)
+        if abs(gt) < 1.e-10:
+            break
+        elif gt < 0:
+            t1 = t
+            g1 = gt
+        else:
+            t2 = t
+            g2 = gt
+    return t
