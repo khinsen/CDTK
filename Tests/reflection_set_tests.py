@@ -35,6 +35,35 @@ class ReflectionSetTests(unittest.TestCase):
         for r in reflections:
             self.assert_(r.in_subset)
 
+    def _symmetryTest(self, reflections):
+        max_h, max_k, max_l = reflections.maxHKL()
+        min_s, max_s = reflections.sRange()
+        r1, r2, r3 = reflections.crystal.unit_cell.reciprocalBasisVectors()
+        sg = reflections.crystal.space_group
+        for h in range(-max_h, max_h+1):
+            for k in range(-max_k, max_k+1):
+                for l in range(-max_l, max_l+1):
+                    sv = h*r1 + k*r2 + l*r3
+                    s = sv.length()
+                    if s < min_s or s > max_s:
+                        continue
+                    r0 = reflections[(h, k, l)]
+                    if r0.isSystematicAbsence():
+                        # Phase factors are not used for absent reflections
+                        continue
+                    p0 = r0.phase_factor
+                    if r0.sf_conjugate:
+                        p0 = N.conjugate(p0)
+                    eq, phases = sg.symmetryEquivalentMillerIndices(
+                                                         N.array([h, k, l]))
+                    for (h, k, l), p in zip(eq, phases):
+                        p_r = p0*p
+                        r = reflections[(h, k, l)]
+                        p_test = r.phase_factor
+                        if r.sf_conjugate:
+                            p_test = N.conjugate(p_test)
+                        self.assert_(abs(p_test - p_r) < 1.e-13)
+
     def test_P1(self):
         cell = UnitCell(Vector(1., 0., 0.),
                         Vector(0., 1., 0.),
@@ -54,31 +83,27 @@ class ReflectionSetTests(unittest.TestCase):
             self.assert_(r.symmetryFactor() == 1)
         self._shellTest(reflections, [(0.5, 1.), (1., 5.), (5., 11.)])
         self._subsetTest(reflections)
+        self._symmetryTest(reflections)
 
     def test_P31(self):
         cell = UnitCell(3., 3., 4.,
                         90.*Units.deg, 90.*Units.deg, 120.*Units.deg)
         res_max = 0.5
         res_min = 10.
-        reflections = ReflectionSet(cell, space_groups['P 31'],
-                                    res_max, res_min)
+        sg = space_groups['P 31']
+        reflections = ReflectionSet(cell, sg, res_max, res_min)
         nr = sum([r.n_symmetry_equivalents for r in reflections]) + \
              len(reflections.systematic_absences)
         self.assertEqual(len(reflections.reflection_map), nr)
         for r in reflections:
             self.assert_(res_max <= r.resolution() <= res_min)
-            sg = reflections.space_group
-            for rot, tn, td in sg.transposed_transformations:
-                h, k, l = N.dot(rot, N.array([r.h, r.k, r.l]))
-                p = N.exp(-2j*N.pi*N.dot(N.array([r.h, r.k, r.l]), (tn*1.)/td))
-                self.assert_(N.absolute(p-reflections[(h, k, l)].phase_factor)
-                             < 1.e-14)
         for r in reflections.systematic_absences:
             self.assertEqual(r.h, 0)
             self.assertEqual(r.k, 0)
             self.assertNotEqual(r.l % 3, 0)
         self._shellTest(reflections, [(0.5, 1.), (1., 5.), (5., 11.)])
         self._subsetTest(reflections)
+        self._symmetryTest(reflections)
 
     def test_P43212(self):
         cell = UnitCell(Vector(1., 0., 0.),
@@ -86,8 +111,8 @@ class ReflectionSetTests(unittest.TestCase):
                         Vector(0., 0., 1.5))
         res_max = 0.1
         res_min = 10.
-        reflections = ReflectionSet(cell, space_groups['P 43 21 2'],
-                                    res_max, res_min)
+        sg = space_groups['P 43 21 2']
+        reflections = ReflectionSet(cell, sg, res_max, res_min)
         nr = sum([r.n_symmetry_equivalents for r in reflections]) + \
              len(reflections.systematic_absences)
         self.assertEqual(len(reflections.reflection_map), nr)
@@ -120,6 +145,7 @@ class ReflectionSetTests(unittest.TestCase):
                 self.assertNotEqual(r.l % 4, 0)
         self._shellTest(reflections, [(0.1, 1.), (1., 5.), (5., 11.)])
         self._subsetTest(reflections)
+        self._symmetryTest(reflections)
 
     def test_pickle(self):
         cell = UnitCell(3., 3., 4.,

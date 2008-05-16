@@ -160,16 +160,18 @@ class Reflection(object):
         c = self.crystal
         sg = c.space_group
         ri = self.index
+        centric = self.isCentric()
         unique_reflections = set()
         equivalents, phases = sg.symmetryEquivalentMillerIndices(self.array)
         for (h, k, l), p in zip(equivalents, phases):
             r = Reflection(h, k, l, c, ri)
             r.phase_factor = p
             unique_reflections.add(r)
-            r = Reflection(-h, -k, -l, c, ri)
-            r.phase_factor = p
-            r.sf_conjugate = True
-            unique_reflections.add(r)
+            if not centric:
+                r = Reflection(-h, -k, -l, c, ri)
+                r.phase_factor = p
+                r.sf_conjugate = True
+                unique_reflections.add(r)
         n = len(unique_reflections)
         for r in unique_reflections:
             r.n_symmetry_equivalents = n
