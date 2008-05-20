@@ -98,6 +98,7 @@ class CommonRefinementTests2ONX(unittest.TestCase):
         self.assertEqual(sum_sq, sum_sq_ref)
         self.assertAlmostEqual(sum_sq, target)
         da = 0.005*N.minimum.reduce(self.re.model_amplitudes)
+        max_error = 0.
         for ri in range(len(self.re.ssq)):
             a = self.re.model_amplitudes[ri]
             self.re.model_amplitudes[ri] = a + da
@@ -114,7 +115,8 @@ class CommonRefinementTests2ONX(unittest.TestCase):
                 self.assert_(self.re.working_set[ri] == 0)
                 self.assert_(deviation == 0.)
             else:
-                self.assert_(abs(deviation/deriv[ri]) < precision)
+                max_error = max(max_error, abs(deviation/deriv[ri]))
+        self.assert_(max_error < precision)
 
     def _test_position_derivatives(self, precision):
         llk, pd = self.re.targetFunctionAndPositionDerivatives()
@@ -162,6 +164,8 @@ class AllAtomLSQRefinementTests2ONX(CommonRefinementTests2ONX):
 
     def setUp(self):
         CommonRefinementTests2ONX._setUp(self)
+        global rs
+        rs = self.reflections
         self.re = LeastSquaresRefinementEngine(self.exp_amplitudes,
                   ((atom['serial_number'], atom['element'],
                     atom['position']*Units.Ang,
@@ -175,13 +179,13 @@ class AllAtomLSQRefinementTests2ONX(CommonRefinementTests2ONX):
  
     def test_amplitude_derivatives(self):
         CommonRefinementTests2ONX._test_amplitude_derivatives(self,
-                                  9.9151769565153121, 8.e-8)
+                                  6.1496839424141037, 4.e-8)
 
     def test_position_derivatives(self):
-        CommonRefinementTests2ONX._test_position_derivatives(self, 2.e-5)
- 
+        CommonRefinementTests2ONX._test_position_derivatives(self, 2.7e-5)
+
     def test_ADP_derivatives(self):
-        CommonRefinementTests2ONX._test_ADP_derivatives(self, 2.e-3)
+        CommonRefinementTests2ONX._test_ADP_derivatives(self, 1.e-3)
 
 
 class AllAtomMLRefinementTests2ONX(CommonRefinementTests2ONX):
@@ -202,7 +206,7 @@ class AllAtomMLRefinementTests2ONX(CommonRefinementTests2ONX):
     def test_scale_factor(self):
         llk = self.re.targetFunction()
         scale = self.re.scale
-        self.assertAlmostEqual(scale, 0.861603190715)
+        self.assertAlmostEqual(scale, 0.95006033349406649)
         for f in [0.9, 0.95, 1.05, 1.1]:
             self.re.scale = f*scale
             self.assert_(self.re.targetFunction() >= llk)
@@ -210,13 +214,13 @@ class AllAtomMLRefinementTests2ONX(CommonRefinementTests2ONX):
 
     def test_amplitude_derivatives(self):
         CommonRefinementTests2ONX._test_amplitude_derivatives(self,
-                                  6.4627998500204171, 2.e-6)
+                                  4.6385834857607229, 1.e-6)
 
     def test_position_derivatives(self):
-        CommonRefinementTests2ONX._test_position_derivatives(self, 2.e-5)
+        CommonRefinementTests2ONX._test_position_derivatives(self, 3.e-5)
  
     def test_ADP_derivatives(self):
-        CommonRefinementTests2ONX._test_ADP_derivatives(self, 4.e-2)
+        CommonRefinementTests2ONX._test_ADP_derivatives(self, 2.e-3)
 
 
 class AllAtomMLWMERefinementTests2ONX(CommonRefinementTests2ONX):
@@ -235,13 +239,13 @@ class AllAtomMLWMERefinementTests2ONX(CommonRefinementTests2ONX):
     test_internal_structures = CommonRefinementTests2ONX._test_internal_structures
     def test_amplitude_derivatives(self):
         CommonRefinementTests2ONX._test_amplitude_derivatives(self,
-                                  2.8110781472911381, 2.e-6)
+                                  2.7832439338960988, 1.e-7)
 
     def test_position_derivatives(self):
-        CommonRefinementTests2ONX._test_position_derivatives(self, 2.5e-5)
+        CommonRefinementTests2ONX._test_position_derivatives(self, 5.e-6)
 
     def test_ADP_derivatives(self):
-        CommonRefinementTests2ONX._test_ADP_derivatives(self, 5.5e-4)
+        CommonRefinementTests2ONX._test_ADP_derivatives(self, 5.e-4)
 
 
 class CalphaRefinementTests2ONX(CommonRefinementTests2ONX):
@@ -262,10 +266,10 @@ class CalphaRefinementTests2ONX(CommonRefinementTests2ONX):
         self.re = AtomSubsetRefinementEngine(self.aa_re, self.atom_ids)
 
     def test_position_derivatives(self):
-        CommonRefinementTests2ONX._test_position_derivatives(self, 6.e-6)
+        CommonRefinementTests2ONX._test_position_derivatives(self, 2.e-4)
 
     def test_ADP_derivatives(self):
-        CommonRefinementTests2ONX._test_ADP_derivatives(self, 4.5e-4)
+        CommonRefinementTests2ONX._test_ADP_derivatives(self, 5.e-5)
 
 
 def suite():
@@ -279,3 +283,4 @@ def suite():
 
 if __name__ == '__main__':
     unittest.main()
+

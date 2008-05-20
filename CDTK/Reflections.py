@@ -80,16 +80,16 @@ class Reflection(object):
         return self.h != other.h or self.k != other.k or self.l != other.l
 
     def __gt__(self, other):
-        pref1 = 4*(self.h >= 0) + 2*(self.k >= 0) + (self.l >= 0)
-        pref2 = 4*(other.h >= 0) + 2*(other.k >= 0) + (other.l >= 0)
-        return pref1 > pref2 \
-               or self.h > other.h or self.k > other.k or self.l > other.l
+        if self.h != other.h:
+            return self.h > other.h
+        if self.k != other.k:
+            return self.k > other.k
+        if self.l != other.l:
+            return self.l > other.l
+        return False
 
     def __lt__(self, other):
-        pref1 = 4*(self.h >= 0) + 2*(self.k >= 0) + (self.l >= 0)
-        pref2 = 4*(other.h >= 0) + 2*(other.k >= 0) + (other.l >= 0)
-        return pref1 < pref2 \
-               or self.h < other.h or self.k < other.k or self.l < other.l
+        return (not self.__eq__(other)) and (not self.__gt__(other))
 
     def __ge__(self, other):
         return self.__eq__(other) or self.__gt__(other)

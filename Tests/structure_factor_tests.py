@@ -157,7 +157,7 @@ class StructureFactorTests2ONX(unittest.TestCase):
         test_sf = k*self.model_sf.applyDebyeWallerFactor(-u)
         sf_scaled, k_fit, u_fit = test_sf.scaleTo(self.exp_amplitudes, 5)
         self.assert_(abs(k_fit-1./k) < 2.e-2)
-        self.assert_(largestAbsoluteElement((u-u_fit).array) < 1.5e-4)
+        self.assert_(largestAbsoluteElement((u-u_fit).array) < 2.5e-4)
         self.assert_(self.exp_amplitudes.rFactor(sf_scaled) < 0.185)
 
 
