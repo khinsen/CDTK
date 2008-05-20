@@ -18,6 +18,9 @@ import cPickle
 
 class ReflectionSetTests(unittest.TestCase):
 
+    def setUp(self):
+        self.compact = False
+
     def _shellTest(self, reflections, shells):
         nr = 0
         for rmin, rmax in shells:
@@ -70,11 +73,13 @@ class ReflectionSetTests(unittest.TestCase):
                         Vector(0., 0., 1.))
         res_max = 0.5
         res_min = 10.
-        reflections = ReflectionSet(cell, space_groups['P 1'], res_max, res_min)
+        reflections = ReflectionSet(cell, space_groups['P 1'], res_max, res_min,
+                                    compact=self.compact)
         nr = sum([r.n_symmetry_equivalents for r in reflections]) + \
-             len(reflections.systematic_absences)
-        self.assertEqual(len(reflections.reflection_map), nr)
-        self.assert_(len(reflections.reflection_map) ==
+             sum([r.n_symmetry_equivalents
+                  for r in reflections.systematic_absences])
+        self.assertEqual(reflections.total_reflection_count, nr)
+        self.assert_(reflections.total_reflection_count ==
                      2*len(reflections.minimal_reflection_list))
         for r in reflections:
             self.assert_(r.n_symmetry_equivalents == 2)
@@ -91,10 +96,12 @@ class ReflectionSetTests(unittest.TestCase):
         res_max = 0.5
         res_min = 10.
         sg = space_groups['P 31']
-        reflections = ReflectionSet(cell, sg, res_max, res_min)
+        reflections = ReflectionSet(cell, sg, res_max, res_min,
+                                    compact=self.compact)
         nr = sum([r.n_symmetry_equivalents for r in reflections]) + \
-             len(reflections.systematic_absences)
-        self.assertEqual(len(reflections.reflection_map), nr)
+             sum([r.n_symmetry_equivalents
+                  for r in reflections.systematic_absences])
+        self.assertEqual(reflections.total_reflection_count, nr)
         for r in reflections:
             self.assert_(res_max <= r.resolution() <= res_min)
         for r in reflections.systematic_absences:
@@ -109,13 +116,15 @@ class ReflectionSetTests(unittest.TestCase):
         cell = UnitCell(Vector(1., 0., 0.),
                         Vector(0., 1., 0.),
                         Vector(0., 0., 1.5))
-        res_max = 0.1
+        res_max = 0.5
         res_min = 10.
         sg = space_groups['P 43 21 2']
-        reflections = ReflectionSet(cell, sg, res_max, res_min)
+        reflections = ReflectionSet(cell, sg, res_max, res_min,
+                                    compact=self.compact)
         nr = sum([r.n_symmetry_equivalents for r in reflections]) + \
-             len(reflections.systematic_absences)
-        self.assertEqual(len(reflections.reflection_map), nr)
+             sum([r.n_symmetry_equivalents
+                  for r in reflections.systematic_absences])
+        self.assertEqual(reflections.total_reflection_count, nr)
         for r in reflections:
             self.assert_(res_max <= r.resolution() <= res_min)
             is_centric = r.isCentric()
@@ -153,7 +162,8 @@ class ReflectionSetTests(unittest.TestCase):
         res_max = 0.5
         res_min = 10.
         reflections = ReflectionSet(cell, space_groups['P 31'],
-                                    res_max, res_min)
+                                    res_max, res_min,
+                                    compact=self.compact)
         string = cPickle.dumps(reflections)
         unpickled = cPickle.loads(string)
         self.assertEqual(len(reflections), len(unpickled))
@@ -163,6 +173,8 @@ class ReflectionSetTests(unittest.TestCase):
                          len(unpickled.reflection_map))
         self.assertEqual(len(reflections.systematic_absences),
                          len(unpickled.systematic_absences))
+        self.assertEqual(reflections.total_reflection_count,
+                         unpickled.total_reflection_count)
         for r in reflections:
             for re in r.symmetryEquivalents():
                 rp = unpickled[(re.h, re.k, re.l)]
@@ -179,8 +191,17 @@ class ReflectionSetTests(unittest.TestCase):
             self.assert_(unpickled[(r.h, r.k, r.l)]
                          in unpickled.systematic_absences)
 
+class CompactReflectionSetTests(ReflectionSetTests):
+
+    def setUp(self):
+        self.compact = True
+
 def suite():
-    return unittest.TestLoader().loadTestsFromTestCase(ReflectionSetTests)
+    loader = unittest.TestLoader()
+    s = unittest.TestSuite()
+    s.addTest(loader.loadTestsFromTestCase(ReflectionSetTests))
+    s.addTest(loader.loadTestsFromTestCase(CompactReflectionSetTests))
+    return s
 
 if __name__ == '__main__':
     unittest.main()

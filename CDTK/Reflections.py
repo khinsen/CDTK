@@ -95,7 +95,7 @@ class Reflection(object):
         return self.__eq__(other) or self.__gt__(other)
 
     def __le__(self, other):
-        return self.__eq__(other) or self.__lt__(other)
+        return self.__eq__(other) or (not self.__gt__(other))
 
     def __hash__(self):
         return 400*self.h + 20*self.k + self.l
@@ -218,7 +218,8 @@ class ReflectionSet(object):
     """
 
     def __init__(self, cell, space_group,
-                 max_resolution=None, min_resolution=None):
+                 max_resolution=None, min_resolution=None,
+                 compact=True):
         """
         @param cell: the unit cell of the crystal
         @type cell: L{CDTK.Crystal.UnitCell}
@@ -234,13 +235,26 @@ class ReflectionSet(object):
                                If None, there is no lower limit and the
                                reflection (0, 0, 0) is included in the set.
         @type min_resolution: C{float}
+        @param compact: if True, only the reflections in an asymmetric unit
+                        are stored explicitly. Retrieving a reflection for
+                        a given set of Miller indices can be slow, because
+                        the symmetry operations of the space group must be
+                        tried one by one. If False, symmetry-related reflections
+                        are stored explicitly. This takes more memory, but
+                        access by Miller indices is fast. There is no
+                        performance difference for iteration over a
+                        reflection set, which is always an iteration over an
+                        asymmetric unit.
+        @tyoe compact: C{Bool}
         """
         self.cell = cell
         self.space_group = space_group
+        self.compact = compact
         self.crystal = Crystal(cell, space_group)
         self.minimal_reflection_list = []
         self.reflection_map = {}
         self.systematic_absences = set()
+        self.total_reflection_count = 0
         self.s_min = None
         self.s_max = None
         if max_resolution is not None:
@@ -260,25 +274,45 @@ class ReflectionSet(object):
         """
         hkl = Reflection(h, k, l, self.crystal,
                          len(self.minimal_reflection_list))
-        if self.reflection_map.has_key((hkl.h, hkl.k, hkl.l)):
-            return
-        equivalents = list(hkl.symmetryEquivalents())
-        equivalents.sort()
-        for r in equivalents:
-            self.reflection_map[(r.h, r.k, r.l)] = r
-        hkl = equivalents[-1]
-        for r in equivalents:
-            r.phase_factor /= hkl.phase_factor
-        if hkl.sf_conjugate:
-            for r in equivalents:
-                r.sf_conjugate = not r.sf_conjugate
-                r.phase_factor = N.conjugate(r.phase_factor)
-        if hkl.isSystematicAbsence():
-            for r in equivalents:
-                r.index = None
-                self.systematic_absences.add(r)
+        if self.compact:
+
+            equivalents = list(hkl.symmetryEquivalents())
+            equivalents.sort()
+            hkl = equivalents[-1]
+            key = (hkl.h, hkl.k, hkl.l)
+            if self.reflection_map.has_key(key):
+                return
+            self.reflection_map[key] = hkl
+            hkl.phase_factor = 1.
+            hkl.sf_conjugate = False
+            if hkl.isSystematicAbsence():
+                self.systematic_absences.add(hkl)
+                hkl.index = None
+            else:
+                self.minimal_reflection_list.append(hkl)
+
         else:
-            self.minimal_reflection_list.append(hkl)
+
+            if self.reflection_map.has_key((hkl.h, hkl.k, hkl.l)):
+                return
+            equivalents = list(hkl.symmetryEquivalents())
+            equivalents.sort()
+            hkl = equivalents[-1]
+            for r in equivalents:
+                r.phase_factor /= hkl.phase_factor
+                self.reflection_map[(r.h, r.k, r.l)] = r
+            if hkl.sf_conjugate:
+                for r in equivalents:
+                    r.sf_conjugate = not r.sf_conjugate
+                    r.phase_factor = N.conjugate(r.phase_factor)
+            if hkl.isSystematicAbsence():
+                self.systematic_absences.add(hkl)
+                for r in equivalents:
+                    r.index = None
+            else:
+                self.minimal_reflection_list.append(hkl)
+
+        self.total_reflection_count += hkl.n_symmetry_equivalents
         s = hkl.sVector().length()
         if self.s_min is None:
             self.s_min = s
@@ -349,8 +383,15 @@ class ReflectionSet(object):
                  reflection set
         @rtype: C{tuple}
         """
-        return tuple(N.maximum.reduce(N.array(self.reflection_map.keys())))
-        
+        if self.compact:
+            max_hkl = N.zeros((3,), N.Int)
+            for r in self.reflection_map.values():
+                hkl = [(re.h, re.k, re.l) for re in r.symmetryEquivalents()]
+                max_hkl = N.maximum(max_hkl, N.maximum.reduce(N.array(hkl)))
+            return tuple(max_hkl)
+        else:
+            return tuple(N.maximum.reduce(N.array(self.reflection_map.keys())))
+
     def __iter__(self):
         """
         @return: a generator yielding the elements of the minimal
@@ -375,7 +416,22 @@ class ReflectionSet(object):
         @rtype: L{CDTK.Reflections.Reflection}
         @raise KeyError: if the requested reflection is not part of the set
         """
-        return self.reflection_map[item]
+        try:
+            return self.reflection_map[item]
+        except KeyError:
+            if self.compact:
+                hkl = N.array(item)
+                for hkl in self.crystal.space_group.\
+                                symmetryEquivalentMillerIndices(hkl)[0]:
+                    for sign in [1., -1.]:
+                        try:
+                            r = self.reflection_map[tuple(sign*hkl)]
+                            for re in r.symmetryEquivalents():
+                                if (re.h, re.k, re.l) == item:
+                                    return re
+                        except KeyError:
+                            pass
+            raise KeyError(item)
 
     def getReflection(self, hkl):
         """
@@ -389,11 +445,11 @@ class ReflectionSet(object):
         @rtype: L{CDTK.Reflections.Reflection}
         """
         try:
-            return self.reflection_map[hkl]
+            return self[hkl]
         except KeyError:
             h, k, l = hkl
             self.addReflection(h, k, l)
-            return self.reflection_map[hkl]
+            return self[hkl]
 
     # When pickling, store only a minimal information set in order to
     # reduce pickle file size and CPU time. The lost information is
@@ -406,14 +462,14 @@ class ReflectionSet(object):
                     for r in self.systematic_absences]
         return (tuple(self.cell.basis),
                 self.space_group.number,
-                self.s_min, self.s_max,
+                self.s_min, self.s_max, self.compact,
                 N.array(reflections), N.array(absences))
 
     def __setstate__(self, state):
         from CDTK.SpaceGroups import space_groups
         from CDTK.Crystal import UnitCell
         cell_basis, space_group_number, \
-                    self.s_min, self.s_max, \
+                    self.s_min, self.s_max, self.compact, \
                     reflections, absences = state
         self.cell = UnitCell(*cell_basis)
         self.space_group = space_groups[space_group_number]
@@ -425,14 +481,30 @@ class ReflectionSet(object):
             r = Reflection(h, k, l, self.crystal, index)
             for re in r.symmetryEquivalents():
                 hkl = (re.h, re.k, re.l)
+                if not self.compact:
+                    self.reflection_map[hkl] = re
                 if hkl == (h, k, l):
-                    r = re
-                self.reflection_map[hkl] = re
-            self.minimal_reflection_list.append(r)
+                    self.minimal_reflection_list.append(re)
+                    if self.compact:
+                        self.reflection_map[hkl] = re
+                        break
         for h, k, l in absences:
             r = Reflection(h, k, l, self.crystal, None)
-            self.systematic_absences.add(r)
-            self.reflection_map[(h, k, l)] = r
+            for re in r.symmetryEquivalents():
+                hkl = (re.h, re.k, re.l)
+                if not self.compact:
+                    self.reflection_map[hkl] = re
+                if hkl == (h, k, l):
+                    self.systematic_absences.add(re)
+                    if self.compact:
+                        self.reflection_map[(h, k, l)] = re
+                        break
+        if self.compact:
+            self.total_reflection_count = \
+                               sum([r.n_symmetry_equivalents
+                                    for r in self.reflection_map.values()])
+        else:
+            self.total_reflection_count = len(self.reflection_map)
 
     def sVectorArray(self, cell=None):
         """
