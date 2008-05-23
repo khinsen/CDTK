@@ -257,6 +257,7 @@ class ReflectionSet(object):
         self.total_reflection_count = 0
         self.s_min = None
         self.s_max = None
+        self.completeness_range = (None, None)
         if max_resolution is not None:
             self.fillResolutionSphere(max_resolution, min_resolution)
 
@@ -323,23 +324,32 @@ class ReflectionSet(object):
         else:
             self.s_max = max(s, self.s_max)
 
-    def fillResolutionSphere(self, max_resolution, min_resolution=None):
+    def fillResolutionSphere(self, max_resolution=None, min_resolution=None):
         """
         Add all reflections in the spherical shell in reciprocal space
         specified by the resolution range to the reflection set.
 
         @param max_resolution: the upper limit of the resolution range.
+                               If both max_resolution and min_resolution
+                               are C{None}, use the resolution range of
+                               the currenly present reflections.
         @type max_resolution: C{float}
         @param min_resolution: the lower limit of the resolution range.
                                If None, there is no lower limit and the
                                reflection (0, 0, 0) is included in the set.
         @type min_resolution: C{float}
         """
+        if max_resolution is None:
+            max_resolution = 1./self.s_max
+            min_resolution = 1./self.s_min
         max_inv_sq_resolution = 1.00001/max_resolution**2
         if min_resolution is None:
             min_inv_sq_resolution = 0.
         else:
             min_inv_sq_resolution = (1.-0.00001)/min_resolution**2
+        if self.isComplete(N.sqrt(min_inv_sq_resolution),
+                           N.sqrt(max_inv_sq_resolution)):
+            return
         r1, r2, r3 = self.cell.reciprocalBasisVectors()
         h_max = int(N.sqrt(max_inv_sq_resolution/(r1*r1)))
         k_max = int(N.sqrt(max_inv_sq_resolution/(r2*r2)))
@@ -355,6 +365,30 @@ class ReflectionSet(object):
                            <= max_inv_sq_resolution:
                         self.addReflection(h, k, l)
         self.minimal_reflection_list.sort()
+        self.completeness_range = (N.sqrt(min_inv_sq_resolution),
+                                   N.sqrt(max_inv_sq_resolution))
+
+    def isComplete(self, s_min=None, s_max=None):
+        """
+        @param s_min: the lower limit of the range of scattering vector
+                      lengths to check. Defaults to the lowest-resolution
+                      reflection.
+        @type s_min: C{float}
+        @param s_max: the upper limit of the range of scattering vector
+                      lengths to check. Defaults to the highest-resolution
+                      reflection.
+        @type s_max: C{float}
+        @return: C{True} if the ReflectionSet is known to contain all
+                 reflections in the given range, C{False} if the
+                 completeness cannot be guaranteed
+        @rtype: C{bool}
+        """
+        c_min, c_max = self.completeness_range
+        if c_min is None or c_max is None:
+            return False
+        if s_min is None: s_min = self.s_min
+        if s_max is None: s_max = self.s_max
+        return s_min >= c_min and s_max <= c_max
 
     def sRange(self):
         """
@@ -463,6 +497,7 @@ class ReflectionSet(object):
         return (tuple(self.cell.basis),
                 self.space_group.number,
                 self.s_min, self.s_max, self.compact,
+                self.completeness_range,
                 N.array(reflections), N.array(absences))
 
     def __setstate__(self, state):
@@ -470,6 +505,7 @@ class ReflectionSet(object):
         from CDTK.Crystal import UnitCell
         cell_basis, space_group_number, \
                     self.s_min, self.s_max, self.compact, \
+                    self.completeness_range, \
                     reflections, absences = state
         self.cell = UnitCell(*cell_basis)
         self.space_group = space_groups[space_group_number]

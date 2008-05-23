@@ -392,6 +392,41 @@ class ExperimentalReflectionData(ReflectionData):
                 self.array[r.index, 1] = sigma[i]
                 self.data_available[r.index] = True
 
+    def completeness(self, nbins = 1, s_range = (None, None)):
+        """
+        @param nbins: the number of intervals into which the s range
+                      is divided
+        @type nbins: C{int}
+        @param s_range: the range of s values for which the average
+                        is calculated. The minimum and/or maximum
+                        value can be C{None}, in which case it is replaced
+                        by the lower/upper limit of the resolution range of
+                        the reflection set.
+        @type s_range: C{(float, float)}
+        @return: the fraction of reflections within the resolution interval
+                 for which observations are available
+        @rtype: C{Scientific.N.array}
+        """
+        s_min, s_max = s_range
+        if s_min is None or s_max is None:
+            s1, s2 = self.reflection_set.sRange()
+            if s_min is None: s_min = 0.99*s1
+            if s_max is None: s_max = 1.01*s2
+        bin_width = (s_max-s_min)/nbins
+        reflection_count = N.zeros((nbins,), N.Int)
+        observed_reflection_count = N.zeros((nbins,), N.Float)
+        for reflection in self.reflection_set:
+            s = reflection.sVector().length()
+            bin = int((s-s_min)/bin_width)
+            if bin >= 0 and bin < nbins:
+                n = reflection.n_symmetry_equivalents
+                reflection_count[bin] += n
+                if self.data_available[reflection.index]:
+                    observed_reflection_count[bin] += n
+        completeness = observed_reflection_count / \
+                            (reflection_count + (reflection_count==0))
+        return completeness
+
     def __add_op__(self, other, result):
         result.data_available[:] = self.data_available*other.data_available
         result.array[:] = self.array[:]+other.array[:]

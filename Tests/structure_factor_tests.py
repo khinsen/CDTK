@@ -87,6 +87,8 @@ class StructureFactorTests2ONX(unittest.TestCase):
         self.assert_(self.model_sf.rFactor(self.model_sf) == 0.)
         self.assert_(N.fabs(self.exp_amplitudes.rFactor(self.model_sf)-0.1842)
                      < 5.e-5)
+        self.assertAlmostEqual(self.exp_amplitudes.completeness()[0],
+                               0.67755682, 6)
         self.checkSymmetry(self.model_sf)
 
         # Tests on addition/subtraction

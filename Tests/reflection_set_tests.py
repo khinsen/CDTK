@@ -75,6 +75,7 @@ class ReflectionSetTests(unittest.TestCase):
         res_min = 10.
         reflections = ReflectionSet(cell, space_groups['P 1'], res_max, res_min,
                                     compact=self.compact)
+        self.assert_(reflections.isComplete())
         nr = sum([r.n_symmetry_equivalents for r in reflections]) + \
              sum([r.n_symmetry_equivalents
                   for r in reflections.systematic_absences])
@@ -98,6 +99,7 @@ class ReflectionSetTests(unittest.TestCase):
         sg = space_groups['P 31']
         reflections = ReflectionSet(cell, sg, res_max, res_min,
                                     compact=self.compact)
+        self.assert_(reflections.isComplete())
         nr = sum([r.n_symmetry_equivalents for r in reflections]) + \
              sum([r.n_symmetry_equivalents
                   for r in reflections.systematic_absences])
@@ -121,6 +123,7 @@ class ReflectionSetTests(unittest.TestCase):
         sg = space_groups['P 43 21 2']
         reflections = ReflectionSet(cell, sg, res_max, res_min,
                                     compact=self.compact)
+        self.assert_(reflections.isComplete())
         nr = sum([r.n_symmetry_equivalents for r in reflections]) + \
              sum([r.n_symmetry_equivalents
                   for r in reflections.systematic_absences])
@@ -164,8 +167,10 @@ class ReflectionSetTests(unittest.TestCase):
         reflections = ReflectionSet(cell, space_groups['P 31'],
                                     res_max, res_min,
                                     compact=self.compact)
+        self.assert_(reflections.isComplete())
         string = cPickle.dumps(reflections)
         unpickled = cPickle.loads(string)
+        self.assert_(unpickled.isComplete())
         self.assertEqual(len(reflections), len(unpickled))
         self.assertEqual(len(reflections.minimal_reflection_list),
                          len(unpickled.minimal_reflection_list))
