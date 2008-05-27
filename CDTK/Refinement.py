@@ -417,6 +417,8 @@ class LeastSquaresRefinementEngine(RefinementEngine):
         self.calculateWeights()
         self.working_weights = N.repeat(self.weights, self.working_set)
         self.validation_weights = N.repeat(self.weights, self.validation_set)
+        wweights = N.repeat(self.working_weights, self.working_weights > 0.)
+        self.constant_term = -0.5*N.sum(N.log(2.*N.pi/wweights))
 
     def calculateWeights(self):
         """
@@ -434,7 +436,8 @@ class LeastSquaresRefinementEngine(RefinementEngine):
         scale = N.sum(self.working_weights*me)/N.sum(self.working_weights*mm)
         self.scale = scale
         df = scale*self.working_model_amplitudes - self.working_exp_amplitudes
-        return N.sum(self.working_weights*df*df)/self.nwreflections
+        return (0.5*N.sum(self.working_weights*df*df) + self.constant_term) \
+               / self.nwreflections
 
     def targetFunctionAndAmplitudeDerivatives(self):
         self.updateInternalState()
@@ -453,8 +456,8 @@ class LeastSquaresRefinementEngine(RefinementEngine):
                 N.sum(N.repeat(2.*self.weights*df*self.model_amplitudes,
                                self.working_set)) \
                  * sderiv
-        return sum_sq/self.nwreflections, \
-               deriv*self.working_set/self.nwreflections
+        return (0.5*sum_sq+self.constant_term)/self.nwreflections, \
+               0.5*deriv*self.working_set/self.nwreflections
 
 #
 # RefinementEngines with a maximum-likelihood target function
