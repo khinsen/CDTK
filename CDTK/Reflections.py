@@ -200,7 +200,49 @@ class Reflection(object):
         equivalents = sg.symmetryEquivalentMillerIndices(self.array)[0]
         return N.int_sum(N.alltrue(N.array(equivalents) == -self.array,
                                    axis=1)) > 0
-        
+
+#
+# ReflectionSelector is a mix-in class that contains the methods for
+# reflection selection shared between ReflectionSet and ReflectionSubset.
+#
+class ReflectionSelector(object):
+
+    def select(self, condition):
+        """
+        @param condition: a function that returns C{True} for each reflection
+                          to be selected.
+        @type condition: function taking a L{Reflection} argument
+                         and returning C{bool}
+        @return: the subset of the reflections that satisfy the condition
+        @rtype: L{ReflectionSubset}
+        """
+        return ReflectionSubset(self, [r for r in self if condition(r)])
+
+    def randomlyAssignedSubsets(self, fractions):
+        """
+        Partition the reflections into several subsets of
+        given (approximate) sizes by a random choice algorithm.
+
+        @param fractions: a sequence of fractions (between 0. and 1.)
+                          that specify the size that each subset should have
+        @type fractions: sequence of C{int}
+        @return: subsets of approximately the requested sizes
+        @rtype: sequence of L{ReflectionSubset}
+        """
+        if N.sum(fractions) > 1.:
+            raise ValueError("Sum of fractions > 1")
+        import random
+        fractions = N.add.accumulate(fractions)
+        subsets = []
+        for i in range(len(fractions)):
+            subsets.append([])
+        for r in self:
+            index = N.sum(random.uniform(0., 1.) > fractions)
+            if index < len(subsets):
+                subsets[index].append(r)
+        return [ReflectionSubset(self, s) for s in subsets]
+
+
 #
 # A ReflectionSet represents all possible reflections for a given crystal
 # within a given resolution range and manages a minimal list of reflections
@@ -211,7 +253,7 @@ class Reflection(object):
 # Iteration over a ReflectionSet yields the elements of the minimal list.
 # Indexation by (h, k, l) tuples gives access to arbitrary Miller indices.
 #
-class ReflectionSet(object):
+class ReflectionSet(ReflectionSelector):
 
     """
     Set of reflections observed in an experiment
@@ -604,46 +646,11 @@ class ReflectionSet(object):
             sm[r.index, 1] = r.isCentric()
         return sm
 
-    def select(self, condition):
-        """
-        @param condition: a function that returns C{True} for each reflection
-                          to be selected.
-        @type condition: function taking a L{Reflection} argument
-                         and returning C{bool}
-        @return: the subset of the reflections that satisfy the condition
-        @rtype: L{ReflectionSubset}
-        """
-        return ReflectionSubset(self, [r for r in self if condition(r)])
-
-    def randomlyAssignedSubsets(self, fractions):
-        """
-        Partition the reflection set into several subsets of
-        given (approximate) sizes by a random choice algorithm.
-
-        @param fractions: a sequence of fractions (between 0. and 1.)
-                          that specify the size that each subset should have
-        @type fractions: sequence of C{int}
-        @return: subsets of approximately the requested sizes
-        @rtype: sequence of L{ReflectionSubset}
-        """
-        if N.sum(fractions) > 1.:
-            raise ValueError("Sum of fractions > 1")
-        import random
-        fractions = N.add.accumulate(fractions)
-        subsets = []
-        for i in range(len(fractions)):
-            subsets.append([])
-        for r in self:
-            index = N.sum(random.uniform(0., 1.) > fractions)
-            if index < len(subsets):
-                subsets[index].append(r)
-        return [ReflectionSubset(self, s) for s in subsets]
-
 #
 # A ReflectionSubset object is an iterator over a subset of a
 # ReflectionSet.
 #
-class ReflectionSubset(object):
+class ReflectionSubset(ReflectionSelector):
 
     """
     Iterator over a subset of reflections
@@ -669,17 +676,6 @@ class ReflectionSubset(object):
         """
         for r in self.reflection_list:
             yield r
-
-    def select(self, condition):
-        """
-        @param condition: a function that returns C{True} for each reflection
-                          to be selected.
-        @type condition: function taking a L{Reflection} argument
-                         and returning C{bool}
-        @return: the subset of the reflections that satisfy the condition
-        @rtype: L{ReflectionSubset}
-        """
-        return ReflectionSubset(self, [r for r in self if condition(r)])
 
 #
 # A ResolutionShell object is an iterator over the reflections in
