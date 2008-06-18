@@ -62,7 +62,7 @@ class ElectronDensityMapTests(unittest.TestCase):
         unit_cell_atom_data = []
         for tr in self.s.cs_transformations:
             for atom in asu_atoms:
-                unit_cell_atom_data.append((atom['element'],
+                unit_cell_atom_data.append((atom, atom['element'],
                                             tr(atom['position'])*Units.Ang,
                                             atom['temperature_factor'] 
                                               * Units.Ang**2/(8.*N.pi**2),

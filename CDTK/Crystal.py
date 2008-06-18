@@ -11,6 +11,9 @@
 Description of a crystal
 """
 
+from CDTK import Units
+from CDTK.SpaceGroups import space_groups
+from CDTK.Utility import SymmetricTensor
 from Scientific.Geometry import Vector, isVector
 from Scientific.Geometry.Transformation import Rotation, Translation, Shear
 from Scientific import N, LA
@@ -161,18 +164,98 @@ class UnitCell(object):
         return transformations
 
 
+class Atom(object):
+
+    """
+    An Atom object stores the relevant data about an atom for
+    the purpose of calculating scattering factors and maps:
+    the chemical element, the position, the fluctuation
+    parameter (scalar or tensor), and the occupancy. It also
+    stores an atom_id attribute whose value is not used in the
+    calculations. It can be used as a unique atom identifier to
+    establish a link to other atomic models.
+    """
+
+    def __init__(self, atom_id, element, position, fluctuation, occupancy):
+        """
+        @param atom_id: not used in any calculation. This value can be used
+                        as a unique atom identifier to establish a link
+                        to other atomic models.
+        @param element: the chemical element
+        @type element: C{str}
+        @param position: the position vector
+        @type position: C{Scientific.Geometry.Vector}
+        @param fluctuation: the fluctuation parameter (B factor)
+        @type fluctuation: C{float} or L{CDTK.Utility.SymmetricTensor}
+        @param occupancy: the occupancy
+        @type occupancy: C{float}
+        """
+        self.atom_id = atom_id
+        self.element = element
+        self.position = position
+        self.fluctuation = fluctuation
+        self.occupancy = occupancy
+
+
 class Crystal(object):
 
     """
-    A crystal object defines a unit cell plus a space group
+    A Crystal object defines a unit cell, a space group, and a list
+    of atoms in the unit cell. Its iterator interface permits it
+    to be used directly as the asymmetric unit iterator in the calculation
+    of model amplitudes, maps, and in the definition of refinement
+    engines.
     """
 
-    def __init__(self, unit_cell, space_group):
+    def __init__(self, cell, space_group):
         """
-        @param unit_cell: the unit cell
-        @type unit_cell: L{CDTK.Crystal.UnitCell}
+        @param cell: the unit cell
+        @type cell: L{CDTK.Crystal.UnitCell}
         @param space_group: the space group
         @type space_group: L{CDTK.SpaceGroups.SpaceGroup}
         """
-        self.unit_cell = unit_cell
+        self.cell = cell
         self.space_group = space_group
+        self.atoms = []
+
+    def __iter__(self):
+        """
+        @return: a generator yielding the elements of the minimal
+                 reflection set
+        @rtype: generator
+        """
+        for a in self.atoms:
+            yield (a.atom_id, a.element, a.position, a.fluctuation, a.occupancy)
+
+
+class PDBCrystal(Crystal):
+
+    """
+    A PDBCrystal object is a Crystal object generated from a PDB
+    file.
+    """
+
+    def __init__(self, file_or_filename):
+        """
+        @param file_or_filename: the name of a PDB file, or a file object
+        @type file_or_filename: C{str} or C{file}
+        """
+        from Scientific.IO.PDB import Structure
+        s = Structure(file_or_filename)
+        self.pdb_structure = s
+
+        cell = UnitCell(s.a*Units.Ang, s.b*Units.Ang, s.c*Units.Ang,
+                        s.alpha*Units.deg, s.beta*Units.deg, s.gamma*Units.deg)
+        Crystal.__init__(self, cell, space_groups[s.space_group])
+        
+        for residue in s.residues:
+            for atom in residue:
+                fluctuation = atom['temperature_factor'] \
+                              * Units.Ang**2/(8.*N.pi**2)
+                try:
+                    fluctuation = SymmetricTensor(atom['u']*Units.Ang**2)
+                except KeyError:
+                    pass
+                a = Atom(atom, atom['element'], atom['position']*Units.Ang,
+                         fluctuation, atom['occupancy'])
+                self.atoms.append(a)

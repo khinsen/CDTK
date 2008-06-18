@@ -110,7 +110,7 @@ class Reflection(object):
         @rtype: C{Scientific.Geometry.Vector}
         """
         if cell is None:
-            cell = self.crystal.unit_cell
+            cell = self.crystal.cell
         r1, r2, r3 = cell.reciprocalBasisVectors()
         return self.h*r1 + self.k*r2 + self.l*r3
 
@@ -287,7 +287,7 @@ class ReflectionSet(ReflectionSelector):
                         performance difference for iteration over a
                         reflection set, which is always an iteration over an
                         asymmetric unit.
-        @tyoe compact: C{Bool}
+        @type compact: C{Bool}
         """
         self.cell = cell
         self.space_group = space_group

@@ -932,7 +932,7 @@ class StructureFactor(ReflectionData, AmplitudeData):
         """
         @param atom_iterator: an iterator or sequence that yields
                               for each atom in the unit cell a
-                              tuple of (chemical element,
+                              tuple of (atom_id, chemical element,
                               position vector, position fluctuation,
                               occupancy). The position fluctuation
                               can be a symmetric tensor (ADP tensor)
@@ -950,7 +950,7 @@ class StructureFactor(ReflectionData, AmplitudeData):
         self.array[:] = 0j
         twopii = 2.j*N.pi
         twopisq = -2.*N.pi**2
-        for element, position, adp, occupancy in atom_iterator:
+        for atom_id, element, position, adp, occupancy in atom_iterator:
             a, b = atomic_scattering_factors[element.lower()]
             f_atom = occupancy * \
                      N.sum(a[:, N.NewAxis]
@@ -969,7 +969,7 @@ class StructureFactor(ReflectionData, AmplitudeData):
         """
         @param atom_iterator: an iterator or sequence that yields
                               for each atom in the asymmetric unit a
-                              tuple of (chemical element,
+                              tuple of (atom_id, chemical element,
                               position vector, position fluctuation,
                               occupancy). The position fluctuation
                               can be a symmetric tensor (ADP tensor)
@@ -986,7 +986,7 @@ class StructureFactor(ReflectionData, AmplitudeData):
         sv, p = self.reflection_set.sVectorArrayAndPhasesForASU(cell)
         ssq = N.sum(sv[0]*sv[0], axis=-1)
         self.array[:] = 0j
-        for element, position, adp, occupancy in atom_iterator:
+        for atom_id, element, position, adp, occupancy in atom_iterator:
             a, b = atomic_scattering_factors[element.lower()]
             f_atom = N.sum(a[:, N.NewAxis]
                            * N.exp(-b[:, N.NewAxis]*ssq[N.NewAxis, :]))

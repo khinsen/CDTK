@@ -41,7 +41,7 @@ class ReflectionSetTests(unittest.TestCase):
     def _symmetryTest(self, reflections):
         max_h, max_k, max_l = reflections.maxHKL()
         min_s, max_s = reflections.sRange()
-        r1, r2, r3 = reflections.crystal.unit_cell.reciprocalBasisVectors()
+        r1, r2, r3 = reflections.crystal.cell.reciprocalBasisVectors()
         sg = reflections.crystal.space_group
         for h in range(-max_h, max_h+1):
             for k in range(-max_k, max_k+1):

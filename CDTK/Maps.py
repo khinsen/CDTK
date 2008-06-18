@@ -96,7 +96,7 @@ class ElectronDensityMap(Map):
         """
         @param atom_iterator: an iterator or sequence that yields
                               for each atom in the unit cell a
-                              tuple of (chemical element,
+                              tuple of (atom_id, chemical element,
                               position vector, position fluctuation,
                               occupancy). The position fluctuation
                               can be a symmetric tensor (ADP tensor)
@@ -118,7 +118,7 @@ class ElectronDensityMap(Map):
             cell = self.cell
         m_fc = cell.fractionalToCartesianMatrix()
         from AtomicScatteringFactors import atomic_scattering_factors
-        for element, position, adp, occupancy in atom_iterator:
+        for atom_id, element, position, adp, occupancy in atom_iterator:
             a, b = atomic_scattering_factors[element.lower()]
             bdiv = b / (2.*N.pi**2)
             xa = cell.cartesianToFractional(position)
@@ -164,7 +164,7 @@ class ElectronDensityMap(Map):
             conf = universe.configuration()
         cell = universe.__class__()
         cell.setCellParameters(conf.cell_parameters)
-        self.calculateFromUnitCellAtoms(((atom.symbol, conf[atom],
+        self.calculateFromUnitCellAtoms(((atom, atom.symbol, conf[atom],
                                           adps[atom], 1.)
                                          for atom in universe.atomList()),
                                         cell)
