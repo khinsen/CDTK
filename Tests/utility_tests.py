@@ -131,7 +131,7 @@ class UtilityTests(unittest.TestCase):
             cell = UnitCell(*params)
             sg = space_groups[sg]
             trs = cell.cartesianCoordinateSymmetryOperations(sg)
-            basis = symmetricTensorBasis(sg, cell)
+            basis = symmetricTensorBasis(cell, sg)
             assert len(basis) == nb
             for t in basis:
                 for tr in trs:

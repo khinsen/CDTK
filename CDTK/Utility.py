@@ -38,11 +38,10 @@ def symmetricTensorRotationMatrix(d):
 # space group and unit cell. Every tensor that is invariant under the rotations
 # of the space group can be written as a linear superposition of these vectors.
 
-def symmetricTensorBasis(space_group, unit_cell):
+def symmetricTensorBasis(cell, space_group):
     from CDTK.Crystal import UnitCell
-    assert isinstance(unit_cell, UnitCell)
     subspace = 1.*N.equal.outer(N.arange(6), N.arange(6))
-    for tr in unit_cell.cartesianCoordinateSymmetryOperations(space_group):
+    for tr in cell.cartesianCoordinateSymmetryOperations(space_group):
         rot = symmetricTensorRotationMatrix(tr.tensor.array)
         ev, axes = LA.eigenvectors(rot)
         new_subspace = []
