@@ -10,10 +10,11 @@
 """
 Basic structure refinement support
 
-The class L{MaximumLikelihoodRefinementEngine} calculates a
-maximum-likelihood target functions as well as its derivatives with
-respect to the model parameters (positions and ADPs). There is
-no minimization algorithm and no support for restraints of any kind.
+The class L{RefinementEngine} calculates a target function as well as
+its derivatives with respect to the model parameters (positions and
+ADPs). There is no minimization algorithm and no support for
+restraints of any kind. Two subclasses implement a least-squares
+target and a maximum-likelihood target.
 """
 
 #
