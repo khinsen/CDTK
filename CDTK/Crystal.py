@@ -227,6 +227,12 @@ class Crystal(object):
         for a in self.atoms:
             yield (a.atom_id, a.element, a.position, a.fluctuation, a.occupancy)
 
+    def updateAtomParametersFromRefinementEngine(self, refinement_engine):
+        for a in self.atoms:
+            a.position = refinement_engine.getPosition(a.atom_id)
+            a.fluctuation = refinement_engine.getADP(a.atom_id)
+            a.occupancy = refinement_engine.getOccupancy(a.atom_id)
+
 
 class PDBCrystal(Crystal):
 
@@ -243,11 +249,17 @@ class PDBCrystal(Crystal):
         from Scientific.IO.PDB import Structure
         s = Structure(file_or_filename)
         self.pdb_structure = s
+        self.atom_dict = {}
 
         cell = UnitCell(s.a*Units.Ang, s.b*Units.Ang, s.c*Units.Ang,
                         s.alpha*Units.deg, s.beta*Units.deg, s.gamma*Units.deg)
         Crystal.__init__(self, cell, space_groups[s.space_group])
         
+        for residue in s.residues:
+            residue.chain_id = ''
+        for chain in s.peptide_chains + s.nucleotide_chains:
+            for residue in chain:
+                residue.chain_id = chain.chain_id
         for residue in s.residues:
             for atom in residue:
                 fluctuation = atom['temperature_factor'] \
@@ -259,3 +271,71 @@ class PDBCrystal(Crystal):
                 a = Atom(atom, atom['element'], atom['position']*Units.Ang,
                          fluctuation, atom['occupancy'])
                 self.atoms.append(a)
+                self.atom_dict[atom] = a
+
+    def writeToFile(self, filename):
+        from Scientific.IO.PDB import PDBFile
+        pdb = PDBFile(filename, 'w')
+        pdb.writeLine('CRYST1',
+                      {'a': self.cell.a/Units.Ang,
+                       'b': self.cell.b/Units.Ang,
+                       'c': self.cell.c/Units.Ang,
+                       'alpha': self.cell.alpha/Units.deg,
+                       'beta': self.cell.beta/Units.deg,
+                       'gamma': self.cell.gamma/Units.deg,
+                       'space_group': self.space_group.symbol,
+                       'z': len(self.space_group),
+                       })
+        m = self.cell.cartesianToFractionalMatrix()*Units.Ang
+        m = N.where(N.fabs(m) >= 1.e-6, m, 0.)
+        pdb.writeLine('SCALE1',
+                      {'s1': m[0, 0],
+                       's2': m[0, 1],
+                       's3': m[0, 2],
+                       'u': 0.,
+                       })
+        pdb.writeLine('SCALE2',
+                      {'s1': m[1, 0],
+                       's2': m[1, 1],
+                       's3': m[1, 2],
+                       'u': 0.,
+                       })
+        pdb.writeLine('SCALE3',
+                      {'s1': m[2, 0],
+                       's2': m[2, 1],
+                       's3': m[2, 2],
+                       'u': 0.,
+                       })
+
+        for residue in self.pdb_structure.residues:
+            for atom in residue:
+                u = self.atom_dict[atom].fluctuation
+                if isinstance(u, SymmetricTensor):
+                    b = u.trace()*(8.*N.pi**2/3.)
+                else:
+                    b = u*(8.*N.pi**2)
+                    u = None
+                pdb.writeLine('ATOM',
+                              {'position': self.atom_dict[atom].position \
+                                             / Units.Ang,
+                               'occupancy': self.atom_dict[atom].occupancy,
+                               'temperature_factor': b/Units.Ang**2,
+                               'element': atom['element'],
+                               'serial_number': atom['serial_number'],
+                               'name': atom.name,
+                               'residue_name': residue.name,
+                               'residue_number': residue.number,
+                               'chain_id': residue.chain_id,
+                               })
+                if u is not None:
+                    pdb.writeLine('ANISOU',
+                                  {'u': u.array2d/Units.Ang**2,
+                                    'element': atom['element'],
+                                   'serial_number': atom['serial_number'],
+                                   'name': atom.name,
+                                   'residue_name': residue.name,
+                                   'residue_number': residue.number,
+                                   'chain_id': residue.chain_id,
+                                   })
+
+        pdb.close()
