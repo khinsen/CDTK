@@ -493,16 +493,21 @@ class AmplitudeData(object):
     values
     """
 
-    def rFactor(self, other):
+    def rFactor(self, other, subset = None):
         """
         @param other: reflection data containing amplitudes or structure factors
+        @param subset: a reflection subset over which the R factor is
+                       calculated. The default value of None selects
+                       the complete reflection set of the data.
         @return: the R factor between the two data sets
         @rtype: C{float}
         """
         assert isinstance(other, AmplitudeData)
+        if subset is None:
+            subset = self.reflection_set
         sum_self = 0.
         sum_diff = 0.
-        for r in self.reflection_set:
+        for r in subset:
             f_self = self[r]
             f_other = other[r]
             if f_self is None or f_other is None:
@@ -513,18 +518,23 @@ class AmplitudeData(object):
             sum_diff += abs(f_self-f_other)
         return sum_diff/sum_self
 
-    def rFactorWithScale(self, other):
+    def rFactorWithScale(self, other, subset=None):
         """
         @param other: reflection data containing amplitudes or structure factors
+        @param subset: a reflection subset over which the R factor is
+                       calculated. The default value of None selects
+                       the complete reflection set of the data.
         @return: a tuple (R, scale) where scale is the scale factor that must
                  be applied to other to minimize the R factor and R is the
                  R factor obtained with this scale factor
         @rtype: C{float}
         """
         assert isinstance(other, AmplitudeData)
+        if subset is None:
+            subset = self.reflection_set
         sum_self = 0.
         sum_other = 0.
-        for r in self.reflection_set:
+        for r in subset:
             f_self = self[r]
             f_other = other[r]
             if f_self is None or f_other is None:
@@ -536,7 +546,7 @@ class AmplitudeData(object):
         scale = sum_self/sum_other
         sum_self = 0.
         sum_diff = 0.
-        for r in self.reflection_set:
+        for r in subset:
             f_self = self[r]
             f_other = other[r]
             if f_self is None or f_other is None:
