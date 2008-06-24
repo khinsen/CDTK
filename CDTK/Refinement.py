@@ -171,6 +171,23 @@ class RefinementEngine(object):
                                                 * self.ssq[N.NewAxis, :]))
         self.f_atom = f_atom
 
+    def atoms(self):
+        """
+        @return: an iterator over the atom_id objects of the atoms in the model
+        """
+        for atom_id in self.ids:
+            yield atom_id
+
+    def atomicParameters(self):
+        """
+        @return: an iterator over the atoms in the model yielding a tuple
+                 (atom_id, position, ADP_tensor, occupancy)
+        """
+        for atom_id in self.ids:
+            yield (atom_id, Vector(self.positions[self.id_dict[atom_id]]),
+                   SymmetricTensor(self.adps[self.id_dict[atom_id]]),
+                   self.occupancies[self.id_dict[atom_id]])
+
     def getPosition(self, atom_id):
         """
         @param atom_id: id of the atom whose position is requested
