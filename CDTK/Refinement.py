@@ -693,7 +693,7 @@ try:
     from CDTK_refinement import _llkwd, _llkdf, _l
 except ImportError:
     import sys
-    sys.error.write("Module CDTK_refinement is missing\n")
+    sys.stderr.write("Module CDTK_refinement is missing\n")
 
     def _llkwd(arg1, arg2, darg1, darg2, dllk, rc, ra):
         llk = 0.
