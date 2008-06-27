@@ -7,7 +7,7 @@
 # Written by Konrad Hinsen.
 #
 
-from CDTK.PDBRepository import loadReflectionData
+from CDTK.MMCIF import MMCIFStructureFactorData
 import cPickle
 import sys
 
@@ -32,5 +32,6 @@ if len(pdb_code) != 4:
     sys.stderr.write("%s is not a valid PDB code\n" % repr(pdb_code))
     raise SystemExit
 
-data = loadReflectionData(pdb_code)
-cPickle.dump(data, file(reflection_file, 'wb'))
+data = MMCIFStructureFactorData(pdb_code=pdb_code)
+cPickle.dump((data.reflections, data.data, data.model),
+             file(reflection_file, 'wb'))

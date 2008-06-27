@@ -14,11 +14,8 @@ from MMTK import *
 from MMTK.PDB import PDBConfiguration
 from MMTK.PDBMoleculeFactory import PDBMoleculeFactory
 
-from CDTK.mmCIF import mmCIFFile
-from CDTK.SpaceGroups import space_groups
-from CDTK.Crystal import UnitCell
+from CDTK.MMCIF import MMCIFStructureFactorData
 from CDTK.Maps import ElectronDensityMap
-from CDTK.Reflections import ReflectionSet
 from CDTK.ReflectionData import StructureFactor
 
 from Scientific.IO.TextFile import TextFile
@@ -29,29 +26,8 @@ from Scientific import N
 class MMTKTests(unittest.TestCase):
 
     def setUp(self):
-        cif_file = mmCIFFile()
-        cif_file.load_file(TextFile('2onx-sf.cif.gz'))
-        cif_data = cif_file[0]
-
-        cell_data = cif_data['cell']
-        cell = UnitCell(float(cell_data['length_a'])*Units.Ang,
-                        float(cell_data['length_b'])*Units.Ang,
-                        float(cell_data['length_c'])*Units.Ang,
-                        float(cell_data['angle_alpha'])*Units.deg,
-                        float(cell_data['angle_beta'])*Units.deg,
-                        float(cell_data['angle_gamma'])*Units.deg)
-
-        space_group = space_groups[cif_data['symmetry']['space_group_name_H-M']]
-
-        self.reflections = ReflectionSet(cell, space_group)
-        for r in cif_data['refln']:
-            h = int(r['index_h'])
-            k = int(r['index_k'])
-            l = int(r['index_l'])
-            ri = self.reflections.getReflection((h, k, l))
-
-        max_resolution, min_resolution = self.reflections.resolutionRange()
-        self.reflections.fillResolutionSphere(max_resolution, min_resolution)
+        cif_data = MMCIFStructureFactorData('2onx-sf.cif.gz', fill=True)
+        self.reflections = cif_data.reflections
 
         conf = PDBConfiguration('2ONX.pdb.gz')
         factory = PDBMoleculeFactory(conf)

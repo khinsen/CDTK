@@ -8,11 +8,6 @@ CDTK is distributed under the CeCILL-C licence. See the file
 LICENCE (in English) or LICENSE (in French) for the details of this
 licence.
 
-The mmCIF parser (module CDTK.mmCIF) was taken from version 1.0.0 of
-the Python Macromolecular Library (mmLib), written by Jay Painter and
-Ethan Merritt. PyMMLIB is published under the Artistic License.
-For more information about this library, see http://pymmlib.sourceforge.net/.
-
 
 Konrad Hinsen
 Centre de Biophysique MolÅÈculaire (CNRS)

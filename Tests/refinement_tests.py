@@ -16,11 +16,8 @@ from Scientific import N
 from CDTK.Utility import largestAbsoluteElement
 from CDTK_symtensor import SymmetricTensor
 
-from CDTK.mmCIF import mmCIFFile
-from CDTK.SpaceGroups import space_groups
-from CDTK.Crystal import UnitCell
-from CDTK.Reflections import ReflectionSet, ReflectionSubset
-from CDTK.ReflectionData import ExperimentalAmplitudes, StructureFactor
+from CDTK.MMCIF import MMCIFStructureFactorData
+from CDTK.Reflections import ReflectionSubset
 from CDTK.Refinement import RefinementEngine, LeastSquaresRefinementEngine, \
                             MLRefinementEngine, \
                             MLWithModelErrorsRefinementEngine
@@ -39,44 +36,13 @@ class ModifiedMLRefinementEngine(MLWithModelErrorsRefinementEngine):
 class CommonRefinementTests2ONX(unittest.TestCase):
 
     def _setUp(self):
-        cif_file = mmCIFFile()
-        cif_file.load_file(TextFile('2onx-sf.cif.gz'))
-        cif_data = cif_file[0]
-
-        cell_data = cif_data['cell']
-        cell = UnitCell(float(cell_data['length_a'])*Units.Ang,
-                        float(cell_data['length_b'])*Units.Ang,
-                        float(cell_data['length_c'])*Units.Ang,
-                        float(cell_data['angle_alpha'])*Units.deg,
-                        float(cell_data['angle_beta'])*Units.deg,
-                        float(cell_data['angle_gamma'])*Units.deg)
-
-        space_group = space_groups[cif_data['symmetry']['space_group_name_H-M']]
-
-        self.reflections = ReflectionSet(cell, space_group)
-        for r in cif_data['refln']:
-            h = int(r['index_h'])
-            k = int(r['index_k'])
-            l = int(r['index_l'])
-            ri = self.reflections.getReflection((h, k, l))
-
-        max_resolution, min_resolution = self.reflections.resolutionRange()
-        self.reflections.fillResolutionSphere(max_resolution, min_resolution)
-
-        self.exp_amplitudes = ExperimentalAmplitudes(self.reflections)
+        cif_data = MMCIFStructureFactorData('2onx-sf.cif.gz', fill=True)
+        self.reflections = cif_data.reflections
+        self.exp_amplitudes = cif_data.data
 
         all = [r for r in self.reflections]
         self.work = ReflectionSubset(self.reflections, all[:200])
         self.free = ReflectionSubset(self.reflections, all[200:])
-
-        for r in cif_data['refln']:
-            h = int(r['index_h'])
-            k = int(r['index_k'])
-            l = int(r['index_l'])
-            ri = self.reflections[(h, k, l)]
-            if r['f_meas_au'] != '?':
-                self.exp_amplitudes[ri] = N.array([float(r['f_meas_au']),
-                                                   float(r['f_meas_sigma_au'])])
 
         s = Structure('2ONX.pdb.gz')
         self.asu_atoms = sum(([atom for atom in residue] for residue in s), [])
