@@ -265,6 +265,27 @@ class ReflectionData(object):
                                       axis=-1))
         return dwf
 
+    def _averageByResolutionBinning(self, nbins, s_range, all_flag, data_array):
+        s_min, s_max = s_range
+        if s_min is None or s_max is None:
+            s1, s2 = self.reflection_set.sRange()
+            if s_min is None: s_min = 0.99*s1
+            if s_max is None: s_max = 1.01*s2
+        bin_width = (s_max-s_min)/nbins
+        reflection_count = N.zeros((nbins,), N.Int)
+        data_sum = N.zeros((nbins,), N.Float)
+        for reflection in self.reflection_set:
+            if not all_flag and self[reflection] is None:
+                continue
+            s = reflection.sVector().length()
+            bin = int((s-s_min)/bin_width)
+            if bin >= 0 and bin < nbins:
+                n = reflection.n_symmetry_equivalents
+                reflection_count[bin] += n
+                data_sum[bin] += n*data_array[reflection.index]
+        s = s_min + bin_width*(N.arange(nbins)+0.5)
+        return s, data_sum / (reflection_count + (reflection_count==0))
+
     def writeToVMDScript(self, filename):
         """
         Writes a VMD script containing the values as map data in
@@ -397,7 +418,7 @@ class ExperimentalReflectionData(ReflectionData):
         @param nbins: the number of intervals into which the s range
                       is divided
         @type nbins: C{int}
-        @param s_range: the range of s values for which the average
+        @param s_range: the range of s values for which the completeness
                         is calculated. The minimum and/or maximum
                         value can be C{None}, in which case it is replaced
                         by the lower/upper limit of the resolution range of
@@ -407,24 +428,9 @@ class ExperimentalReflectionData(ReflectionData):
                  for which observations are available
         @rtype: C{Scientific.N.array}
         """
-        s_min, s_max = s_range
-        if s_min is None or s_max is None:
-            s1, s2 = self.reflection_set.sRange()
-            if s_min is None: s_min = 0.99*s1
-            if s_max is None: s_max = 1.01*s2
-        bin_width = (s_max-s_min)/nbins
-        reflection_count = N.zeros((nbins,), N.Int)
-        observed_reflection_count = N.zeros((nbins,), N.Float)
-        for reflection in self.reflection_set:
-            s = reflection.sVector().length()
-            bin = int((s-s_min)/bin_width)
-            if bin >= 0 and bin < nbins:
-                n = reflection.n_symmetry_equivalents
-                reflection_count[bin] += n
-                if self.data_available[reflection.index]:
-                    observed_reflection_count[bin] += n
-        completeness = observed_reflection_count / \
-                            (reflection_count + (reflection_count==0))
+        s, completeness = \
+           self._averageByResolutionBinning(nbins, s_range, True,
+                                            self.data_available)
         return completeness
 
     def __add_op__(self, other, result):
@@ -645,6 +651,8 @@ class AmplitudeData(object):
             a2 = self[r]
             if a1 is None or a2 is None:
                 continue
+            if a1 <= 0 or a2 <= 0:
+                continue
             rhs.append(N.log(abs(a1)/abs(a2)))
             sx, sy, sz = r.sVector()
             mat.append([1., twopisq*sx*sx, twopisq*sy*sy, twopisq*sz*sz,
@@ -705,24 +713,9 @@ class IntensityData(object):
         @rtype: C{Scientific.Functions.InterpolatingFunction}
         """
         from Scientific.Functions.Interpolation import InterpolatingFunction
-        s_min, s_max = s_range
-        if s_min is None or s_max is None:
-            s1, s2 = self.reflection_set.sRange()
-            if s_min is None: s_min = 0.99*s1
-            if s_max is None: s_max = 1.01*s2
-        bin_width = (s_max-s_min)/nbins
-        reflection_count = N.zeros((nbins,), N.Int)
-        intensity_sum = N.zeros((nbins,), N.Float)
-        for reflection, intensity in self:
-            s = reflection.sVector().length()
-            bin = int((s-s_min)/bin_width)
-            if bin >= 0 and bin < nbins:
-                n = reflection.n_symmetry_equivalents
-                reflection_count[bin] += n
-                intensity_sum[bin] += n*intensity
-        intensity_average = intensity_sum / \
-                            (reflection_count + (reflection_count==0))
-        s = s_min + bin_width*(N.arange(nbins)+0.5)
+        s, intensity_average = \
+           self._averageByResolutionBinning(nbins, s_range, False,
+                                            self.array[:, 0:1])
         return InterpolatingFunction((s,), intensity_average)
 
     def wilsonPlot(self, nbins=50):
