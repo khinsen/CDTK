@@ -163,7 +163,7 @@ class MMCIFParser(object):
                                                          "stop"):
                         yield DATA_VALUE, token
                     else:
-                        yield KEYWORD, tuple(token_parts)
+                        yield KEYWORD, (token_parts[0].lower(), token_parts[1])
 
     def parse(self):
         """
@@ -210,7 +210,13 @@ class MMCIFParser(object):
 
             elif state is LOOP_LABELS:
                 if item_type is DATA_LABEL:
-                    loop_labels.append(item)
+                    if loop_labels and loop_labels[0][0] != item[0]:
+                        # The label does not belong to the loop category.
+                        # meaning that the loop is empty and terminated.
+                        label1, label2 = item
+                        state = VALUE
+                    else:
+                        loop_labels.append(item)
                 elif item_type is DATA_VALUE:
                     loop_data = [item]
                     state = LOOP_VALUES
@@ -436,7 +442,7 @@ class MMCIFStructureFactorData(object):
         from CDTK import Units
 
         if len(self.cell) == 0 or len(self.symmetry) == 0:
-            self.parseStructureFile(pdb_code)
+            self.parseStructureFile()
         if len(self.cell) == 0:
             raise MMCIFError("cell parameters missing")
         if len(self.symmetry) == 0:
@@ -467,6 +473,7 @@ class MMCIFStructureFactorData(object):
                     self.sigma_index = indices[label2]
                     self.data = ExperimentalAmplitudes
             for label1, label2 in [('intensity_meas', 'intensity_sigma'),
+                                   ('intensity_meas_au', 'intensity_sigma_au'),
                                    ('F_squared_meas', 'F_squared_sigma')]:
                 if label1 in indices and label2 in indices:
                     self.data_index = indices[label1]
