@@ -2,9 +2,16 @@
 % distributed under the CeCILL-C licence. See the file LICENCE
 % for the full text of this licence.
 
-\documentclass[12pt]{article}
+\documentclass[11pt]{article}
 \usepackage{a4}
 \usepackage{pdfsync}
+
+\newcommand{\authors}[1]{#1\hspace{3mm}}
+\newcommand{\name}[2]{#2, #1}
+\newcommand{\And}{, }
+\newcommand{\btitle}[1]{{#1,}}
+\newcommand{\journal}[4]{#1, #2:#3, #4}
+
 
 \newcommand{\vect}[1]{{\bf #1}}
 \newcommand{\mat}[1]{{\bf #1}}
@@ -198,7 +205,7 @@ four Gaussians plus a constant:
 f(s) = \sum_{i=1}^5 a_i e^{-b_i s^2}
 \end{equation}
 with $b_5 = 0$. The parameters of this approximation have been tabulated
-\cite{}. In CDTK, this table is available in the form of the
+\cite{CromerMann}. In CDTK, this table is available in the form of the
 dictionary
 \texttt{CDTK.AtomicScatteringFactors.atomic\_scattering\_factors}.
 
@@ -305,14 +312,18 @@ a model and compared to the experimental data.
 
 Real biomolecular crystals are not perfectly periodic. The arrangement
 of the molecules in the different copies of the unit cell varies due
-to crystal defects and thermal motion. As a consequence, the structure
-factor in Eq.~(\ref{eq:sf}) is non-zero for points in reciprocal space
-outside the reciprocal lattice; this is known as \textit{diffuse
-scattering}. The energy that goes into diffuse scattering is also
-lost to the Bragg reflections, whose intensity is reduced by
-destructive interference between the contributions from unit cell
-copies with slightly different conformations. This attenuation of the
-Bragg peaks becomes more important with increasing $|\vs|$.
+to static disorder (the molecules have somewhat different
+configurations in each copy unit cell), crystal defects (mostly
+missing molecules whose absence causes deformations in the
+neighbouring unit cells), and thermal motion. As a consequence, the
+structure factor in Eq.~(\ref{eq:sf}) is non-zero for points in
+reciprocal space outside the reciprocal lattice; this is known as
+\textit{diffuse scattering}. The energy that goes into diffuse
+scattering is also lost to the Bragg reflections, whose intensity is
+reduced by destructive interference between the contributions from
+unit cell copies with slightly different conformations. This
+attenuation of the Bragg peaks becomes more important with increasing
+$|\vs|$.
 
 Standard crystallographic models represent non-ideal crystals by an
 average unit cell containing an average conformation plus Gaussian
@@ -358,7 +369,7 @@ Several points are important to note:
   information about the phases of the structure factors.
   The restraints on the average positions are derived from the known
   chemical structure of the building blocks of the molecules and are
-  thus physicallly reasonable. The restraints on the fluctuation
+  thus physically reasonable. The restraints on the fluctuation
   parameters are chosen much more arbitrarily with the main goal
   of stabilizing the convergence of the fit procedure.
 \item
@@ -387,12 +398,12 @@ There are three ways to specify the model:
 \begin{itemize}
 \item
 as an iterator over the atoms in the unit cell, yielding a tuple
-of (chemical element, position, fluctuation tensor, occupancy)
+of (atom_id, chemical element, position, fluctuation tensor, occupancy)
 for each atom:
 {\small
 \begin{verbatim}
 sf = StructureFactor(reflection_set)
-sf.calculateFromUnitCellAtoms((atom.symbol, atom.position(),
+sf.calculateFromUnitCellAtoms((atom, atom.symbol, atom.position(),
                                atom.temperature_factor/(8.*N.pi**2),
                                atom.occupancy)
                               for atom in unit_cell.atomList())
@@ -400,12 +411,12 @@ sf.calculateFromUnitCellAtoms((atom.symbol, atom.position(),
 }
 \item
 as an iterator over the atoms in the asymmetric unit, yielding a tuple
-of (chemical element, position, fluctuation tensor, occupancy)
+of (atom_id, chemical element, position, fluctuation tensor, occupancy)
 for each atom:
 {\small
 \begin{verbatim}
 sf = StructureFactor(reflection_set)
-sf.calculateFromAsymmetricUnitAtoms((atom.symbol, atom.position(),
+sf.calculateFromAsymmetricUnitAtoms((atom, atom.symbol, atom.position(),
                                      adps[atom], atom.occupancy)
                                     for atom in asu.atomList())
 \end{verbatim}
@@ -420,6 +431,11 @@ sf.calculateFromUniverse(universe, adps)
 \end{verbatim}
 }
 \end{itemize}
+The first item in each of the atom iterators is an arbitrary object
+that serves as a unique identifier for the atom. It is not used
+in the calculation of structure factors, but it becomes important
+in the \texttt{RefinementEngine} classes that share the same
+iterator interface.
 
 \subsection{Comparing models to experimental data}
 
@@ -471,12 +487,12 @@ are performed to solve the non-linear least-squares problem.
 The iterative procedure (partly automatic, partly manual) of
 constructing a model of the type given by Eq.~(\ref{eq:model_sf}) and
 fitting it to the experimental data is known as \textit{structure
-refinement}. The main difficulty in this procedure is the lack of
+  refinement}. The main difficulty in this procedure is the lack of
 experimental information about the phase of the structure factor. If
-the phase were known, a simple Fourier transform of the measured
-structure factor would yield an electronic density map from which an
-initial model could easily be constructed. This problem and various
-approaches to a solution are discussed in the crystallographic
+the phase were known, a Fourier transform of the measured structure
+factor would yield an electronic density map, whose visual inspection
+would permit the construction of an initial model. This problem and
+various approaches to a solution are discussed in the crystallographic
 literature. In the following, we describe only the final stages of
 structure refinement (a reasonably good model is supposed to be known
 already), for which CDTK contains some functionality.
@@ -490,9 +506,9 @@ fitted. It calculates a \textit{target function} (the function that
 the refinement process aims to minimize) and its derivatives with
 respect to the amplitudes or with respect to the model parameters.
 There are several refinement engine classes that implement different
-models and target functions. Note that the refinement engines
-do not (at this time) implement minimization or sampling algorithms
-for the model parameters.
+models and target functions. Note that the refinement engines do not
+implement minimization or sampling algorithms for the model
+parameters.
 
 \subsection{Bayesian inference}
 
@@ -520,7 +536,13 @@ $D$, $P_{\mbox{posterior}}(X|D)$, as a function of the prior probability
 $P_{\mbox{prior}}(X)$ and the \textit{conditional probability} $P(D|X)$
 that the data $D$ are observed if the parameters are known to be $X$.
 This conditional probability is also called the \textit{likelihood}
-of $X$ given the data $D$, denoted by $L(X|D)$.
+of $X$ given the data $D$, denoted by $L(X|D)$. For a model to be
+useful in Bayesian inference, it must be a probabilistic model in which
+$P(D|X)$ is non-zero for a certain range of $D$. In other words, the model
+must describe the sources of uncertainties in the experiment, such as
+experimental errors.
+
+\subsection{Maximum-likelihood optimization}
 
 In general, the posterior probability is the most accurate description
 of the available information about the paramters $X$. If it is a
@@ -547,119 +569,259 @@ for the Bragg reflections. The likelihood function must of course
 include the model given Eq.~(\ref{eq:model_sf}), but in addition it
 contains an error model that describes the distribution of deviations
 from the ideal relation (\ref{eq:model_sf}). These deviations can take
-the form of errors in the parameters or errors in the structure factor
+the form of errors in the parameters and/or errors in the structure factor
 values.
 
-The most popular likelihood function used in crystallographic structure
-refinement is based on the following assumptions:
-\begin{itemize}
-\item The structure factor values $F(\vs_k)$ for different reflections
-  $\vs_k$ are independent. This assumption is certainly wrong, but
-  introduced because it greatly simplifies the mathematical treatment.
-\item The error model contains two forms of error: (1) errors in the
-  parameters that are independent for each atom and (2) incompleteness
-  of the model in that only a subset of the atoms are represented,
-  the parameters of the remaining ones being assumed unknown.
-\item The distributions of the errors fulfill the conditions of the
-  central limit theorem.
-\end{itemize}
+The likelihood functions currently used in crystallographic structure
+refinement are all based on the assumption that the probability
+distributions for the structure factor values $F(\vs_k)$ for different
+reflections $\vs_k$ are independent. This assumption is certainly
+wrong, but introduced because it greatly simplifies the mathematical
+treatment. The various likelihood functions differ in the error model
+and in simplifying assumptions made about the importance of the various
+errors.
 
-The last assumption allows to conclude that the probability
-distribution for each complex structure factor value $F(\vs_k)$ is a
-two-dimensional Gaussian in the absence of symmetry constraints on
-$F(\vs_k)$ (so-called \textit{acentric} reflections). For
+\subsubsection{Observational errors}
+
+Observational errors are caused by imperfections of the experiment.
+They are generally assumed to b desribed by a Gaussian distribution of
+the observed intensities $I$ around the ``true'' value
+$I^{\mbox{true}}$ with variance $\sigma_I^2$.
+\begin{equation}
+P_{\mbox{obs-I}}(I; I^{\mbox{true}}, \sigma_I) =
+     \frac{1}{\sqrt{2\pi\sigma_I^2}}
+           \exp \left( - \frac{I-I^{\mbox{true}}}{2 \sigma_I^2}\right)
+\end{equation}
+The diffraction experiment yields for each reflection both $I$
+(interpreted as a realization of the random variable) and an
+estimation of $\sigma_I$ based on an analysis of the shape of the
+reflection images (which are of course not perfect points) and their
+surroundings.
+
+For mathematical convenience, the error model is most often applied to
+the structure factor amplitudes instead of the intensities, yielding a
+Gaussian distribution of the observed intensities $A$ around the
+``true'' value $A^{\mbox{true}}$ with variance $\sigma^2$:
+\begin{equation}
+\label{gaussian_amplitude}
+P_{\mbox{obs}}(A; A^{\mbox{true}}, \sigma) =
+      \frac{1}{\sqrt{2\pi\sigma^2}}
+           \exp \left( - \frac{A-A^{\mbox{true}}}{2 \sigma^2}\right)
+\end{equation}
+If $I >> \sigma_I$, the error model for the amplitudes is equivalent
+to the one for the intensities, with $A^{\mbox{true}} =
+\sqrt{I^{\mbox{true}}}$ and $\sigma = \sigma_I/2 A^{\mbox{true}}$.
+CDTK uses these relations when converting between experimental
+intensities and amplitudes. There are, however, more elaborate
+procedures for converting intensities and their variances to
+amplitudes and variances, which perform better for small $I/\sigma_I$
+and in particular for negative $I$ (see e.g. \cite{FrWi1978}).
+
+\vspace{3mm}
+
+If observational errors are the only source of uncertainty in the
+model, the total likelihood function is a product of the terms
+(\ref{gaussian_amplitude}) over all reflections and $A^{\mbox{true}} =
+A^{\mbox{model}}$. Maximizing this function is equivalent to
+minimizing its negative logarithm, which takes the form
+\begin{equation}
+\label{eq:lsq_target}
+LLK = \frac{1}{N_{\mbox{r}}}
+      \sum_k \left[ \frac{\left( A_k - f A_k^{\mbox{model}}\right)^2}
+                         {2 \sigma_k^2}
+                    - \frac{1}{2} \log{2\pi\sigma_k^2}
+             \right]
+\end{equation}
+where $N_{\mbox{r}}$ is the number of reflections.
+The scale factor $f$ must be introduced because the experimental
+amplitudes are measured on an arbitrary scale. The optimal value of
+$f$ is the one that minimizes (\ref{eq:lsq_target}); it is given by
+\begin{equation}
+f = \frac{\sum_k A_k  A_k^{\mbox{model}}/\sigma_k^2}
+         {\sum_k \left(A_k^{\mbox{model}}/\sigma_k\right)^2}.
+\end{equation}
+The use of this model is known as \textit{least-squares refinement},
+implemented in \texttt{CDTK.Refinement.LeastSquaresRefinementEngine}.
+Least-squares refinement used to be the standard refinement technique
+in biomolecular crystallography, until it was realized that in most
+situations, the model errors discussed below are much more important
+than the observational errors. Nevertheless, least-squares refinement
+remains a valid choice in the final stages of refinement, when a good
+model is already available and the model errors are small.
+
+
+\subsubsection{Model errors}
+
+Model errors describe uncertainties in the parameters entering into
+the model for the structure factors given by Eq.~(\ref{eq:model_sf}),
+as well as phenomena not described by that model at all. The most
+commonly considered model errors are (1) incompleteness of the model
+(there are atoms in the crystal that are not contained in the model
+for various reasons) and (2) errors in the atomic parameters
+(position, ADP, occupancy). It should be noted that in the framework
+of Bayesian inference, it is inconsistent to include uncertainties in
+the parameters being optimized into the error model. The uncertainties
+of these parameters are given by the width of the peak in the
+posterior probability distribution function that corresponds to the
+maximum-likelihood values of the parameters, i.e. they are a result
+of the inference procedure and not an input to it. It is therefore
+inconsistent to use an error model based on positional uncertainties
+in structure refinement, although that same error model is acceptable
+for other tasks, such as the estimation of phases.
+
+A common feature of the commonly used error models is that they yield
+a Gaussian distribution for the (complex) structure factor values
+$F(\vs_k)$. In the absence of symmetry constraints on $F(\vs_k)$
+(so-called \textit{acentric} reflections), the probability
+distribution of $F(\vs_k)$ is a two-dimensional Gaussian. For
 \textit{centric} reflections, defined as those $\vs_k$ for which at
 least one symmetry operation of the space group yields
 $\mat{D}^T\cdot\vs_k = -\vs_k$, the phase can take only two values
 (given by $\phi_1 = \pi \vs_k\cdot\vt$ and $\phi_2 = \phi_1+\pi$) and
-the distribution of $F(\vs_k)$ is a one-dimensional Gaussian.
-The probability distributions for the structure factor amplitudes
-are obtained by integrating over the phases (for acentric reflections)
-or by summing over the two possible phases (for centric reflections),
+the distribution of $F(\vs_k)$ is a one-dimensional Gaussian. The
+probability distributions for the structure factor amplitudes are
+obtained by integrating over the phases (for acentric reflections) or
+by summing over the two possible phases (for centric reflections),
 yielding the \textit{Rice distribution},
 \begin{equation}
-P(A; A_0, \sigma) = \frac{A}{\sigma}
-                      \exp\left(-\frac{A^2+A_0^2}{2\sigma}\right)
-                      I_0\left(\frac{A A_0}{\sigma}\right)
+P_{\mbox{model}}(A; A_0, \Sigma) = \frac{A}{\Sigma}
+                      \exp\left(-\frac{A^2+A_0^2}{2\Sigma}\right)
+                      I_0\left(\frac{A A_0}{\Sigma}\right)
 \end{equation}
 for acentric reflections and
 \begin{equation}
-P(A; A_0, \sigma) = \sqrt{\frac{2}{\pi\sigma}}
-                      \exp\left(-\frac{A^2+A_0^2}{2\sigma}\right)
-                      \cosh\left(\frac{A A_0}{\sigma}\right)
+P_{\mbox{model}}(A; A_0, \Sigma) = \sqrt{\frac{2}{\pi\Sigma}}
+                      \exp\left(-\frac{A^2+A_0^2}{2\Sigma}\right)
+                      \cosh\left(\frac{A A_0}{\Sigma}\right)
 \end{equation}
 for centric reflections, where $A$ is the measured structure factor
-amplitude. The parameters $A_0$ and $\sigma$ can be expressed as
-\begin{eqnarray}
-A_0 &=& \alpha A^{\mbox{model}}, \\
-\sigma &=& \left\{
+amplitude. The parameter
+\begin{equation}
+A_0 = \alpha f A^{\mbox{model}}
+\end{equation}
+is the mean structure factor value under the probability distribution
+that describes the uncertainties due to the model errors. It depends
+on the model structure factor amplitude $A^{\mbox{model}}$, the scale factor
+$f$ (see the discussion above), and a factor $\alpha$ that depends on
+the error model. The parameter
+\begin{equation}
+\Sigma = \left\{
   \begin{array}{cl}
     \frac{1}{2} \epsilon \beta & \mbox{(acentric)} \\
     \epsilon \beta &\mbox{(centric)}
   \end{array}
-\right. ,
-\end{eqnarray}
-where $A^{\mbox{model}}$ is the model structure factor amplitude and
-$\epsilon$ is equal to the number of symmetry relations that map the
-reflection vector $\vs_k$ onto itself. The new parameters $\alpha$ and
-$\beta$ are functions of $|\vs|$ that depend on the distributions of
-the errors in the atomic positions and ADPs as well as on the number
-of atoms that are missing in the model. The unknown scale factor
-between the measured amplitudes and the model amplitudes is also taken
-into account by $\alpha$. In practice, $\alpha$ and $\beta$ are
-unknown and must be determined from the data, together with the
-parameters of the model.
+\right. 
+\end{equation}
+describes the width of the structure factor amplitude distribution. It
+depends on the integer number $\epsilon$, which is equal to the number
+of symmetry relations that map the reflection vector $\vs_k$ onto
+itself, and a factor $\beta$ that again depends on the error model.
+With this notation, an error model consists of a specification of
+$\alpha$ and $\beta$ for each reflection $\vs_k$.
 
-The total likelihood function can thus be written as
+\vspace{2mm}
+\textbf{Incompleteness}
+
+For a model in which M out of the N atoms are represented by positions
+and ADPs, whereas the remaining N-M atoms have unknown positions and are
+assumed to be uniformly distributed in the asymmetric unit, the
+error model is specified by
 \begin{eqnarray}
-L(A^{\mbox{model}}, \alpha(|\vs|), \beta(|\vs|) | A) 
- &=&   P(A | A^{\mbox{model}}, \alpha(|\vs|), \beta(|\vs|)) \nonumber \\
- &=&  \prod_{k} P_k(A_k | A_k^{\mbox{model}}, \alpha(|\vs_k|), \beta(|\vs_k|))
+\alpha(\vs_k) &=& 1 \\
+\beta(\vs_k) &=& \sum_{j=M+1}^N f_j^2(|\vs_k|) \exp(-B_j |\vs_k|^2/2),
 \end{eqnarray}
-with
-\begin{equation}
-P_k(A_k | A_k^{\mbox{model}}, \alpha_k, \beta_k) =
-  \frac{2 A_k}{\epsilon_k\beta_k}
-  \exp\left(-\frac{A_k^2+\left(\alpha_k A_k^{\mbox{model}}\right)^2}
-                  {\epsilon_k \beta_k}\right)
-  I_0\left(\frac{2 \alpha_k A_k A_k^{\mbox{model}}}{\epsilon_k \beta_k}\right)
-\end{equation}
-for acentric reflections and
-\begin{equation}
-P_k(A_k | A_k^{\mbox{model}}, \alpha_k, \beta_k) =
-  \sqrt{\frac{2}{\pi\epsilon_k\beta_k}}
-  \exp\left(-\frac{A_k^2+\left(\alpha_k A_k^{\mbox{model}}\right)^2}
-                  {2\epsilon_k \beta_k}\right)
-  \cosh\left(\frac{\alpha_k A_k A_k^{\mbox{model}}}{\epsilon_k \beta_k}\right)
-\end{equation}
-for centric reflections. The target function for structure refinement,
-as implemented in
-\texttt{CDTK.Refinement.MaximumLikelihoodRefinementEngine}, is the
-negative logarithm of the likelihood summed over all reflections.
+where $B_j$ is the (isotropic) B-factor of atom $j$. It can either
+be given an fixed assumed value, or it can be refined along with the
+parameters of the model (\ref{eq:model_sf}).
 
-\subsection{Least-squares refinement}
+\vspace{2mm}
+\textbf{Incompleteness and errors in the atomic parameters}
 
-Before the popularization of maximum-likelihood refinement in protein
-crystallography, the most common technique was least-squares
-refinement, which is still used occasionally. In least-squares
-refinement, implemented in
-\texttt{CDTK.Refinement.LeastSquaresRefinementEngine},
-the target function is
+If in addition to the incompleteness of the model it is assumed that
+the positions and ADPs of all atoms have errors, the total error model
+is specified by
+\begin{eqnarray}
+\alpha(s) &=& \left< \exp\left[-\Delta B s^2/4\right]
+                       \cos\left[2\pi \vs \cdot \Delta \vr\right]
+              \right>_{\Delta B, \Delta \vr}
+\\
+\beta(s) &=& \sum_{k=1}^M f_k^2(s) \exp(-B_k s^2/2) (1-\alpha(s)^2)
+           + \sum_{k=M+1}^N f_k^2(s) \exp(-B_k s^2/2)
+\end{eqnarray}
+These expressions, which depend only on the length of the scattering
+vector $\vs_k$, can be derived under the assumption that the uncertainties
+of the positions have an identical and isotropic distribution for all
+atoms. In practice, $\alpha$ and $\beta$ are estimated from a set of
+reflections within a given small $s$ range by maximizing the likelihood
+function.
+
+\subsubsection{Combining observational and model errors}
+
+If both model errors and observational errors are considered,
+the amplitude variable $A$ of the ``model error'' likelihood function
+is the ``true'' amplitude of the ``observational error'' likelihood
+function, which thus becomes itself a random variable. The total
+likelihood function is then given by the integral
 \begin{equation}
-\sum_k \left( A_k - f A_k^{\mbox{model}}\right)^2,
+P_{\mbox{total}}(A; A_0, \Sigma, \sigma) = 
+   \int_0^{\infty} \, d A^{\mbox{true}} \,
+      P_{\mbox{obs}}(A; A^{\mbox{true}}, \sigma) \,
+      P_{\mbox{model}}(A^{\mbox{true}}; A_0, \Sigma)
 \end{equation}
-where $f$ is a scale factor. The value of $f$ that minimizes the target
-function is given by
+Since this integral cannot be calculated analytically, and since its
+numerical evaluation is too expensive, various approximations are used
+in practice. For $A_0 >> \Sigma$, the Rice distribution is well
+approximated by a Gaussian distribution. The total likelihood function
+is then close to a Gaussian with a width of $\Sigma+\sigma^2$. The
+approximation
 \begin{equation}
-f = \frac{\sum_k A_k  A_k^{\mbox{model}}}
-         {\sum_k \left(A_k^{\mbox{model}}\right)^2}.
+P_{\mbox{total}}(A; A_0, \Sigma, \sigma) = 
+    P_{\mbox{model}}(A; A_0, \Sigma+\sigma^2),
 \end{equation}
-Least-squares refinement assumes an error model that assigns a
-Gauss-distributed error to the structure factor amplitudes and zero
-error to the phases. While a Gaussian error distribution can be
-justified for the real and imaginary parts of the structure factor by
-the central limit theorem, there is no physical or mathematical
-justification for its use with the amplitudes.
+used in the refinement program REFMAC \cite{MuVaDo1997}, is obviously
+good in this case, but it is also good if $\sigma^2 << \Sigma$, i.e.
+if the model error dominates the observational error.
+
+This approximation is implemented in the class
+\texttt{CDTK.Refinement.MLRefinementEngine}, which by default
+uses incompleteness as the only model error. Other model errors
+can be implemented by subclassing and redefining the method that
+calculates $\alpha$ and $\beta$. The target function of this
+refinement engine is
+\begin{equation}
+\label{eq:ml_target}
+LLK = -\frac{1}{N_{\mbox{r}}}
+      \sum_k \log P_{\mbox{model}}(A_k; A_{0, k}, \Sigma_k+\sigma_k^2)
+\end{equation}
+Like in the case of least-squares refinement, the optimal scale factor
+$f$ is obtained by minimizing the target function with respect to $f$.
+Unlike for least-squares refinement, this optimization must be
+performed numerically, and is thus relatively expensive in terms
+of CPU time. For this reason, it is not performed automatically at
+each evaluation of the target function, but must be invoked explicitly
+by calling the method \texttt{optimizeScaleFactor()}.
+
 
 \end{sloppy}
+
+\begin{thebibliography}{99}
+
+\bibitem{CromerMann}
+International Tables for Crystallography, Vol. C\\
+ISBN 978-1-4020-1900-5 \\
+doi:10.1107/97809553602060000103
+
+\bibitem{FrWi1978}
+\authors{\name{S.}{French}\And\name{K.S.}{Wilson}}
+\btitle{On the Treatment of Negative Intensity Observations}
+\journal{Acta Cryst. A}{34}{517--525}{1978}
+
+\bibitem{MuVaDo1997}
+\authors{\name{G.N.}{Murshudov}, \name{A.A.}{Vagin}\And\name{E.J.}{Dodson}}
+\btitle{Refinement of Macromolecular Structures by the
+        Maximum-Likelihood Method }
+\journal{Acta Cryst. D}{53}{240--255}{1997}
+
+\end{thebibliography}
+
 \end{document}
