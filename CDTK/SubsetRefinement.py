@@ -14,8 +14,8 @@ Structure refinement using a subset of representative atoms
 from CDTK.Refinement import RefinementEngine, \
                             AtomDataArray, AtomPositionDataArray
 from CDTK.Utility import symmetricTensorRotationMatrix
-from Scientific import N
 from Scientific.Geometry import Vector, Tensor
+from Scientific import N, LA
 import itertools
 
 class AtomSubsetRefinementEngine(RefinementEngine):
@@ -26,7 +26,7 @@ class AtomSubsetRefinementEngine(RefinementEngine):
     An AtomSubsetRefinementEngine works as a driver for an all-atom
     RefinementEngine. It works on a subset of the atoms (e.g. the
     C-alpha atoms of a protein). Every change of the parameters of these
-    atoms is extended to the remaining atoms by a linear interpolation scheme.
+    atoms is extended to the remaining atoms by an interpolation scheme.
     The idea behind this approach is that both atom displacements and atomic
     ADPs are slowly-varying functions of position when considered at low
     resolutions.
@@ -38,9 +38,18 @@ class AtomSubsetRefinementEngine(RefinementEngine):
      2. Create an AtomSubsetRefinementEngine for a suitable atom subset.
      3. Refine at the subset level.
      4. Refine at the all-atom level using the all-atom RefinementEngine.
+
+    The interpolation scheme for atom displacements and atomic ADPs assigns
+    values to each atom that is not in the subset based on the values for
+    the atoms that are in the subset as well as their images constructed by
+    applying the symmetry operations of the space group. The weight of each
+    atom in the interpolation is a function of its minimum-image distance
+    vector from the target atom. The default weights are given by the
+    inverse of the squared length of the distance vector.
     """
 
-    def __init__(self, all_atom_refinement_engine, subset_atom_ids):
+    def __init__(self, all_atom_refinement_engine, subset_atom_ids,
+                 distance_power=2):
         """
         @param all_atom_refinement_engine: the underlying all-atom
                                            refinement engine
@@ -48,10 +57,14 @@ class AtomSubsetRefinementEngine(RefinementEngine):
         @param subset_atom_ids: the ids of the atoms that are part of the
                                 subset to be used in refinement
         @type subset_atom_ids: sequence
+        @param distance_power: the power of the length of the distance
+                               vector in the calculation of the weight
+        @type distance_power: C{int}
         """
         assert isinstance(all_atom_refinement_engine, RefinementEngine)
         self.re = all_atom_refinement_engine
         self.ids = subset_atom_ids
+        self.power = distance_power
         try:
             self.aa_indices = [self.re.id_dict[id] for id in self.ids]
         except KeyError, e:
@@ -92,19 +105,22 @@ class AtomSubsetRefinementEngine(RefinementEngine):
                 nb = []
                 r = Vector(self.re.positions[i])
                 for sindex, rot_v, rot_adp, position in unit_cell_subset:
-                    d = cell.minimumImageDistanceVector(position, r)
-                    nb.append((1./d.length(), sindex, rot_v, rot_adp))
-                cutoff = max(t[0] for t in nb)/4.
-                total_weight = sum(t[0] for t in nb if t[0] >= cutoff)
-                for w, sindex, rot_v, rot_adp in nb:
-                    if w >= cutoff:
-                        w /= total_weight
-                        self.position_interpolation[i, :, sindex, :] += w*rot_v
-                        self.adp_interpolation[i, :, sindex, :] += w*rot_adp
+                    d = cell.minimumImageDistanceVector(r, position)
+                    nb.append((d, sindex, rot_v, rot_adp))
+                self._interpolate(i, nb)
         self.position_interpolation.shape = (3*self.re.natoms, 3*self.natoms)
         self.adp_interpolation.shape = (6*self.re.natoms, 6*self.natoms)
 
         self.state_valid = False
+
+    def _interpolate(self, aa_index, atom_data):
+        atom_data = [(1./d[0].length()**self.power,) + d[1:]
+                     for d in atom_data]
+        total_weight = sum(d[0] for d in atom_data)
+        for w, sindex, rot_v, rot_adp in atom_data:
+            w /= total_weight
+            self.position_interpolation[aa_index, :, sindex, :] += w*rot_v
+            self.adp_interpolation[aa_index, :, sindex, :] += w*rot_adp
 
     def setPosition(self, atom_id, position):
         # Redefine setPosition to keep track of the change in position in
