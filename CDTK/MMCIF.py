@@ -63,7 +63,13 @@ class MMCIFError(Exception):
 
 class MMCIFSyntaxError(MMCIFError):
 
-    def __init__(self, text, line_number):
+    def __init__(self, text, line_number=None):
+        if line_number is None:
+            # This is a workaround for the __setstate__ method in Exception
+            # that effectively requires exceptions to accept a single
+            # argument, otherwise a bug occurs during unpickling.
+            MMCIFError.__init__(self, text)
+            return
         self.line_number = line_number
         MMCIFError.__init__(self, "Line %d: %s" % (line_number, text))
 
