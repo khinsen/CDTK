@@ -371,7 +371,8 @@ class MMCIFStructureFactorData(object):
     """
 
     def __init__(self, sf_file=None, structure_file=None, pdb_code=None,
-                 fill = False):
+                 fill = False, load_model_sf = True,
+                 require_sigma = True):
         """
         Specify the data to be loaded. The following combinations
         are valid:
@@ -396,6 +397,13 @@ class MMCIFStructureFactorData(object):
                of C{False}, only the reflections listed in the mmCIF file
                will be present in the reflection set.
         @type fill: C{bool}
+        @param load_model_sf: C{True} if model structure factors (F_calc)
+                              should be loaded if present in the file
+        @type load_model_sf: C{bool}
+        @param require_sigma: if C{True}, ignore experimental data points
+                              without sigma. If C{False}, set sigma to zero
+                              if it is not given.
+        @type require_sigma: C{bool}
         """
         if pdb_code is not None:
             self.pdb_code = pdb_code
@@ -412,6 +420,8 @@ class MMCIFStructureFactorData(object):
             self.structure_file = structure_file
         else:
             raise MMCIFError("No structure factor data given")
+        self.load_model_sf = load_model_sf
+        self.require_sigma = require_sigma
         self.cell = {}
         self.symmetry = {}
         self.reflections = None
@@ -486,10 +496,27 @@ class MMCIFStructureFactorData(object):
                     self.sigma_index = indices[label2]
                     self.data = ExperimentalIntensities
             if self.data is None:
-                raise MMCIFError("no experimental data found in %s"
-                                 % str(indices.keys()))
+                if self.require_sigma:
+                    raise MMCIFError("no experimental data with sigma"
+                                     " found in %s" % str(indices.keys()))
+                else:
+                    for label1 in ['F_meas', 'F_meas_au']:
+                        if label1 in indices:
+                            self.data_index = indices[label1]
+                            self.sigma_index = None
+                            self.data = ExperimentalAmplitudes
+                    for label1 in ['intensity_meas', 'intensity_meas_au',
+                                   'F_squared_meas']:
+                        if label1 in indices:
+                            self.data_index = indices[label1]
+                            self.sigma_index = None
+                            self.data = ExperimentalIntensities
+                    if self.data is None:
+                        raise MMCIFError("no experimental data found in %s"
+                                         % str(indices.keys()))
             self.model = None
-            if 'F_calc' in indices and 'phase_calc' in indices:
+            if self.load_model_sf and \
+                   'F_calc' in indices and 'phase_calc' in indices:
                 self.model = StructureFactor
             self.reflection_data = []
 
@@ -506,8 +533,13 @@ class MMCIFStructureFactorData(object):
             except KeyError:
                 status = 'o'
             value = data[self.data_index]
-            sigma = data[self.sigma_index]
+            if self.sigma_index is None:
+                sigma = '0.'
+            else:
+                sigma = data[self.sigma_index]
             observed = status in 'ofhl01' and value != '?'
+            if self.require_sigma:
+                observed = observed and sigma != '?'
             if observed:
                 value = float(value)
                 sigma = float(sigma)
@@ -538,8 +570,10 @@ class MMCIFStructureFactorData(object):
                 except ValueError:
                     # Systematically absent reflections that is not marked
                     # as such in the status field. This is too common to
-                    # raise an exception.
-                    pass
+                    # raise an exception. Continue to the next reflection,
+                    # as setting the model sf is likely to cause the same
+                    # exception again.
+                    continue
             if self.model is not None:
                 self.model[ri] = model_amplitude*N.exp(1j*model_phase*Units.deg)
 
