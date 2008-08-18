@@ -218,10 +218,16 @@ class Crystal(object):
         self.space_group = space_group
         self.atoms = []
 
+    def __len__(self):
+        """
+        @return: the number of atoms in the asymmetric unit
+        @rtype: C{int}
+        """
+        return len(self.atoms)
+
     def __iter__(self):
         """
-        @return: a generator yielding the elements of the minimal
-                 reflection set
+        @return: a generator yielding the atoms in the asymmetric unit
         @rtype: generator
         """
         for a in self.atoms:
