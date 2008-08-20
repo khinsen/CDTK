@@ -12,7 +12,7 @@ Basic structure refinement support
 
 The class L{RefinementEngine} calculates a target function as well as
 its derivatives with respect to the model parameters (positions and
-ADPs). There is no minimization algorithm and no support for
+ADPs). There is only minimal minimization support and none at all for
 restraints of any kind. Two subclasses implement a least-squares
 target and a maximum-likelihood target.
 """
@@ -397,6 +397,34 @@ class RefinementEngine(object):
         target, deriv = self.targetFunctionAndAmplitudeDerivatives()
         return N.sum(N.repeat(deriv, self.working_set) * \
                      self.working_model_amplitudes)
+
+    def steepestDescentPositionMinimizationStep(self, scale_factor):
+        """
+        Modify the position parameters by adding the negative gradient
+        of the target function multiplied by a scale factor.
+        @param scale_factor: the scale factor
+        @type scale_factor: C{float}
+        @return: the target function and the gradient array
+        @rtype: (C{float}, L{AtomPositionDataArray})
+        """
+        target, deriv = self.targetFunctionAndPositionDerivatives()
+        self.positions -= scale_factor*deriv.array
+        self.state_valid = False
+        return target, deriv
+
+    def steepestDescentADPMinimizationStep(self, scale_factor):
+        """
+        Modify the ADPs by adding the negative gradient
+        of the target function multiplied by a scale factor.
+        @param scale_factor: the scale factor
+        @type scale_factor: C{float}
+        @return: the target function and the gradient array
+        @rtype: (C{float}, L{AtomDataArray})
+        """
+        target, deriv = self.targetFunctionAndADPDerivatives()
+        self.adps -= scale_factor*deriv.array
+        self.state_valid = False
+        return target, deriv
 
 #
 # Thin wrapper around arrays representing per-atom positions, ADPs,
