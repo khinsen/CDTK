@@ -715,7 +715,7 @@ class IntensityData(object):
         from Scientific.Functions.Interpolation import InterpolatingFunction
         s, intensity_average = \
            self._averageByResolutionBinning(nbins, s_range, False,
-                                            self.array[:, 0:1])
+                                            self.value_array)
         return InterpolatingFunction((s,), intensity_average)
 
     def wilsonPlot(self, nbins=50):
@@ -837,6 +837,7 @@ class StructureFactor(ReflectionData, AmplitudeData):
             assert(data.shape == (self.number_of_reflections,))
             self.array = data
         self.absent_value = 0j
+        self.value_array = self.array
 
     def __getitem__(self, reflection):
         index = reflection.index
@@ -1048,6 +1049,7 @@ class ModelAmplitudes(ReflectionData,
             assert(data.shape == (self.number_of_reflections,))
             self.array = data
         self.absent_value = 0.
+        self.value_array = self.array
 
 
 class ModelIntensities(ReflectionData,
@@ -1077,6 +1079,7 @@ class ModelIntensities(ReflectionData,
             assert(data.shape == (self.number_of_reflections,))
             self.array = data
         self.absent_value = 0.
+        self.value_array = self.array
 
     def calculateFromUniformAtomDistribution(self, atom_count):
         """
@@ -1119,6 +1122,7 @@ class ExperimentalAmplitudes(ExperimentalReflectionData,
             assert(data.shape == (self.number_of_reflections, 2))
             self.array = data
         self.absent_value = N.zeros((2,), N.Float)
+        self.value_array = self.array[:, 0]
 
     def intensities(self):
         intensities = ExperimentalIntensities(self.reflection_set)
@@ -1149,6 +1153,7 @@ class ExperimentalIntensities(ExperimentalReflectionData,
             assert(data.shape == (self.number_of_reflections, 2))
             self.array = data
         self.absent_value = N.zeros((2,), N.Float)
+        self.value_array = self.array[:, 0]
 
     def amplitudes(self):
         amplitudes = ExperimentalAmplitudes(self.reflection_set)
