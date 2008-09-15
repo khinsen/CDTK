@@ -87,14 +87,14 @@ def _llkwd(array_type p, array_type q, array_type dp, array_type dq,
     p_dllk = <double *>dllk.data
 
     llk = 0.
-    for i from 0 <= i < nc:
+    for 0 <= i < nc:
         pv = p_p[rc_p[i]]
         qv = p_q[rc_p[i]]
         dpv = p_dp[rc_p[i]]
         dqv = p_dq[rc_p[i]]
         llk = llk - 0.5*pv - qv - log(0.5*(1.+exp(-2.*qv)))
         p_dllk[rc_p[i]] = -(dpv + dqv*tanh(qv))/nwr
-    for i from 0 <= i < na:
+    for 0 <= i < na:
         pv = p_p[ra_p[i]]
         qv = 2.*p_q[ra_p[i]]
         dpv = p_dp[ra_p[i]]
@@ -150,11 +150,11 @@ def _llkdf(array_type p, array_type q, array_type rc, array_type ra):
     p_q = <double *>q.data
 
     d = 0.
-    for i from 0 <= i < nc:
+    for 0 <= i < nc:
         pv = p_p[rc_p[i]]
         qv = p_q[rc_p[i]]
         d = d - pv - qv*tanh(qv)
-    for i from 0 <= i < na:
+    for 0 <= i < na:
         pv = p_p[ra_p[i]]
         qv = 2.*p_q[ra_p[i]]
         status = gsl_sf_bessel_I1_scaled_e(qv, &result)
@@ -200,10 +200,10 @@ def _l(double t, array_type p, array_type rsc, array_type rsa):
     p_p = <double *>p.data
 
     lv = 0.
-    for i from 0 <= i < nc:
+    for 0 <= i < nc:
         pv = p_p[rsc_p[i]]
         lv = lv + pv*tanh(t*pv)
-    for i from 0 <= i < na:
+    for 0 <= i < na:
         pv = 2.*p_p[rsa_p[i]]
         status = gsl_sf_bessel_I1_scaled_e(pv*t, &result)
         if status != GSL_SUCCESS and status != GSL_EUNDRFLW:

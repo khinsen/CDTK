@@ -113,7 +113,7 @@ cdef class MTZColumn:
             dims[0] = self.mtz_file.number_of_reflections
             array = PyArray_FromDims(1, dims, PyArray_UBYTE)
             data = <unsigned char *>array.data
-            for i from 0 <= i < dims[0]:
+            for 0 <= i < dims[0]:
                 data[i] = ccp4_ismnf(self.mtz_data, self.mtz_col.ref[i])
             return <object>array
 
@@ -168,7 +168,7 @@ cdef class MTZDataset:
         self.mtz_data = mtz_data
         self.mtz_set = set
         self.columns = {}
-        for i from 0 <= i < self.mtz_set.ncol:
+        for 0 <= i < self.mtz_set.ncol:
             column = MTZColumn(self)
             column._setData(self.mtz_data, self.mtz_set.col[i])
             self.columns[column.label] = column
@@ -213,7 +213,7 @@ cdef class MTZCrystal:
         self.mtz_data = mtz_data
         self.mtz_xtal = xtal
         self.datasets = []
-        for i from 0 <= i < self.mtz_xtal.nset:
+        for 0 <= i < self.mtz_xtal.nset:
             dataset = MTZDataset(self)
             dataset._setData(self.mtz_data, self.mtz_xtal.set[i])
             self.datasets.append(dataset)
@@ -257,7 +257,7 @@ cdef class MTZSymmetry:
         self.symmetry_operations = []
         dims[0] = 4
         dims[1] = 4
-        for i from 0 <= i < self.mtz_symgrp.nsym:
+        for 0 <= i < self.mtz_symgrp.nsym:
             array = PyArray_FromDimsAndData(2, dims, PyArray_FLOAT,
                                             <char *>self.mtz_symgrp.sym[i])
             rotation = copy.deepcopy(array[:3, :3])
@@ -312,7 +312,7 @@ cdef class MTZFile:
         self.symmetry = <object>symmetry
 
         self.crystals = []
-        for i from 0 <= i < self.mtz_data.nxtal:
+        for 0 <= i < self.mtz_data.nxtal:
             crystal = MTZCrystal(self)
             crystal._setData(self.mtz_data, self.mtz_data.xtal[i])
             self.crystals.append(crystal)

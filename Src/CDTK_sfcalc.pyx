@@ -65,7 +65,7 @@ def sfTerm(array_type result, array_type s, array_type f_atom,
         up = <double *>u.data
         fap = <double *>f_atom.data
 
-        for i from 0 <= i < ns:
+        for 0 <= i < ns:
             dot_sr = twopi*(rp[0]*sp[3*i] + rp[1]*sp[3*i+1] + rp[2]*sp[3*i+2])
             f_r = fap[i]*cos(dot_sr)
             f_i = fap[i]*sin(dot_sr)
@@ -173,17 +173,17 @@ def sfDeriv(array_type element_indices, array_type f_atom, array_type positions,
     sf_in_d = <double *>sf_in.data
     a_in_d = <double *>a_in.data
 
-    for i from 0 <= i < natoms:
+    for 0 <= i < natoms:
         f_atom_p = f_atom_d + ns*element_indices_d[i]
         positions_p = positions_d + 3*i
         adps_p = adps_d + 6*i
         occupancy = occupancies_d[i]
         pd_p = pd_d + 3*i
         adpd_p = adpd_d + 6*i
-        for j from 0 <= j < nsg:
+        for 0 <= j < nsg:
             sv_p = sv_d + 3*ns*j
             p_p = p_d + 2*ns*j
-            for k from 0 <= k < ns:
+            for 0 <= k < ns:
                 dwf = exp(twopisq*(adps_p[0]*sv_p[3*k]*sv_p[3*k] +
                                    adps_p[1]*sv_p[3*k+1]*sv_p[3*k+1] +
                                    adps_p[2]*sv_p[3*k+2]*sv_p[3*k+2] +
