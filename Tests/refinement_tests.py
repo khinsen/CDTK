@@ -235,7 +235,7 @@ class CalphaRefinementTests2ONX(CommonRefinementTests2ONX):
         CommonRefinementTests2ONX._test_position_derivatives(self, 2.e-4)
 
     def test_ADP_derivatives(self):
-        CommonRefinementTests2ONX._test_ADP_derivatives(self, 5.e-5)
+        CommonRefinementTests2ONX._test_ADP_derivatives(self, 2.e-4)
 
 
 def suite():
