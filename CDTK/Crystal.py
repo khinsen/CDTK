@@ -240,6 +240,18 @@ class Crystal(object):
             a.fluctuation = refinement_engine.getADP(a.atom_id)
             a.occupancy = refinement_engine.getOccupancy(a.atom_id)
 
+    def countAtomsByElement(self):
+        """
+        @return: a dictionary mapping chemical element symbols
+                 to the number of atoms of that element in the
+                 crystal
+        @rtype: C{dict}
+        """
+        counts = {}
+        for atom_id, element, position, fluctuation, occupancy in self:
+            counts[element] = counts.get(element, 0) + 1
+        return counts
+
 
 class PDBCrystal(Crystal):
 
