@@ -17,6 +17,7 @@ from CDTK.Utility import SymmetricTensor
 from Scientific.Geometry import Vector, isVector
 from Scientific.Geometry.Transformation import Rotation, Translation, Shear
 from Scientific import N, LA
+import copy
 
 class UnitCell(object):
 
@@ -247,10 +248,24 @@ class PDBCrystal(Crystal):
     file.
     """
 
-    def __init__(self, file_or_filename):
+    def __init__(self, file_or_filename,
+                 peptide_chains=True, nucleotide_chains=True,
+                 residue_filter = None):
         """
         @param file_or_filename: the name of a PDB file, or a file object
         @type file_or_filename: C{str} or C{file}
+        @param peptide_chains: if True, include the peptide chains from
+                               the PDB file, otherwise discard them
+        @type peptide_chains: C{Boolean}
+        @param nucleotide_chains: if True, include the nucleotide chains from
+                                  the PDB file, otherwise discard them
+        @type nucleotide_chains: C{Boolean}
+        @param residue_filter: a function called for each non-peptide and
+                               non-nucleotide residue with the residue name
+                               and residue number as argument. If it returns
+                               True, the residue is included, otherwise it
+                               is discarded. If no residue_filter is given,
+                               all residues are includes.
         """
         from Scientific.IO.PDB import Structure
         s = Structure(file_or_filename)
@@ -260,13 +275,27 @@ class PDBCrystal(Crystal):
         cell = UnitCell(s.a*Units.Ang, s.b*Units.Ang, s.c*Units.Ang,
                         s.alpha*Units.deg, s.beta*Units.deg, s.gamma*Units.deg)
         Crystal.__init__(self, cell, space_groups[s.space_group])
-        
-        for residue in s.residues:
+
+        remaining_residues = [r for r in s.residues]
+        for residue in remaining_residues:
             residue.chain_id = ''
-        for chain in s.peptide_chains + s.nucleotide_chains:
-            for residue in chain:
-                residue.chain_id = chain.chain_id
-        for residue in s.residues:
+        residues = []
+        for chain_list, flag in [(s.peptide_chains, peptide_chains),
+                                 (s.nucleotide_chains, nucleotide_chains)]:
+            for chain in chain_list:
+                for residue in chain:
+                    residue.chain_id = chain.chain_id
+                    remaining_residues.remove(residue)
+                    if flag:
+                        residues.append(residue)
+        if residue_filter is None:
+            residues.extend(remaining_residues)
+        else:
+            for residue in remaining_residues:
+                if residue_filter(residue.name, residue.number):
+                    residues.append(residue)
+
+        for residue in residues:
             for atom in residue:
                 fluctuation = atom['temperature_factor'] \
                               * Units.Ang**2/(8.*N.pi**2)
