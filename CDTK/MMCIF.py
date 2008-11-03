@@ -470,7 +470,11 @@ class MMCIFStructureFactorData(object):
                         float(self.cell['angle_alpha'])*Units.deg,
                         float(self.cell['angle_beta'])*Units.deg,
                         float(self.cell['angle_gamma'])*Units.deg)
-        space_group = space_groups[self.symmetry['space_group_name_H-M']]
+        try:
+            sg_key = int(self.symmetry['Int_Tables_number'])
+        except (KeyError, ValueError):
+            sg_key = self.symmetry['space_group_name_H-M'].strip()
+        space_group = space_groups[sg_key]
         self.reflections = ReflectionSet(cell, space_group)
 
     def addReflection(self, indices, data):

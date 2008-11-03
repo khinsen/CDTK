@@ -23359,12 +23359,29 @@ sg = SpaceGroup(230, 'I a -3 d', transformations)
 space_groups[230] = sg
 space_groups['I a -3 d'] = sg
 
+# Add alternative symbols
+space_groups['R 3'] = space_groups['H 3'] = space_groups[146]
+space_groups['R 3 2'] = space_groups['H 3 2'] = space_groups[155]
+
+space_groups['C 2'] = space_groups['C 1 2 1']
+space_groups['I 1 2 1'] = space_groups['C 1 2 1']
+space_groups['B 2'] = space_groups['C 1 2 1']
+
+space_groups['P 21'] = space_groups['P 1 21 1']
+space_groups['P 1 1 21'] = space_groups['P 1 21 1']
+
+space_groups['P 2 21 21'] = space_groups['P 21 21 2']
+
+# Make it possible to use space group symbols without spaces, which occur
+# in several PDB entries.
+for k, sg in space_groups.items():
+    if not isinstance(k, int):
+        compacted = ''.join(k.split())
+        if compacted not in space_groups:
+            space_groups[compacted] = sg
 
 del transformations
 del rot
 del trans_num
 del trans_den
 del sg
-
-space_groups['R 3'] = space_groups['H 3'] = space_groups[146]
-space_groups['R 3 2'] = space_groups['H 3 2'] = space_groups[155]
