@@ -621,7 +621,7 @@ class AmplitudeData(object):
         dwf = self._debyeWallerFactor(adp_or_scalar)
         return self.__class__(self.reflection_set, self.array*dwf)
 
-    def scaleTo(self, other, iterations=0):
+    def scaleTo(self, other, iterations=0, filter=None):
         """
         Performs a non-linear fit of self multiplied by a Debye-Waller
         factor and a overall global factor to other. The fit parameters
@@ -637,16 +637,25 @@ class AmplitudeData(object):
         @param other: L{AmplitudeData}
         @param iterations: the number of Gauss-Newton iterations
         @type iterations: C{int}
+        @param filter: a function called for each reflection object. The
+                       reflection is used in the fit only if the return
+                       value is C{True}. If no function is passed (C{None}),
+                       all reflections are used.
+        @type filter: callable
         @return: a tuple (scaled_amplitudes, k, u), where scaled_amplitudes
                  is the fitted amplitude data set, k is the global factor,
                  and u is the ADP tensor of the fitted Debye-Waller factor
         @rtype: C{tuple}
         """
         assert isinstance(other, AmplitudeData)
+        if filter is None:
+            reflections = self.reflection_set
+        else:
+            reflections = [r for r in self.reflection_set if filter(r)]
         twopisq = -2.*N.pi**2
         mat = []
         rhs = []
-        for r in self.reflection_set:
+        for r in reflections:
             a1 = other[r]
             a2 = self[r]
             if a1 is None or a2 is None:
@@ -667,7 +676,7 @@ class AmplitudeData(object):
             # Gauss-Newton iteration
             mat = []
             rhs = []
-            for r in self.reflection_set:
+            for r in reflections:
                 a1 = other[r]
                 a2 = self[r]
                 if a1 is None or a2 is None:
@@ -765,7 +774,7 @@ class IntensityData(object):
         dwf = self._debyeWallerFactor(adp_or_scalar)
         return self.__class__(self.reflection_set, self.array*(dwf**2))
 
-    def scaleTo(self, other, iterations=0):
+    def scaleTo(self, other, iterations=0, filter=None):
         """
         Performs a non-linear fit of self multiplied by a Debye-Waller
         factor and a overall global factor to other. The fit parameters
@@ -781,12 +790,19 @@ class IntensityData(object):
         @param other: L{AmplitudeData}
         @param iterations: the number of Gauss-Newton iterations
         @type iterations: C{int}
-        @return: a tuple (scaled_amplitudes, k, u), where scaled_amplitudes
-                 is the fitted amplitude data set, k is the global factor,
-                 and u is the ADP tensor of the fitted Debye-Waller factor
+        @param filter: a function called for each reflection object. The
+                       reflection is used in the fit only if the return
+                       value is C{True}. If no function is passed (C{None}),
+                       all reflections are used.
+        @type filter: callable
+        @return: a tuple (scaled_intensities, k, u), where scaled_intensities
+                 is the fitted intensity data set, k is the global amplitude
+                 factor, and u is the ADP tensor of the fitted Debye-Waller
+                 factor. Note: the intensities have been scalled by k**2.
         @rtype: C{tuple}
         """
-        a, k, u = self.amplitudes().scaleTo(other.amplitudes(), iterations)
+        a, k, u = self.amplitudes().scaleTo(other.amplitudes(),
+                                            iterations, filter)
         return a.intensities(), k, u
 
     def normalize(self, atom_count):
@@ -805,7 +821,6 @@ class IntensityData(object):
         """
         i_random = ModelIntensities(self.reflection_set)
         i_random.calculateFromUniformAtomDistribution(atom_count)
-        i_random, k, u = i_random.scaleTo(self)
         return self/i_random
 
 
