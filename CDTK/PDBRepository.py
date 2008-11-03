@@ -96,11 +96,19 @@ class PDBFileCollection(object):
         if not self.is_local:
             assert len(pdb_code) == 4, "Invalid PDB code " + repr(pdb_code)
             pdb_code = pdb_code.lower()
+            if url_pattern is None:
+                raise IOError("No URL pattern for PDB repository")
             url = self.url_pattern % pdb_code
             filename, headers = urllib.urlretrieve(url)
-            return gzip.GzipFile(filename)
+            if filename[-2:] == 'gz':
+                return gzip.GzipFile(filename)
+            else:
+                return file(filename)
         filename = self.getFilename(pdb_code)
-        return gzip.GzipFile(filename)
+        if filename[-2:] == 'gz':
+            return gzip.GzipFile(filename)
+        else:
+            return file(filename)
 
     def __iter__(self):
         """
@@ -112,7 +120,8 @@ class PDBFileCollection(object):
             for filename in filenames:
                 pdb_code = filename[self.pdb_code_index:
                                     self.pdb_code_index+4]
-                yield pdb_code
+                if self.filename_pattern % pdb_code == filename:
+                    yield pdb_code
 
 
 pdb_files = PDBFileCollection(pdb_path, 'pdb%s.ent.gz',
