@@ -160,9 +160,9 @@ class Reflection(object):
         c = self.crystal
         sg = c.space_group
         ri = self.index
-        centric = self.isCentric()
-        unique_reflections = set()
         equivalents, phases = sg.symmetryEquivalentMillerIndices(self.array)
+        centric = self.isCentric(equivalents)
+        unique_reflections = set()
         for (h, k, l), p in zip(equivalents, phases):
             r = Reflection(h, k, l, c, ri)
             r.phase_factor = p
@@ -189,7 +189,7 @@ class Reflection(object):
         equivalents = sg.symmetryEquivalentMillerIndices(self.array)[0]
         return N.int_sum(N.alltrue(N.array(equivalents) == self.array, axis=1))
 
-    def isCentric(self):
+    def isCentric(self, _equivalents=None):
         """
         @return: C{True} if the reflection is centric (i.e. equivalent to
                  the reflection (-h, -k, -l) by space group symmetry
@@ -197,8 +197,9 @@ class Reflection(object):
         @rtype: C{bool}
         """
         sg = self.crystal.space_group
-        equivalents = sg.symmetryEquivalentMillerIndices(self.array)[0]
-        return N.int_sum(N.alltrue(N.array(equivalents) == -self.array,
+        if _equivalents is None:
+            _equivalents = sg.symmetryEquivalentMillerIndices(self.array)[0]
+        return N.int_sum(N.alltrue(N.array(_equivalents) == -self.array,
                                    axis=1)) > 0
 
 #

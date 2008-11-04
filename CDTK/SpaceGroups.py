@@ -47,8 +47,10 @@ class SpaceGroup(object):
         self.number = number
         self.symbol = symbol
         self.transformations = transformations
-        self.transposed_transformations = [(N.transpose(t[0]), t[1], t[2])
-                                           for t in self.transformations]
+        self.transposed_rotations = N.array([N.transpose(t[0])
+                                            for t in transformations])
+        self.phase_factors = N.exp(N.array([(-2j*N.pi*t[1])/t[2]
+                                            for t in transformations]))
 
     def __repr__(self):
         return "SpaceGroup(%d, %s)" % (self.number, repr(self.symbol))
@@ -64,23 +66,19 @@ class SpaceGroup(object):
         """
         @param hkl: a set of Miller indices
         @type hkl: C{Scientific.N.array_type}
-        @return: a tuple (miller_indices, phase_factor) of two lists
+        @return: a tuple (miller_indices, phase_factor) of two arrays
                  of length equal to the number of space group
                  transformations. miller_indices contains the Miller
                  indices of each reflection equivalent by symmetry to the
-                 reflection hkl (inclduing hkl itself as the first element).
+                 reflection hkl (including hkl itself as the first element).
                  phase_factor contains the phase factors that must be applied
                  to the structure factor of reflection hkl to obtain the
                  structure factor of the symmetry equivalent reflection.
         @rtype: C{tuple}
         """
-        hkl_list = []
-        phase_factor_list = []
-        for rot, tn, td in self.transposed_transformations:
-            hkl_list.append(N.dot(rot, hkl))
-            t = (tn*1.)/td
-            phase_factor_list.append(N.exp(-2j*N.pi*N.dot(hkl, t)))
-        return hkl_list, phase_factor_list
+        hkls = N.dot(self.transposed_rotations, hkl)
+        p = N.multiply.reduce(self.phase_factors**hkl, -1)
+        return hkls, p
 
 space_groups = {}
 
