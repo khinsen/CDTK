@@ -411,13 +411,14 @@ class ExperimentalReflectionData(ReflectionData):
                        whole reflection set
         @type subset: L{CDTK.Reflections.ReflectionSubset}
         @return: the fraction of reflections in the subset
-                 for which observations are available
+                 for which observations are available. If the subset is
+                 empty, its completeness is 0.
         @rtype: C{Scientific.N.array}
         """
         if subset is None:
             subset = self.reflection_set
         if len(subset) == 0:
-            raise ValueError("reflection subset is empty")
+            return 0.
         nr = 0
         count = 0
         for r in subset:
