@@ -28,6 +28,18 @@ class ReflectionSetTests(unittest.TestCase):
             nr += len(subset)
         self.assertEqual(len(reflections.minimal_reflection_list), nr)
 
+    def _shellTest2(self, reflections):
+        subsets = reflections.resolutionShells(10)
+        self.assert_(len(subsets) == 10)
+        nr = 0
+        for shell in subsets:
+            nr += len(shell)
+            for r in shell:
+                s = r.sVector().length()
+                self.assert_(s >= shell.s_min)
+                self.assert_(s < shell.s_max)
+        self.assertEqual(len(reflections.minimal_reflection_list), nr)
+
     def _subsetTest(self, reflections):
         subsets = reflections.randomlyAssignedSubsets([0.1, 0.5, 0.4])
         for r in reflections:
@@ -88,6 +100,7 @@ class ReflectionSetTests(unittest.TestCase):
             self.assert_(not r.isCentric())
             self.assert_(r.symmetryFactor() == 1)
         self._shellTest(reflections, [(0.5, 1.), (1., 5.), (5., 11.)])
+        self._shellTest2(reflections)
         self._subsetTest(reflections)
         self._symmetryTest(reflections)
 
@@ -111,6 +124,7 @@ class ReflectionSetTests(unittest.TestCase):
             self.assertEqual(r.k, 0)
             self.assertNotEqual(r.l % 3, 0)
         self._shellTest(reflections, [(0.5, 1.), (1., 5.), (5., 11.)])
+        self._shellTest2(reflections)
         self._subsetTest(reflections)
         self._symmetryTest(reflections)
 
@@ -156,6 +170,7 @@ class ReflectionSetTests(unittest.TestCase):
             if r.l != 0:
                 self.assertNotEqual(r.l % 4, 0)
         self._shellTest(reflections, [(0.1, 1.), (1., 5.), (5., 11.)])
+        self._shellTest2(reflections)
         self._subsetTest(reflections)
         self._symmetryTest(reflections)
 

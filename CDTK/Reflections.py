@@ -243,6 +243,49 @@ class ReflectionSelector(object):
                 subsets[index].append(r)
         return [ReflectionSubset(self, s) for s in subsets]
 
+    def resolutionShells(self, shells):
+        """
+        Partition the reflections into resolution shells.
+
+        @param shells: the resolution shell specification, either a sequence of
+                       s values delimiting the shells (one more value than
+                       there will be shells), or an integer indicating the
+                       number of shells into which the total resolution range
+                       will be divided.
+        @type shells:  C{int} or sequence of C{float}
+        @return: the resolution shells, each of which has its average
+                 s value stored in the attribute 's'.
+        @rtype: sequence of L{ReflectionSubset}
+        """
+        if isinstance(shells, int):
+            assert shells > 0
+            s_min, s_max = self.sRange()
+            nshells = shells
+            shells = s_min + N.arange(nshells+1)*((s_max-s_min)/nshells)
+            shells[0] *= 0.99
+            shells[-1] *= 1.01
+        else:
+            shells = N.array(shells)
+            nshells = len(shells)-1
+            assert nshells > 0
+            assert ((shells[1:]-shells[:-1]) > 0.).all()
+        reflections = [[] for i in range(nshells)]
+        s_sum = N.zeros((nshells,), N.Float)
+        for reflection in self:
+            s = reflection.sVector().length()
+            n = N.sum(s >= shells)-1
+            if n >= 0 and n < nshells:
+                reflections[n].append(reflection)
+                s_sum[n] += s
+        subsets = []
+        for i in range(nshells):
+            subset = ReflectionSubset(self, reflections[i])
+            subset.s_min = shells[i]
+            subset.s_max = shells[i+1]
+            subset.s_middle = 0.5*(shells[i]+shells[i+1])
+            subset.s_avg = s_sum[i]/len(reflections[i])
+            subsets.append(subset)
+        return subsets
 
 #
 # A ReflectionSet represents all possible reflections for a given crystal
@@ -677,6 +720,15 @@ class ReflectionSubset(ReflectionSelector):
         """
         for r in self.reflection_list:
             yield r
+
+    def sRange(self):
+        """
+        @return: a tuple (s_min, s_max) containing the range of
+                 scattering vector lengths in the reflection set
+        @rtype: C{tuple} of C{float}
+        """
+        s = [r.sVector().length() for r in self]
+        return min(s), max(s)
 
 #
 # A ResolutionShell object is an iterator over the reflections in
