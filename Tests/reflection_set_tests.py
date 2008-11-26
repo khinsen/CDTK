@@ -9,7 +9,7 @@
 
 import unittest
 from CDTK.Crystal import UnitCell
-from CDTK.Reflections import ReflectionSet, ResolutionShell
+from CDTK.Reflections import ReflectionSet
 from CDTK.SpaceGroups import space_groups
 from CDTK import Units
 from Scientific.Geometry import Vector
@@ -21,14 +21,7 @@ class ReflectionSetTests(unittest.TestCase):
     def setUp(self):
         self.compact = False
 
-    def _shellTest(self, reflections, shells):
-        nr = 0
-        for rmin, rmax in shells:
-            subset = ResolutionShell(reflections, rmin, rmax)
-            nr += len(subset)
-        self.assertEqual(len(reflections.minimal_reflection_list), nr)
-
-    def _shellTest2(self, reflections):
+    def _shellTest(self, reflections):
         subsets = reflections.resolutionShells(10)
         self.assert_(len(subsets) == 10)
         nr = 0
@@ -99,8 +92,7 @@ class ReflectionSetTests(unittest.TestCase):
             self.assert_(res_max <= r.resolution() <= res_min)
             self.assert_(not r.isCentric())
             self.assert_(r.symmetryFactor() == 1)
-        self._shellTest(reflections, [(0.5, 1.), (1., 5.), (5., 11.)])
-        self._shellTest2(reflections)
+        self._shellTest(reflections)
         self._subsetTest(reflections)
         self._symmetryTest(reflections)
 
@@ -123,8 +115,7 @@ class ReflectionSetTests(unittest.TestCase):
             self.assertEqual(r.h, 0)
             self.assertEqual(r.k, 0)
             self.assertNotEqual(r.l % 3, 0)
-        self._shellTest(reflections, [(0.5, 1.), (1., 5.), (5., 11.)])
-        self._shellTest2(reflections)
+        self._shellTest(reflections)
         self._subsetTest(reflections)
         self._symmetryTest(reflections)
 
@@ -169,8 +160,7 @@ class ReflectionSetTests(unittest.TestCase):
                 self.assertEqual(r.k % 2, 1)
             if r.l != 0:
                 self.assertNotEqual(r.l % 4, 0)
-        self._shellTest(reflections, [(0.1, 1.), (1., 5.), (5., 11.)])
-        self._shellTest2(reflections)
+        self._shellTest(reflections)
         self._subsetTest(reflections)
         self._symmetryTest(reflections)
 

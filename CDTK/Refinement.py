@@ -28,7 +28,6 @@ if _distributed:
     from CDTK.DistributedComputations import _evaluateModel_distributed, \
          _distributed_refinement_cleanup
 
-from CDTK.Reflections import ResolutionShell
 from CDTK.Utility import SymmetricTensor
 from CDTK_math import I1divI0, logI0, logcosh
 from Scientific.Functions.Interpolation import InterpolatingFunction

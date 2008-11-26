@@ -729,27 +729,3 @@ class ReflectionSubset(ReflectionSelector):
         """
         s = [r.sVector().length() for r in self]
         return min(s), max(s)
-
-#
-# A ResolutionShell object is an iterator over the reflections in
-# a given resolution shell.
-#
-class ResolutionShell(ReflectionSubset):
-
-    """
-    Iterator over reflections in a resolution shell
-    """
-
-    def __init__(self, reflection_set, min_resolution, max_resolution):
-        """
-        @param reflection_set: complete reflection set
-        @type reflection_set: L{ReflectionSet}
-        @param min_resolution: the lower limit of the resolution range
-        @type min_resolution: C{float}
-        @param max_resolution: the upper limit of the resolution range
-        @type max_resolution: C{float}
-        """
-        subset = [r for r in reflection_set
-                  if min_resolution <= r.resolution() < max_resolution]
-        ReflectionSubset.__init__(self, reflection_set, subset)
-
