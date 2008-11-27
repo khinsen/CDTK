@@ -96,7 +96,7 @@ class PDBFileCollection(object):
         if not self.is_local:
             assert len(pdb_code) == 4, "Invalid PDB code " + repr(pdb_code)
             pdb_code = pdb_code.lower()
-            if url_pattern is None:
+            if self.url_pattern is None:
                 raise IOError("No URL pattern for PDB repository")
             url = self.url_pattern % pdb_code
             filename, headers = urllib.urlretrieve(url)
