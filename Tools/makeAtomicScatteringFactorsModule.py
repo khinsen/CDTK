@@ -77,9 +77,9 @@ while lines:
     print "('%s', %d): (%s," % (element.lower(), charge, array1)
     print "             %s)," % array2
 
-print "}"
-
-print """
+print """('x', 0): (N.array([ 0., 0., 0., 0., 0.]),
+             N.array([0., 0., 0., 0., 0.])),
+}
 
 for (element, charge), value in atomic_scattering_factors.items():
     if charge == 0:

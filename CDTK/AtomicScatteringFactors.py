@@ -1,3 +1,4 @@
+
 # Atomic scattering factors in Five-Gaussian approximation.
 # The formula for the atomic scattering factor is
 #   f(s) = N.sum(a*N.exp(-b*s^2))
@@ -442,8 +443,9 @@ atomic_scattering_factors = {
              N.array([  0.00112754,   0.00761547,   0.03223650,   0.21500749,   0.00000000])),
 ('cf', 0): (N.array([ 36.91849900,  25.19949900,  18.33169900,   4.24391000,  13.26740000]),
              N.array([  0.00109383,   0.00751937,   0.03101100,   0.20947025,   0.00000000])),
+('x', 0): (N.array([ 0., 0., 0., 0., 0.]),
+             N.array([0., 0., 0., 0., 0.])),
 }
-
 
 for (element, charge), value in atomic_scattering_factors.items():
     if charge == 0:
@@ -452,3 +454,4 @@ for (element, charge), value in atomic_scattering_factors.items():
 del element
 del charge
 del value
+
