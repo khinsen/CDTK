@@ -45,26 +45,26 @@ class ElectronDensityMapTests(unittest.TestCase):
                                             atom['occupancy']))
 
         hmax, kmax, lmax = self.reflections.maxHKL()
-        density_map = ElectronDensityMap(self.reflections.cell,
-                                         4*hmax, 4*kmax, 4*lmax)
-        density_map.calculateFromUnitCellAtoms(unit_cell_atom_data)
+        density_map = ElectronDensityMap.fromUnitCellAtoms(
+                          self.reflections.cell,
+                          4*hmax, 4*kmax, 4*lmax, unit_cell_atom_data)
 
-        sf_from_map = StructureFactor(self.reflections)
-        sf_from_map.calculateFromElectronDensityMap(density_map)
+        sf_from_map = StructureFactor.fromElectronDensityMap(
+                          self.reflections, density_map)
 
-        sf_from_unit_cell = StructureFactor(self.reflections)
-        sf_from_unit_cell.calculateFromUnitCellAtoms(unit_cell_atom_data)
+        sf_from_unit_cell = StructureFactor.fromUnitCellAtoms(
+                          self.reflections, unit_cell_atom_data)
 
         self.assert_(sf_from_unit_cell.rFactor(sf_from_map) < 1.e-3)
         d = N.absolute(sf_from_unit_cell.array-sf_from_map.array)
         self.assert_(N.maximum.reduce(d) < 0.13)
         self.assert_(N.average(d) < 0.02)
 
-        map_from_sf = ElectronDensityMap(self.reflections.cell,
-                                         4*hmax, 4*kmax, 4*lmax)
-        map_from_sf.calculateFromStructureFactor(sf_from_unit_cell)
-        sf_from_test_map = StructureFactor(self.reflections)
-        sf_from_test_map.calculateFromElectronDensityMap(map_from_sf)
+        map_from_sf = ElectronDensityMap.fromStructureFactor(
+                          self.reflections.cell,
+                          4*hmax, 4*kmax, 4*lmax, sf_from_unit_cell)
+        sf_from_test_map = StructureFactor.fromElectronDensityMap(
+                               self.reflections, map_from_sf)
         d = N.absolute(sf_from_unit_cell.array-sf_from_test_map.array)
         self.assert_(sf_from_unit_cell.rFactor(sf_from_test_map) < 1.e-15)
         self.assert_(N.maximum.reduce(d) < 1.e-13)

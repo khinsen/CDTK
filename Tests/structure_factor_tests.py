@@ -80,12 +80,12 @@ class StructureFactorTests2ONX(unittest.TestCase):
         # Tests on structure factor calculations
         asu_atoms = sum(([atom for atom in residue] for residue in self.s), [])
 
-        sf_from_asu = StructureFactor(self.reflections)
-        sf_from_asu.calculateFromAsymmetricUnitAtoms(
-            (atom, atom['element'], atom['position']*Units.Ang,
-             atom['temperature_factor']*Units.Ang**2/(8.*N.pi**2),
-             atom['occupancy'])
-            for atom in asu_atoms)
+        sf_from_asu = StructureFactor.fromAsymmetricUnitAtoms(
+            self.reflections,
+            ((atom, atom['element'], atom['position']*Units.Ang,
+              atom['temperature_factor']*Units.Ang**2/(8.*N.pi**2),
+              atom['occupancy'])
+             for atom in asu_atoms))
 
         unit_cell_atom_data = []
         for tr in self.s.cs_transformations:
@@ -96,8 +96,8 @@ class StructureFactorTests2ONX(unittest.TestCase):
                                               * Units.Ang**2/(8.*N.pi**2),
                                             atom['occupancy']))
 
-        sf_from_unit_cell = StructureFactor(self.reflections)
-        sf_from_unit_cell.calculateFromUnitCellAtoms(unit_cell_atom_data)
+        sf_from_unit_cell = StructureFactor.fromUnitCellAtoms(
+                                self.reflections, unit_cell_atom_data)
 
         self.assert_(sf_from_unit_cell.rFactor(sf_from_asu)
                      < 2.e-5)

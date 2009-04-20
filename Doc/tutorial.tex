@@ -398,27 +398,27 @@ There are three ways to specify the model:
 \begin{itemize}
 \item
 as an iterator over the atoms in the unit cell, yielding a tuple
-of (atom_id, chemical element, position, fluctuation tensor, occupancy)
+of (atom\_id, chemical element, position, fluctuation tensor, occupancy)
 for each atom:
 {\small
 \begin{verbatim}
-sf = StructureFactor(reflection_set)
-sf.calculateFromUnitCellAtoms((atom, atom.symbol, atom.position(),
-                               atom.temperature_factor/(8.*N.pi**2),
-                               atom.occupancy)
-                              for atom in unit_cell.atomList())
+sf = StructureFactor.fromUnitCellAtoms(reflection_set,
+                       (atom, atom.symbol, atom.position(),
+                        atom.temperature_factor/(8.*N.pi**2),
+                        atom.occupancy)
+                       for atom in unit_cell.atomList())
 \end{verbatim}
 }
 \item
 as an iterator over the atoms in the asymmetric unit, yielding a tuple
-of (atom_id, chemical element, position, fluctuation tensor, occupancy)
+of (atom\_id, chemical element, position, fluctuation tensor, occupancy)
 for each atom:
 {\small
 \begin{verbatim}
-sf = StructureFactor(reflection_set)
-sf.calculateFromAsymmetricUnitAtoms((atom, atom.symbol, atom.position(),
-                                     adps[atom], atom.occupancy)
-                                    for atom in asu.atomList())
+sf = StructureFactor.fromAsymmetricUnitAtoms(reflection_set,
+                         (atom, atom.symbol, atom.position(),
+                          adps[atom], atom.occupancy)
+                         for atom in asu.atomList())
 \end{verbatim}
 }
 \item
@@ -426,8 +426,7 @@ as an MMTK universe plus an optional MMTK \texttt{ParticleTensor} object
 specifying the fluctuation tensors:
 {\small
 \begin{verbatim}
-sf = StructureFactor(reflection_set)
-sf.calculateFromUniverse(universe, adps)
+sf = StructureFactor.fromUniverse(reflection_set, universe, adps)
 \end{verbatim}
 }
 \end{itemize}

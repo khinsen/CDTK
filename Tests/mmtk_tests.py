@@ -41,26 +41,27 @@ class MMTKTests(unittest.TestCase):
 
     def test_sf_from_map(self):
         hmax, kmax, lmax = self.reflections.maxHKL()
-        density_map = ElectronDensityMap(self.reflections.cell,
-                                         4*hmax, 4*kmax, 4*lmax)
-        density_map.calculateFromUniverse(self.universe, self.adps)
+        density_map = ElectronDensityMap.fromUniverse(
+                          self.reflections.cell,
+                          4*hmax, 4*kmax, 4*lmax,
+                          self.universe, self.adps)
 
-        sf_from_map = StructureFactor(self.reflections)
-        sf_from_map.calculateFromElectronDensityMap(density_map)
+        sf_from_map = StructureFactor.fromElectronDensityMap(
+                          self.reflections, density_map)
 
-        sf_from_universe = StructureFactor(self.reflections)
-        sf_from_universe.calculateFromUniverse(self.universe, self.adps)
+        sf_from_universe = StructureFactor.fromUniverse(
+                               self.reflections, self.universe, self.adps)
 
         self.assert_(sf_from_universe.rFactor(sf_from_map) < 1.e-3)
         d = N.absolute(sf_from_universe.array-sf_from_map.array)
         self.assert_(N.maximum.reduce(d) < 0.13)
         self.assert_(N.average(d) < 0.02)
 
-        map_from_sf = ElectronDensityMap(self.reflections.cell,
-                                         4*hmax, 4*kmax, 4*lmax)
-        map_from_sf.calculateFromStructureFactor(sf_from_universe)
-        sf_from_test_map = StructureFactor(self.reflections)
-        sf_from_test_map.calculateFromElectronDensityMap(map_from_sf)
+        map_from_sf = ElectronDensityMap.fromStructureFactor(
+                          self.reflections.cell,
+                          4*hmax, 4*kmax, 4*lmax, sf_from_universe)
+        sf_from_test_map = StructureFactor.fromElectronDensityMap(
+                               self.reflections, map_from_sf)
         d = N.absolute(sf_from_universe.array-sf_from_test_map.array)
         self.assert_(sf_from_universe.rFactor(sf_from_test_map) < 1.e-15)
         self.assert_(N.maximum.reduce(d) < 1.e-13)

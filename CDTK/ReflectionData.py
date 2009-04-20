@@ -810,8 +810,8 @@ class IntensityData(object):
         @return: the normalized intensities
         @rtype: L{IntensityData}
         """
-        i_random = ModelIntensities(self.reflection_set)
-        i_random.calculateFromUniformAtomDistribution(atom_count)
+        i_random = ModelIntensities.fromUniformAtomDistribution(
+                                          self.reflection_set, atom_count)
         return self/i_random
 
 
@@ -844,6 +844,80 @@ class StructureFactor(ReflectionData, AmplitudeData):
             self.array = data
         self.absent_value = 0j
         self.value_array = self.array
+
+    @classmethod
+    def fromUniverse(cls, reflection_set, universe, adps=None, conf=None):
+        """
+        Create a StructureFactor object from a periodic MMTK universe
+        representing a unit cell.
+
+        @param reflection_set: the reflection set for which the structure
+                               factor is defined
+        @type reflection_set: L{CDTK.ReflectionSet.ReflectionSet}
+        @param universe: the MMTK universe
+        @type universe: C{MMTK.Periodic3DUniverse}
+        @param adps: the anisotropic displacement parameters for all atoms
+        @type adps: C{MMTK.ParticleTensor}
+        @param conf: a configuration for the universe, defaults to the
+                     current configuration
+        @type conf: C{MMTK.Configuration}
+        """
+        obj = cls(reflection_set)
+        obj.calculateFromUniverse(universe, adps, conf)
+        return obj
+
+    @classmethod
+    def fromUnitCellAtoms(cls, reflection_set, atom_iterator):
+        """
+        @param reflection_set: the reflection set for which the structure
+                               factor is defined
+        @type reflection_set: L{CDTK.ReflectionSet.ReflectionSet}
+        @param atom_iterator: an iterator or sequence that yields
+                              for each atom in the unit cell a
+                              tuple of (atom_id, chemical element,
+                              position vector, position fluctuation,
+                              occupancy). The position fluctuation
+                              can be a symmetric tensor (ADP tensor)
+                              or a scalar (implicitly multiplied by
+                              the unit tensor).
+        @type atom_iterator: iterable
+        """
+        obj = cls(reflection_set)
+        obj.calculateFromUnitCellAtoms(atom_iterator)
+        return obj
+
+    @classmethod
+    def fromAsymmetricUnitAtoms(cls, reflection_set, atom_iterator):
+        """
+        @param reflection_set: the reflection set for which the structure
+                               factor is defined
+        @type reflection_set: L{CDTK.ReflectionSet.ReflectionSet}
+        @param atom_iterator: an iterator or sequence that yields
+                              for each atom in the asymmetric unit a
+                              tuple of (atom_id, chemical element,
+                              position vector, position fluctuation,
+                              occupancy). The position fluctuation
+                              can be a symmetric tensor (ADP tensor)
+                              or a scalar (implicitly multiplied by
+                              the unit tensor).
+        @type atom_iterator: iterable
+        """
+        obj = cls(reflection_set)
+        obj.calculateFromAsymmetricUnitAtoms(atom_iterator)
+        return obj
+
+    @classmethod
+    def fromElectronDensityMap(cls, reflection_set, density_map):
+        """
+        @param reflection_set: the reflection set for which the structure
+                               factor is defined
+        @type reflection_set: L{CDTK.ReflectionSet.ReflectionSet}
+        @param density_map: an electronic density map
+        @type density_map: L{CDTK.Maps.ElectronDensityMap}
+        """
+        obj = cls(reflection_set)
+        obj.calculateFromElectronDensityMap(density_map)
+        return obj
 
     def __getitem__(self, reflection):
         index = reflection.index
@@ -1086,6 +1160,25 @@ class ModelIntensities(ReflectionData,
             self.array = data
         self.absent_value = 0.
         self.value_array = self.array
+
+    @classmethod
+    def fromUniformAtomDistribution(cls, reflection_set, atom_count):
+        """
+        Create a new ModelIntensities object for a system containing a
+        given combination of atoms whose positions are assumed to be
+        distributed uniformly over the unit cell.
+
+        @param reflection_set: the reflection set for which the intensities
+                               are defined
+        @type reflection_set: L{CDTK.ReflectionSet.ReflectionSet}
+        @param atom_count: a dictionary mapping chemical element symbols
+                           to the number of atoms of that element in the
+                           system
+        @type atom_count: C{dict}
+        """
+        obj = cls(reflection_set)
+        obj.calculateFromUniformAtomDistribution(atom_count)
+        return obj
 
     def calculateFromUniformAtomDistribution(self, atom_count):
         """
