@@ -114,7 +114,7 @@ class UnitCellTests(unittest.TestCase):
             for x in fractional_coordinates:
                 r = cell.fractionalToCartesian(x)
                 rr = N.dot(m_fc, x)
-                self.assert_(largestAbsoluteElement(r.array-rr) < 3.e-14)
+                self.assert_(largestAbsoluteElement(r.array-rr) < 1.e-10)
                 xx = cell.cartesianToFractional(r)
                 self.assert_(largestAbsoluteElement(x-xx) < 1.e-15)
                 xx = N.dot(m_cf, rr)
