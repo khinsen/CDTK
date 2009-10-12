@@ -244,12 +244,21 @@ class Crystal(object):
         """
         @return: a dictionary mapping chemical element symbols
                  to the number of atoms of that element in the
-                 crystal
+                 crystal. Note that the number of atoms can be
+                 non-integer because the occupancies don't
+                 necessarily add up to integer values.
         @rtype: C{dict}
         """
         counts = {}
         for atom_id, element, position, fluctuation, occupancy in self:
-            counts[element] = counts.get(element, 0) + 1
+            counts[element] = counts.get(element, 0.) + occupancy
+        for element in counts.keys():
+            n_float = counts[element]
+            n_int = int(n_float)
+            if float(n_int) == n_float:
+                counts[element] = n_int
+            else:
+                counts[element] = n_float
         return counts
 
 
