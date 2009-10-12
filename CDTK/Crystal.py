@@ -261,6 +261,49 @@ class Crystal(object):
                 counts[element] = n_float
         return counts
 
+    def atomsWithCorrectedFluctuations(self):
+        """
+        Correct fluctuations using two rules: (1) If there is an
+        anisotropic fluctuation tensor with at least one negative
+        eigenvalue, but with a positive trace, replace the negative
+        eigenvalues by zero. If the trace is negative, set the fluctuation
+        tensor to zero. (2) If there is a scalar fluctuation that is
+        negative, replace it by zero.
+        
+        @return: a generator yielding the atoms in the asymmetric unit
+                 after correction of the fluctuation tensor
+        @rtype: generator
+        """
+        for a in self.atoms:
+            adp = a.fluctuation
+            if adp is None:
+                adp = 0.
+            if not isinstance(adp, float):
+                if not adp.isPositiveDefinite():
+                    fixed = adp.makeDefinite()
+                    if fixed.isPositiveDefinite():
+                        adp = fixed
+                    else:
+                        adp = adp.trace()
+            if isinstance(adp, float) and adp < 0.:
+                adp = 0.
+            yield (a.atom_id, a.element, a.position, adp, a.occupancy)
+
+    def atomsWithNegativeFluctuations(self):
+        """
+        @return: a generator yielding the atoms in the asymmetric unit
+                 whose fluctuation parameter has negative eigenvalues
+        @rtype: generator
+        """
+        for a in self.atoms:
+            adp = a.fluctuation
+            if adp is not None and \
+               ((isinstance(adp, float) and adp < 0.)
+                or ((not isinstance(adp, float))
+                    and N.logical_or.reduce(adp.eigenvalues() < 0.))):
+                yield (a.atom_id, a.element, a.position,
+                       a.fluctuation, a.occupancy)
+        
 
 class PDBCrystal(Crystal):
 
