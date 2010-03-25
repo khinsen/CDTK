@@ -59,7 +59,7 @@ for filename in [file_args[0], complement_file]:
 data = MMCIFStructureFactorData(file_args[0], complement_file)
 
 pickle_file = file(file_args[1], 'wb')
-cPickle.dump((data.reflections, data.data, data.model),
+cPickle.dump((data.reflections, data.data.amplitudes(), data.model),
              pickle_file)
 pickle_file.close()
 
