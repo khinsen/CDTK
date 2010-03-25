@@ -729,3 +729,13 @@ class ReflectionSubset(ReflectionSelector):
         """
         s = [r.sVector().length() for r in self]
         return min(s), max(s)
+
+    def resolutionRange(self):
+        """
+        @return: a tuple (r_min, r_max) containing the range of
+                 resolutions in the reflection set
+        @rtype: C{tuple} of C{float}
+        @raise ZeroDivisionError: if the upper resolution limit is infinite
+        """
+        s_min, s_max = self.sRange()
+        return 1./s_max, 1./s_min
