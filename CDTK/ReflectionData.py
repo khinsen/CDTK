@@ -557,23 +557,27 @@ class AmplitudeData(object):
             sum_diff += abs(f_self-scale*f_other)
         return sum_diff/sum_self, scale
 
-    def rFactorByResolution(self, other, nbins = 50):
+    def rFactorByResolution(self, other, subset = None, nbins = 50):
         """
         @param other: reflection data containing amplitudes or structure factors
+        @param subset: a subset of the reflections to use,
+                       or C{None} for all reflections
         @param nbins: the number of intervals into which the resolution range
-                      is divided before calculating the R factor for each
-                      interval
+                      of set subset is divided before calculating the
+                      R factor for each interval
         @type nbins: C{int}
         @return: the R factor between the two data sets for each interval
         @rtype: C{Scientific.Functions.InterpolatingFunction}
         """
         from Scientific.Functions.Interpolation import InterpolatingFunction
         assert isinstance(other, AmplitudeData)
-        s_min, s_max = self.reflection_set.sRange()
+        if subset is None:
+            subset = self.reflection_set
+        s_min, s_max = subset.sRange()
         bin_width = (s_max-s_min)/nbins
         sum_self = N.zeros((nbins,), N.Float)
         sum_diff = N.zeros((nbins,), N.Float)
-        for r in self.reflection_set:
+        for r in subset:
             f_self = self[r]
             f_other = other[r]
             if f_self is None or f_other is None:
