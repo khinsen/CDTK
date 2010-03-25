@@ -240,8 +240,12 @@ class Crystal(object):
             a.fluctuation = refinement_engine.getADP(a.atom_id)
             a.occupancy = refinement_engine.getOccupancy(a.atom_id)
 
-    def countAtomsByElement(self):
+    def countAtomsByElement(self, in_unit_cell=False):
         """
+        @param in_unit_cell: if C{False}, count atoms in the
+                             asymmetric unit, if C{True} count
+                             atoms in the unit cell
+        @type in_unit_cell: C{bool}
         @return: a dictionary mapping chemical element symbols
                  to the number of atoms of that element in the
                  crystal. Note that the number of atoms can be
@@ -249,11 +253,15 @@ class Crystal(object):
                  necessarily add up to integer values.
         @rtype: C{dict}
         """
+        if in_unit_cell:
+            z = len(self.space_group)
+        else:
+            z = 1
         counts = {}
         for atom_id, element, position, fluctuation, occupancy in self:
             counts[element] = counts.get(element, 0.) + occupancy
         for element in counts.keys():
-            n_float = counts[element]
+            n_float = z*counts[element]
             n_int = int(n_float)
             if float(n_int) == n_float:
                 counts[element] = n_int
@@ -329,7 +337,7 @@ class PDBCrystal(Crystal):
                                and residue number as argument. If it returns
                                True, the residue is included, otherwise it
                                is discarded. If no residue_filter is given,
-                               all residues are includes.
+                               all residues are included.
         """
         from Scientific.IO.PDB import Structure
         s = Structure(file_or_filename)
