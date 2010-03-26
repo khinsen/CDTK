@@ -39,10 +39,11 @@ class Map(object):
         self.cell = cell
         self.array = N.zeros((n1, n2, n3), N.Float)
         self.shape = (n1, n2, n3)
-        self.x1 = N.arange(n1)/float(n1)
-        self.x2 = N.arange(n2)/float(n2)
-        self.x3 = N.arange(n3)/float(n3)
-        self.vmd_origin = Vector(0., 0., 0.)
+        self.x1 = N.arange(n1)/float(n1)-0.5
+        self.x2 = N.arange(n2)/float(n2)-0.5
+        self.x3 = N.arange(n3)/float(n3)-0.5
+        e1, e2, e3 = self.cell.basisVectors()
+        self.vmd_origin = -0.5*(e1+e2+e3)
 
     def makePositive(self):
         """
@@ -196,8 +197,8 @@ class ElectronDensityMap(Map):
         for atom_id, element, position, adp, occupancy in atom_iterator:
             a, b = atomic_scattering_factors[element.lower()]
             bdiv = b / (2.*N.pi**2)
-            xa = cell.cartesianToFractional(position)
-            xa = xa-N.floor(xa) # map to interval [0..1)
+            xa = cell.cartesianToFractional(position)+0.5
+            xa -= N.floor(xa)+0.5
             dx1 = self.x1-xa[0]
             dx1 += (dx1 < -0.5).astype(N.Int) - (dx1 >= 0.5).astype(N.Int)
             dx2 = self.x2-xa[1]
