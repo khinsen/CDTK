@@ -324,26 +324,64 @@ class MMCIFParser(object):
         @param categories: the category-specific handlers
         @type categories: C{dict}
         """
+        accumulator = None
         for item_type, item in self.parseAndSelect(categories.keys(), data):
 
             if item_type is DATA:
                 label1, label2, value = item
-                categories[label1][label2] = value
-
-            elif item_type is TABLE_HEADER:
-                indices = {}
-                for i, (label1, label2) in enumerate(item):
-                    indices[label2] = i
                 handler = categories[label1]
-
-            elif item_type is TABLE_DATA:
-                handler(indices, item)
+                if isinstance(handler, dict):
+                    if accumulator is not None:
+                        accumulator.deliver()
+                        accumulator = None
+                    handler[label2] = value
+                else:
+                    if accumulator is not None \
+                           and not accumulator.sameLabel(label1):
+                        accumulator.deliver()
+                        accumulator = None
+                    if accumulator is None:
+                        accumulator = DataAccumulator(label1, handler)
+                    accumulator.add(label2, value)
 
             else:
-                raise MMCIFSyntaxError("Unexpected item type %s"
-                                       % str(item_type),
-                                       self.line_number)
 
+                if accumulator is not None:
+                    accumulator.deliver()
+                    accumulator = None
+
+                if item_type is TABLE_HEADER:
+                    indices = {}
+                    for i, (label1, label2) in enumerate(item):
+                        indices[label2] = i
+                    handler = categories[label1]
+
+                elif item_type is TABLE_DATA:
+                    handler(indices, item)
+
+                else:
+                    raise MMCIFSyntaxError("Unexpected item type %s"
+                                           % str(item_type),
+                                           self.line_number)
+
+class DataAccumulator(object):
+
+    def __init__(self, label, handler):
+        self.label = label
+        self.handler = handler
+        self.fields = []
+        self.values = []
+
+    def add(self, field, value):
+        self.fields.append(field)
+        self.values.append(value)
+
+    def deliver(self):
+        self.handler(dict((f, i) for i, f in  enumerate(self.fields)),
+                     self.values)
+
+    def sameLabel(self, label):
+        return self.label == label
 
 class MMCIFStructureFactorData(object):
 
