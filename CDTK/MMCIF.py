@@ -169,7 +169,8 @@ class MMCIFParser(object):
                                                          "stop"):
                         yield DATA_VALUE, token
                     else:
-                        yield KEYWORD, (token_parts[0].lower(), token_parts[1])
+                        yield KEYWORD, (token_parts[0].lower(),
+                                        '_'.join(token_parts[1:]))
 
     def parse(self):
         """
