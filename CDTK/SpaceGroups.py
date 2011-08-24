@@ -23369,6 +23369,7 @@ space_groups['P 21'] = space_groups['P 1 21 1']
 space_groups['P 1 1 21'] = space_groups['P 1 21 1']
 
 space_groups['P 2 21 21'] = space_groups['P 21 21 2']
+space_groups['P 21 2 21'] = space_groups['P 21 21 2']
 
 # Make it possible to use space group symbols without spaces, which occur
 # in several PDB entries.
