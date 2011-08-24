@@ -1,18 +1,19 @@
+
 # Set "build_from" to  "c" to compile the pre-built C interface module.
-# Choose "pyrex" for building from the original Pyrex source code.
+# Choose "cython" for building from the original Cython source code.
 #
 
-build_from = 'pyrex'
+build_from = 'cython'
 fftw_prefix = None
 ccp4_prefix = None
 gpp4_prefix = None
 
-assert build_from in ['c', 'pyrex']
+assert build_from in ['c', 'cython']
 
 
 from distutils.core import setup, Extension
-if build_from == 'pyrex':
-    from Pyrex.Distutils import build_ext
+if build_from == 'cython':
+    from Cython.Distutils import build_ext
 else:
     from distutils.command.build_ext import build_ext
 import os, sys
@@ -32,15 +33,14 @@ except AttributeError:
     num_package = "Numeric"
 if num_package == "NumPy":
     compile_args.append("-DNUMPY=1")
-    include_dirs.append(os.path.join(sys.prefix,
-                            "lib/python%s.%s/site-packages/numpy/core/include"
-                                 % sys.version_info [:2]))
+    import numpy.distutils.misc_util
+    include_dirs.extend(numpy.distutils.misc_util.get_numpy_include_dirs())
 
 if fftw_prefix is None:
     try:
         fftw_prefix=os.environ['FFTW_PREFIX']
     except KeyError:
-        for fftw_prefix in ['/usr/local', '/usr', '/sw']:
+        for fftw_prefix in ['/usr/local', '/usr', '/sw', '/opt', '/opt/local']:
             fftw_include = os.path.join(fftw_prefix, 'include')
             fftw_lib = os.path.join(fftw_prefix, 'lib')
             if os.path.exists(os.path.join(fftw_include, 'fftw3.h')):
@@ -73,27 +73,27 @@ else:
 
 map_module_source = {
     'c': 'Src/CDTK_sf_fft.c',
-    'pyrex': 'Src/CDTK_sf_fft.pyx'
+    'cython': 'Src/CDTK_sf_fft.pyx'
     }
 sfcalc_module_source = {
     'c': 'Src/CDTK_sfcalc.c',
-    'pyrex': 'Src/CDTK_sfcalc.pyx'
+    'cython': 'Src/CDTK_sfcalc.pyx'
     }
 math_module_source = {
     'c': 'Src/CDTK_math.c',
-    'pyrex': 'Src/CDTK_math.pyx'
+    'cython': 'Src/CDTK_math.pyx'
     }
 symtensor_module_source = {
     'c': 'Src/CDTK_symtensor.c',
-    'pyrex': 'Src/CDTK_symtensor.pyx'
+    'cython': 'Src/CDTK_symtensor.pyx'
     }
 refinement_module_source = {
     'c': 'Src/CDTK_refinement.c',
-    'pyrex': 'Src/CDTK_refinement.pyx'
+    'cython': 'Src/CDTK_refinement.pyx'
     }
 mtz_module_source = {
     'c': 'Src/CDTK_MTZ.c',
-    'pyrex': 'Src/CDTK_MTZ.pyx'
+    'cython': 'Src/CDTK_MTZ.pyx'
     }
 
 extension_modules = [Extension('CDTK_sf_fft',
