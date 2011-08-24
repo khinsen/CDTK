@@ -4,6 +4,7 @@ syntax: glob
 **.pyc
 **.pyo
 **.pdfsync
+.eshell-bufname
 build
 dist
 epydoc
