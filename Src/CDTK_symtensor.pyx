@@ -311,7 +311,8 @@ cdef class SymmetricTensor(symmetric_tensor):
                 array = N.array(xx)
             rank = len(array.shape)
             if rank == 0:
-                self.xx = self.yy = self.zz = float(array)
+                v = float(array)  # assignment in two steps to work around
+                self.xx = self.yy = self.zz = v # a Cython bug
                 self.yz = self.xz = self.xy = 0.
             elif rank == 1:
                 self.xx, self.yy, self.zz, self.yz, self.xz, self.xy = array
