@@ -92,7 +92,7 @@ def sfTerm(array_type result, array_type s, array_type f_atom,
         # highly unlikely), fall back to Python version.
         sf = N.exp(twopi*1j*(N.dot(s, r)))
         if use_u == 1:
-            dwf = N.exp(twopisq*u_scalar*N.sum(sv*sv, axis=-1))
+            dwf = N.exp(twopisq*u_scalar*N.sum(s*s, axis=-1))
             N.add(result, f_atom*dwf*sf, result)
         if use_u == 2:
             dwf = N.exp(twopisq*N.sum(N.dot(s, u)*s, axis=-1))
