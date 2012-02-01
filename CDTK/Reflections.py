@@ -254,7 +254,8 @@ class ReflectionSelector(object):
                        will be divided.
         @type shells:  C{int} or sequence of C{float}
         @return: the resolution shells, each of which has its average
-                 s value stored in the attribute 's'.
+                 s value stored in the attribute 's_avg'. The average is
+                 C{None} if the subset is empty.
         @rtype: sequence of L{ReflectionSubset}
         """
         if isinstance(shells, int):
@@ -283,7 +284,10 @@ class ReflectionSelector(object):
             subset.s_min = shells[i]
             subset.s_max = shells[i+1]
             subset.s_middle = 0.5*(shells[i]+shells[i+1])
-            subset.s_avg = s_sum[i]/len(reflections[i])
+            if reflections[i]:
+                subset.s_avg = s_sum[i]/len(reflections[i])
+            else:
+                subset.s_avg = None
             subsets.append(subset)
         return subsets
 
