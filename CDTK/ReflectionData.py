@@ -694,7 +694,7 @@ class AmplitudeData(object):
             u += SymmetricTensor(duxx, duyy, duzz, duyz, duxz, duxy)
             u = u.makeDefinite()
 
-        return k*self.applyDebyeWallerFactor(u), k, u
+        return float(k)*self.applyDebyeWallerFactor(u), k, u
 
 
 class IntensityData(object):
