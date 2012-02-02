@@ -7,7 +7,6 @@ syntax: glob
 .eshell-bufname
 build
 dist
-epydoc
 Test
 Tests/2ONX.pdb.gz
 Tests/2onx-sf.cif.gz
@@ -20,7 +19,10 @@ Src/CDTK_symtensor.c
 Doc/*.log
 Doc/*.aux
 Doc/*.pdf
-Doc/reference
+Doc/_build
+Doc/_static
+Doc/_templates
+Doc/module_reference
 MANIFEST
 HG_CHANGESET_ID
 1
