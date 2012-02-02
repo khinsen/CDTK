@@ -4,26 +4,27 @@
 # distributed under the CeCILL-C licence. See the file LICENCE
 # for the full text of this licence.
 #
-# Written by Konrad Hinsen.
-#
 
 """
 Reflections
 
-A L{ReflectionSet} object represents the reflections that are observed
+A ReflectionSet object represents the reflections that are observed
 in a crystallographic experiment. It contains reflections that lie
 in a spherical shell in reciprocal space covering a specific
-resolution range. Iteration over a L{ReflectionSet} yields a minimal
-set of L{Reflection} objects from which all other reflections can be
+resolution range. Iteration over a ReflectionSet yields a minimal
+set of Reflection objects from which all other reflections can be
 obtained by symmetry criteria. Indexation with a tuple of Miller
-indices (h, k, l) returns the corresponding L{Reflection} object.
+indices (h, k, l) returns the corresponding Reflection object.
 
-A L{Reflection} object represents a single reflection in a
-L{ReflectionSet}. L{Reflection} objects are used as indices to
-L{CDTK.ReflectionData.ReflectionData} objects.
+A Reflection object represents a single reflection in a
+ReflectionSet}. Reflection objects are used as indices to
+CDTK.ReflectionData.ReflectionData objects.
 
 Data defined per reflection is handled by the module
-L{CDTK.ReflectionData}.
+CDTK.ReflectionData.
+
+.. moduleauthor:: Konrad Hinsen <konrad.hinsen@cnrs-orleans.fr>
+
 """
 
 from CDTK.Crystal import Crystal
@@ -36,7 +37,7 @@ from Scientific import N
 class Reflection(object):
 
     """
-    Reflection within a L{ReflectionSet}
+    Reflection within a ReflectionSet
 
     Applications obtain Reflection objects from ReflectionSet objects,
     but should not attempt to create their own ones.
@@ -44,18 +45,18 @@ class Reflection(object):
 
     def __init__(self, h, k, l, crystal, index):
         """
-        @param h: the first Miller index
-        @type h: C{int}
-        @param k: the second Miller index
-        @type k: C{int}
-        @param l: the third Miller index
-        @type l: C{int}
-        @param crystal: the crystal to which the reflection belongs
-        @type crystal: L{CDTK.Crystal.Crystal}
-        @param index: the corresponding index into the list of
+        :param h: the first Miller index
+        :type h: int
+        :param k: the second Miller index
+        :type k: int
+        :param l: the third Miller index
+        :type l: int
+        :param crystal: the crystal to which the reflection belongs
+        :type crystal: CDTK.Crystal.Crystal
+        :param index: the corresponding index into the list of
                       minimal reflections of the reflection set.
-                      The index is C{None} for systematic absences.
-        @type index: C{int}
+                      The index is None for systematic absences.
+        :type index: int
         """
         self.h = h
         self.k = k
@@ -102,12 +103,12 @@ class Reflection(object):
 
     def sVector(self, cell=None):
         """
-        @param cell: the unit cell for which the scattering vector is
+        :param cell: the unit cell for which the scattering vector is
                      calculated. Defaults to the unit cell of the
                      reflection set.
-        @type cell: L{CDTK.Crystal.UnitCell}
-        @return: the scattering vector of the reflection
-        @rtype: C{Scientific.Geometry.Vector}
+        :type cell: CDTK.Crystal.UnitCell
+        :return: the scattering vector of the reflection
+        :rtype: Scientific.Geometry.Vector
         """
         if cell is None:
             cell = self.crystal.cell
@@ -116,27 +117,27 @@ class Reflection(object):
 
     def qVector(self, cell=None):
         """
-        @param cell: the unit cell for which the scattering vector is
+        :param cell: the unit cell for which the scattering vector is
                      calculated. Defaults to the unit cell of the
                      reflection set.
-        @type cell: L{CDTK.Crystal.UnitCell}
-        @return: the scattering vector of the reflection multiplied by 2pi
-        @rtype: C{Scientific.Geometry.Vector}
+        :type cell: CDTK.Crystal.UnitCell
+        :return: the scattering vector of the reflection multiplied by 2pi
+        :rtype: Scientific.Geometry.Vector
         """
         return 2.*N.pi*self.sVector(cell)
 
     def resolution(self):
         """
-        @return: the resolution of the reflection
-        @rtype: C{float}
+        :return: the resolution of the reflection
+        :rtype: float
         """
         return 1./self.sVector().length()
 
     def isSystematicAbsence(self):
         """
-        @return: C{True} if the reflection is systematically absent
+        :return: True if the reflection is systematically absent
                  due to symmetry
-        @rtype: C{bool}
+        :rtype: bool
         """
         hkl = N.array([self.h, self.k, self.l])
         pf = {}
@@ -151,11 +152,11 @@ class Reflection(object):
 
     def symmetryEquivalents(self):
         """
-        @return: a set of all reflections that are equivalent due to
+        :return: a set of all reflections that are equivalent due to
                  space group symmetry operations or due to the general
                  centrosymmetry of reciprocal space in the absence of
                  anomalous scattering
-        @rtype: C{set}
+        :rtype: set
         """
         c = self.crystal
         sg = c.space_group
@@ -179,11 +180,11 @@ class Reflection(object):
 
     def symmetryFactor(self):
         """
-        @return: the symmetry factor used in the normalization of structure
+        :return: the symmetry factor used in the normalization of structure
                  factors or intensities. It is equal to the number of
                  space group symmetry operations that map a reflection
                  to itself.
-        @rtype: C{int}
+        :rtype: int
         """
         sg = self.crystal.space_group
         equivalents = sg.symmetryEquivalentMillerIndices(self.array)[0]
@@ -191,10 +192,10 @@ class Reflection(object):
 
     def isCentric(self, _equivalents=None):
         """
-        @return: C{True} if the reflection is centric (i.e. equivalent to
+        :return: True if the reflection is centric (i.e. equivalent to
                  the reflection (-h, -k, -l) by space group symmetry
                  operations)
-        @rtype: C{bool}
+        :rtype: bool
         """
         sg = self.crystal.space_group
         if _equivalents is None:
@@ -210,12 +211,12 @@ class ReflectionSelector(object):
 
     def select(self, condition):
         """
-        @param condition: a function that returns C{True} for each reflection
+        :param condition: a function that returns True for each reflection
                           to be selected.
-        @type condition: function taking a L{Reflection} argument
-                         and returning C{bool}
-        @return: the subset of the reflections that satisfy the condition
-        @rtype: L{ReflectionSubset}
+        :type condition: function taking a Reflection argument
+                         and returning bool
+        :return: the subset of the reflections that satisfy the condition
+        :rtype: ReflectionSubset
         """
         return ReflectionSubset(self, [r for r in self if condition(r)])
 
@@ -224,11 +225,11 @@ class ReflectionSelector(object):
         Partition the reflections into several subsets of
         given (approximate) sizes by a random choice algorithm.
 
-        @param fractions: a sequence of fractions (between 0. and 1.)
+        :param fractions: a sequence of fractions (between 0. and 1.)
                           that specify the size that each subset should have
-        @type fractions: sequence of C{int}
-        @return: subsets of approximately the requested sizes
-        @rtype: sequence of L{ReflectionSubset}
+        :type fractions: sequence of int
+        :return: subsets of approximately the requested sizes
+        :rtype: sequence of ReflectionSubset
         """
         if N.sum(fractions) > 1.:
             raise ValueError("Sum of fractions > 1")
@@ -247,16 +248,16 @@ class ReflectionSelector(object):
         """
         Partition the reflections into resolution shells.
 
-        @param shells: the resolution shell specification, either a sequence of
+        :param shells: the resolution shell specification, either a sequence of
                        s values delimiting the shells (one more value than
                        there will be shells), or an integer indicating the
                        number of shells into which the total resolution range
                        will be divided.
-        @type shells:  C{int} or sequence of C{float}
-        @return: the resolution shells, each of which has its average
+        :type shells:  int or sequence of float
+        :return: the resolution shells, each of which has its average
                  s value stored in the attribute 's_avg'. The average is
-                 C{None} if the subset is empty.
-        @rtype: sequence of L{ReflectionSubset}
+                 None if the subset is empty.
+        :rtype: sequence of ReflectionSubset
         """
         if isinstance(shells, int):
             assert shells > 0
@@ -311,21 +312,21 @@ class ReflectionSet(ReflectionSelector):
                  max_resolution=None, min_resolution=None,
                  compact=True):
         """
-        @param cell: the unit cell of the crystal
-        @type cell: L{CDTK.Crystal.UnitCell}
-        @param space_group: the space group of the crystal
-        @type space_group: L{CDTK.SpaceGroups.SpaceGroup}
-        @param max_resolution: the upper limit of the resolution range.
+        :param cell: the unit cell of the crystal
+        :type cell: CDTK.Crystal.UnitCell
+        :param space_group: the space group of the crystal
+        :type space_group: CDTK.SpaceGroups.SpaceGroup
+        :param max_resolution: the upper limit of the resolution range.
                                If not None, all reflections in the
                                specified resolution range are added to the
                                reflection set. If None, the reflection set
                                is initially empty.
-        @type max_resolution: C{float}
-        @param min_resolution: the lower limit of the resolution range.
+        :type max_resolution: float
+        :param min_resolution: the lower limit of the resolution range.
                                If None, there is no lower limit and the
                                reflection (0, 0, 0) is included in the set.
-        @type min_resolution: C{float}
-        @param compact: if True, only the reflections in an asymmetric unit
+        :type min_resolution: float
+        :param compact: if True, only the reflections in an asymmetric unit
                         are stored explicitly. Retrieving a reflection for
                         a given set of Miller indices can be slow, because
                         the symmetry operations of the space group must be
@@ -335,7 +336,7 @@ class ReflectionSet(ReflectionSelector):
                         performance difference for iteration over a
                         reflection set, which is always an iteration over an
                         asymmetric unit.
-        @type compact: C{Bool}
+        :type compact: Bool
         """
         self.cell = cell
         self.space_group = space_group
@@ -356,12 +357,12 @@ class ReflectionSet(ReflectionSelector):
         Adds the reflection (h, k, l) and all reflections that are equivalent
         by symmetry to the reflection set.
 
-        @param h: the first Miller index
-        @type h: C{int}
-        @param k: the second Miller index
-        @type k: C{int}
-        @param l: the third Miller index
-        @type l: C{int}
+        :param h: the first Miller index
+        :type h: int
+        :param k: the second Miller index
+        :type k: int
+        :param l: the third Miller index
+        :type l: int
         """
         hkl = Reflection(h, k, l, self.crystal,
                          len(self.minimal_reflection_list))
@@ -419,15 +420,15 @@ class ReflectionSet(ReflectionSelector):
         Add all reflections in the spherical shell in reciprocal space
         specified by the resolution range to the reflection set.
 
-        @param max_resolution: the upper limit of the resolution range.
+        :param max_resolution: the upper limit of the resolution range.
                                If both max_resolution and min_resolution
-                               are C{None}, use the resolution range of
+                               are None, use the resolution range of
                                the currenly present reflections.
-        @type max_resolution: C{float}
-        @param min_resolution: the lower limit of the resolution range.
+        :type max_resolution: float
+        :param min_resolution: the lower limit of the resolution range.
                                If None, there is no lower limit and the
                                reflection (0, 0, 0) is included in the set.
-        @type min_resolution: C{float}
+        :type min_resolution: float
         """
         if max_resolution is None:
             max_resolution = 1./self.s_max
@@ -460,18 +461,18 @@ class ReflectionSet(ReflectionSelector):
 
     def isComplete(self, s_min=None, s_max=None):
         """
-        @param s_min: the lower limit of the range of scattering vector
+        :param s_min: the lower limit of the range of scattering vector
                       lengths to check. Defaults to the lowest-resolution
                       reflection.
-        @type s_min: C{float}
-        @param s_max: the upper limit of the range of scattering vector
+        :type s_min: float
+        :param s_max: the upper limit of the range of scattering vector
                       lengths to check. Defaults to the highest-resolution
                       reflection.
-        @type s_max: C{float}
-        @return: C{True} if the ReflectionSet is known to contain all
-                 reflections in the given range, C{False} if the
+        :type s_max: float
+        :return: True if the ReflectionSet is known to contain all
+                 reflections in the given range, False if the
                  completeness cannot be guaranteed
-        @rtype: C{bool}
+        :rtype: bool
         """
         c_min, c_max = self.completeness_range
         if c_min is None or c_max is None:
@@ -482,9 +483,9 @@ class ReflectionSet(ReflectionSelector):
 
     def sRange(self):
         """
-        @return: a tuple (s_min, s_max) containing the range of
+        :return: a tuple (s_min, s_max) containing the range of
                  scattering vector lengths in the reflection set
-        @rtype: C{tuple} of C{float}
+        :rtype: tuple of float
         """
         if not self.reflection_map:
             raise ValueError("Empty ReflectionSet")
@@ -492,10 +493,10 @@ class ReflectionSet(ReflectionSelector):
 
     def resolutionRange(self):
         """
-        @return: a tuple (r_min, r_max) containing the range of
+        :return: a tuple (r_min, r_max) containing the range of
                  resolutions in the reflection set
-        @rtype: C{tuple} of C{float}
-        @raise ZeroDivisionError: if the upper resolution limit is infinite
+        :rtype: tuple of float
+        :raise ZeroDivisionError: if the upper resolution limit is infinite
         """
         if not self.reflection_map:
             raise ValueError("Empty ReflectionSet")
@@ -503,9 +504,9 @@ class ReflectionSet(ReflectionSelector):
 
     def maxHKL(self):
         """
-        @return: the highest absolute values of the Miller indices in the
+        :return: the highest absolute values of the Miller indices in the
                  reflection set
-        @rtype: C{tuple}
+        :rtype: tuple
         """
         if self.compact:
             max_hkl = N.zeros((3,), N.Int)
@@ -518,27 +519,27 @@ class ReflectionSet(ReflectionSelector):
 
     def __iter__(self):
         """
-        @return: a generator yielding the elements of the minimal
+        :return: a generator yielding the elements of the minimal
                  reflection set
-        @rtype: generator
+        :rtype: generator
         """
         for r in self.minimal_reflection_list:
             yield r
 
     def __len__(self):
         """
-        @return: the number of reflections in the reflection set
-        @rtype: C{int}
+        :return: the number of reflections in the reflection set
+        :rtype: int
         """
         return len(self.minimal_reflection_list)
 
     def __getitem__(self, item):
         """
-        @param item: a set of Miller indices (h, k, l)
-        @type item: C{tuple} of C{int}
-        @return: the corresponding reflection object
-        @rtype: L{CDTK.Reflections.Reflection}
-        @raise KeyError: if the requested reflection is not part of the set
+        :param item: a set of Miller indices (h, k, l)
+        :type item: tuple of int
+        :return: the corresponding reflection object
+        :rtype: CDTK.Reflections.Reflection
+        :raise KeyError: if the requested reflection is not part of the set
         """
         try:
             return self.reflection_map[item]
@@ -563,10 +564,10 @@ class ReflectionSet(ReflectionSelector):
         If the reflection is not yet part of the reflection set, it is added
         first and all its symmetry equivalents are added as well.
 
-        @param hkl: a set of Miller indices (h, k, l)
-        @type hkl: C{tuple} of C{int}
-        @return: the corresponding reflection object
-        @rtype: L{CDTK.Reflections.Reflection}
+        :param hkl: a set of Miller indices (h, k, l)
+        :type hkl: tuple of int
+        :return: the corresponding reflection object
+        :rtype: CDTK.Reflections.Reflection
         """
         try:
             return self[hkl]
@@ -634,11 +635,11 @@ class ReflectionSet(ReflectionSelector):
 
     def sVectorArray(self, cell=None):
         """
-        @param cell: a unit cell, which defaults to the unit cell for
+        :param cell: a unit cell, which defaults to the unit cell for
                      which the reflection set is defined.
-        @type cell: L{CDTK.Crystal.UnitCell}
-        @return: an array containing the s vectors for all reflections
-        @rtype: C{N.array}
+        :type cell: CDTK.Crystal.UnitCell
+        :return: an array containing the s vectors for all reflections
+        :rtype: N.array
         """
         sv = N.zeros((len(self.minimal_reflection_list), 3), N.Float)
         for r in self:
@@ -650,13 +651,14 @@ class ReflectionSet(ReflectionSelector):
         Calculates the transformed s vectors and phases that are used
         for calculating the structure factor from the atoms in the
         asymmetric unit.
-        @param cell: a unit cell, which defaults to the unit cell for
-                     which the reflection set is defined.
-        @type cell: L{CDTK.Crystal.UnitCell}
-        @return: a tuple (s, p), where s is an array containing the s vectors
-                 for all reflections and space group operations and p is an
-                 array with the corresponding phases
-        @rtype: C{N.array}
+
+        :param cell: a unit cell, which defaults to the unit cell for
+            which the reflection set is defined.
+        :type cell: CDTK.Crystal.UnitCell
+        :returns: a tuple (s, p), where s is an array containing the s vectors
+            for all reflections and space group operations and p is an
+            array with the corresponding phases
+        :rtype: Scientific.N.array_type
         """
         if cell is None:
             cell = self.cell
@@ -684,9 +686,9 @@ class ReflectionSet(ReflectionSelector):
 
     def symmetryAndCentricityArrays(self):
         """
-        @return: an array containing the symmetry factors and centricity flags
+        :return: an array containing the symmetry factors and centricity flags
                  for all reflections
-        @rtype: C{N.array}
+        :rtype: N.array
         """
         sm = N.zeros((len(self.minimal_reflection_list), 2), N.Int)
         for r in self:
@@ -706,10 +708,10 @@ class ReflectionSubset(ReflectionSelector):
 
     def __init__(self, reflection_set, reflection_list):
         """
-        @param reflection_set: complete reflection set
-        @type reflection_set: L{ReflectionSet}
-        @param reflection_list: the reflections to be included in the subset
-        @type reflection_list: C{list}
+        :param reflection_set: complete reflection set
+        :type reflection_set: ReflectionSet
+        :param reflection_list: the reflections to be included in the subset
+        :type reflection_list: list
         """
         self.reflection_set = reflection_set
         self.reflection_list = reflection_list
@@ -719,27 +721,27 @@ class ReflectionSubset(ReflectionSelector):
 
     def __iter__(self):
         """
-        @return: a generator yielding the reflections of the subset
-        @rtype: generator
+        :return: a generator yielding the reflections of the subset
+        :rtype: generator
         """
         for r in self.reflection_list:
             yield r
 
     def sRange(self):
         """
-        @return: a tuple (s_min, s_max) containing the range of
+        :return: a tuple (s_min, s_max) containing the range of
                  scattering vector lengths in the reflection set
-        @rtype: C{tuple} of C{float}
+        :rtype: tuple of float
         """
         s = [r.sVector().length() for r in self]
         return min(s), max(s)
 
     def resolutionRange(self):
         """
-        @return: a tuple (r_min, r_max) containing the range of
+        :return: a tuple (r_min, r_max) containing the range of
                  resolutions in the reflection set
-        @rtype: C{tuple} of C{float}
-        @raise ZeroDivisionError: if the upper resolution limit is infinite
+        :rtype: tuple of float
+        :raise ZeroDivisionError: if the upper resolution limit is infinite
         """
         s_min, s_max = self.sRange()
         return 1./s_max, 1./s_min

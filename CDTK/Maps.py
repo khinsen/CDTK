@@ -4,11 +4,12 @@
 # distributed under the CeCILL-C licence. See the file LICENCE
 # for the full text of this licence.
 #
-# Written by Konrad Hinsen.
-#
 
 """
 Electron density maps and Patterson maps
+
+.. moduleauthor:: Konrad Hinsen <konrad.hinsen@cnrs-orleans.fr>
+
 """
 
 from CDTK import Units
@@ -24,17 +25,17 @@ class Map(object):
 
     def __init__(self, cell, n1, n2, n3):
         """
-        @param cell: the unit cell for which the map is defined
-        @type cell: L{CDTK.Crystal.UnitCell}
-        @param n1: the number of points in the grid along the
+        :param cell: the unit cell for which the map is defined
+        :type cell: CDTK.Crystal.UnitCell
+        :param n1: the number of points in the grid along the
                    first lattice vector
-        @type n1: C{int}
-        @param n2: the number of points in the grid along the
+        :type n1: int
+        :param n2: the number of points in the grid along the
                    second lattice vector
-        @type n2: C{int}
-        @param n3: the number of points in the grid along the
+        :type n2: int
+        :param n3: the number of points in the grid along the
                    third lattice vector
-        @type n3: C{int}
+        :type n3: int
         """
         self.cell = cell
         self.array = N.zeros((n1, n2, n3), N.Float)
@@ -55,10 +56,10 @@ class Map(object):
 
     def writeToVMDScript(self, filename, label=None):
         """
-        @param filename: the name of the generated VMD script
-        @type filename: C{string}
-        @param label: the label of the map as displayed by VMD
-        @type label: C{string}
+        :param filename: the name of the generated VMD script
+        :type filename: string
+        :param label: the label of the map as displayed by VMD
+        :type label: string
         """
         if label is None:
             label = self.default_label
@@ -96,18 +97,18 @@ class ElectronDensityMap(Map):
     @classmethod
     def fromUnitCellAtoms(cls, cell, n1, n2, n3, atom_iterator):
         """
-        @param cell: the unit cell for which the map is defined
-        @type cell: L{CDTK.Crystal.UnitCell}
-        @param n1: the number of points in the grid along the
+        :param cell: the unit cell for which the map is defined
+        :type cell: CDTK.Crystal.UnitCell
+        :param n1: the number of points in the grid along the
                    first lattice vector
-        @type n1: C{int}
-        @param n2: the number of points in the grid along the
+        :type n1: int
+        :param n2: the number of points in the grid along the
                    second lattice vector
-        @type n2: C{int}
-        @param n3: the number of points in the grid along the
+        :type n2: int
+        :param n3: the number of points in the grid along the
                    third lattice vector
-        @type n3: C{int}
-        @param atom_iterator: an iterator or sequence that yields
+        :type n3: int
+        :param atom_iterator: an iterator or sequence that yields
                               for each atom in the unit cell a
                               tuple of (atom_id, chemical element,
                               position vector, position fluctuation,
@@ -115,7 +116,7 @@ class ElectronDensityMap(Map):
                               can be a symmetric tensor (ADP tensor)
                               or a scalar (implicitly multiplied by
                               the unit tensor).
-        @type atom_iterator: iterable
+        :type atom_iterator: iterable
         """
         obj = cls(cell, n1, n2, n3)
         obj.calculateFromUnitCellAtoms(atom_iterator, None)
@@ -124,24 +125,24 @@ class ElectronDensityMap(Map):
     @classmethod
     def fromUniverse(cls, cell, n1, n2, n3, universe, adps, conf=None):
         """
-        @param cell: the unit cell for which the map is defined
-        @type cell: L{CDTK.Crystal.UnitCell}
-        @param n1: the number of points in the grid along the
+        :param cell: the unit cell for which the map is defined
+        :type cell: CDTK.Crystal.UnitCell
+        :param n1: the number of points in the grid along the
                    first lattice vector
-        @type n1: C{int}
-        @param n2: the number of points in the grid along the
+        :type n1: int
+        :param n2: the number of points in the grid along the
                    second lattice vector
-        @type n2: C{int}
-        @param n3: the number of points in the grid along the
+        :type n2: int
+        :param n3: the number of points in the grid along the
                    third lattice vector
-        @type n3: C{int}
-        @param universe: a periodic MMTK universe
-        @type universe: C{MMTK.Periodic3DUniverse}
-        @param adps: the anisotropic displacement parameters for all atoms
-        @type adps: C{MMTK.ParticleTensor}
-        @param conf: a configuration for the universe, defaults to the
+        :type n3: int
+        :param universe: a periodic MMTK universe
+        :type universe: MMTK.Periodic3DUniverse
+        :param adps: the anisotropic displacement parameters for all atoms
+        :type adps: MMTK.ParticleTensor
+        :param conf: a configuration for the universe, defaults to the
                      current configuration
-        @type conf: C{MMTK.Configuration}
+        :type conf: MMTK.Configuration
         """
         obj = cls(cell, n1, n2, n3)
         obj.calculateFromUniverse(universe, adps, conf)
@@ -150,19 +151,19 @@ class ElectronDensityMap(Map):
     @classmethod
     def fromStructureFactor(cls, cell, n1, n2, n3, sf):
         """
-        @param cell: the unit cell for which the map is defined
-        @type cell: L{CDTK.Crystal.UnitCell}
-        @param n1: the number of points in the grid along the
+        :param cell: the unit cell for which the map is defined
+        :type cell: CDTK.Crystal.UnitCell
+        :param n1: the number of points in the grid along the
                    first lattice vector
-        @type n1: C{int}
-        @param n2: the number of points in the grid along the
+        :type n1: int
+        :param n2: the number of points in the grid along the
                    second lattice vector
-        @type n2: C{int}
-        @param n3: the number of points in the grid along the
+        :type n2: int
+        :param n3: the number of points in the grid along the
                    third lattice vector
-        @type n3: C{int}
-        @param sf: a structure factor set
-        @type sf: L{CDTK.Reflections.StructureFactor}
+        :type n3: int
+        :param sf: a structure factor set
+        :type sf: CDTK.Reflections.StructureFactor
         """
         obj = cls(cell, n1, n2, n3)
         obj.calculateFromStructureFactor(sf)
@@ -170,7 +171,7 @@ class ElectronDensityMap(Map):
 
     def calculateFromUnitCellAtoms(self, atom_iterator, cell=None):
         """
-        @param atom_iterator: an iterator or sequence that yields
+        :param atom_iterator: an iterator or sequence that yields
                               for each atom in the unit cell a
                               tuple of (atom_id, chemical element,
                               position vector, position fluctuation,
@@ -178,8 +179,8 @@ class ElectronDensityMap(Map):
                               can be a symmetric tensor (ADP tensor)
                               or a scalar (implicitly multiplied by
                               the unit tensor).
-        @type atom_iterator: iterable
-        @param cell: a unit cell, which defaults to the unit cell for
+        :type atom_iterator: iterable
+        :param cell: a unit cell, which defaults to the unit cell for
                      which the map object is defined. If a different
                      unit cell is given, the map is calculated for
                      this cell in fractional coordinates and converted
@@ -188,7 +189,7 @@ class ElectronDensityMap(Map):
                      unit cells are very similar, such as for unit cells
                      corresponding to different steps in a constant-pressure
                      Molecular Dynamics simulation.
-        @type cell: L{CDTK.Crystal.UnitCell}
+        :type cell: CDTK.Crystal.UnitCell
         """
         if cell is None:
             cell = self.cell
@@ -228,13 +229,13 @@ class ElectronDensityMap(Map):
 
     def calculateFromUniverse(self, universe, adps, conf=None):
         """
-        @param universe: a periodic MMTK universe
-        @type universe: C{MMTK.Periodic3DUniverse}
-        @param adps: the anisotropic displacement parameters for all atoms
-        @type adps: C{MMTK.ParticleTensor}
-        @param conf: a configuration for the universe, defaults to the
+        :param universe: a periodic MMTK universe
+        :type universe: MMTK.Periodic3DUniverse
+        :param adps: the anisotropic displacement parameters for all atoms
+        :type adps: MMTK.ParticleTensor
+        :param conf: a configuration for the universe, defaults to the
                      current configuration
-        @type conf: C{MMTK.Configuration}
+        :type conf: MMTK.Configuration
         """
         if conf is None:
             conf = universe.configuration()
@@ -247,8 +248,8 @@ class ElectronDensityMap(Map):
 
     def calculateFromStructureFactor(self, sf):
         """
-        @param sf: a structure factor set
-        @type sf: L{CDTK.Reflections.StructureFactor}
+        :param sf: a structure factor set
+        :type sf: CDTK.Reflections.StructureFactor
         """
         from CDTK_sf_fft import reflections_to_map
         from CDTK.ReflectionData import StructureFactor
@@ -280,27 +281,27 @@ class PattersonMap(Map):
     @classmethod
     def fromIntensities(cls, cell, n1, n2, n3, intensities):
         """
-        @param cell: the unit cell for which the map is defined
-        @type cell: L{CDTK.Crystal.UnitCell}
-        @param n1: the number of points in the grid along the
+        :param cell: the unit cell for which the map is defined
+        :type cell: CDTK.Crystal.UnitCell
+        :param n1: the number of points in the grid along the
                    first lattice vector
-        @type n1: C{int}
-        @param n2: the number of points in the grid along the
+        :type n1: int
+        :param n2: the number of points in the grid along the
                    second lattice vector
-        @type n2: C{int}
-        @param n3: the number of points in the grid along the
+        :type n2: int
+        :param n3: the number of points in the grid along the
                    third lattice vector
-        @type n3: C{int}
-        @param intensities: a set of reflection intensities
-        @type intensities: L{CDTK.Reflections.IntensityData}
+        :type n3: int
+        :param intensities: a set of reflection intensities
+        :type intensities: CDTK.Reflections.IntensityData
         """
         obj = cls(cell, n1, n2, n3)
         obj.calculateFromIntensities(intensities)
         
     def calculateFromIntensities(self, intensities):
         """
-        @param intensities: a set of reflection intensities
-        @type intensities: L{CDTK.Reflections.IntensityData}
+        :param intensities: a set of reflection intensities
+        :type intensities: CDTK.Reflections.IntensityData
         """
         from CDTK_sf_fft import reflections_to_map
         from CDTK.ReflectionData import IntensityData

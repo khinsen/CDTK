@@ -4,8 +4,6 @@
 # distributed under the CeCILL-C licence. See the file LICENCE
 # for the full text of this licence.
 #
-# Written by Konrad Hinsen.
-#
 
 """
 Structure factor files in MTZ (CCP4) format
@@ -46,6 +44,8 @@ Usage::
               print '      Values (first five): ', column.values[:5]
               print '      Missing number flag(first five): ', \\
                                           column.missing_number_flag[:5]
+
+.. moduleauthor:: Konrad Hinsen <konrad.hinsen@cnrs-orleans.fr>
 
 """
 

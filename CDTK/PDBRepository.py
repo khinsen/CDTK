@@ -4,8 +4,6 @@
 # distributed under the CeCILL-C licence. See the file LICENCE
 # for the full text of this licence.
 #
-# Written by Konrad Hinsen.
-#
 
 """
 Access to files in a local PDB repository or by download from the PDB
@@ -22,6 +20,9 @@ PDB_PATH, PDB_MMCIF_PATH, and PDB_SF_PATH. If a directory is
 undefined, files are downloaded by HTTP access to the PDB Web site
 (http://www.rcsb.org/pdb/). Only the getFile() method will work in
 this case.
+
+.. moduleauthor:: Konrad Hinsen <konrad.hinsen@cnrs-orleans.fr>
+
 """
 
 import cStringIO
@@ -44,17 +45,17 @@ class PDBFileCollection(object):
 
     def __init__(self, base_path, filename_pattern, url_pattern):
         """
-        @param base_path: the path to the database directory, i.e. the
+        :param base_path: the path to the database directory, i.e. the
                           path containing the two-letter subdirectories
-        @type base_path: C{str}
-        @param filename_pattern: the pattern of the file names in the
+        :type base_path: str
+        :param filename_pattern: the pattern of the file names in the
                                  database, containing %s at the place of
                                  the four-letter PDB code.
-        @type filename_pattern: C{str}
-        @param url_pattern: the pattern of the URLs for download from the
+        :type filename_pattern: str
+        :param url_pattern: the pattern of the URLs for download from the
                             PDB server, containing %s at the place of
                             the four-letter PDB code.
-        @type url_pattern: C{str}
+        :type url_pattern: str
         """
         self.base_path = base_path
         self.is_local = base_path is not None
@@ -64,10 +65,10 @@ class PDBFileCollection(object):
 
     def getFilename(self, pdb_code):
         """
-        @param pdb_code: the four-letter PDB code
-        @type pdb_code: C{str}
-        @return: the corresponding file name
-        @rtype: C{str}
+        :param pdb_code: the four-letter PDB code
+        :type pdb_code: str
+        :return: the corresponding file name
+        :rtype: str
         """
         assert len(pdb_code) == 4, "Invalid PDB code " + repr(pdb_code)
         if self.base_path is None:
@@ -79,19 +80,19 @@ class PDBFileCollection(object):
 
     def fileExists(self, pdb_code):
         """
-        @param pdb_code: the four-letter PDB code
-        @type pdb_code: C{str}
-        @return: C{True} if there is a corresponding file
-        @rtype: C{bool}
+        :param pdb_code: the four-letter PDB code
+        :type pdb_code: str
+        :return: True if there is a corresponding file
+        :rtype: bool
         """
         return os.path.exists(self.getFilename(pdb_code))
 
     def getFile(self, pdb_code):
         """
-        @param pdb_code: the four-letter PDB code
-        @type pdb_code: C{str}
-        @return: the corresponding file
-        @rtype: C{file}
+        :param pdb_code: the four-letter PDB code
+        :type pdb_code: str
+        :return: the corresponding file
+        :rtype: file
         """
         if not self.is_local:
             assert len(pdb_code) == 4, "Invalid PDB code " + repr(pdb_code)
@@ -112,9 +113,9 @@ class PDBFileCollection(object):
 
     def __iter__(self):
         """
-        @return: a generator yielding the PDB codes for all the files
+        :return: a generator yielding the PDB codes for all the files
                  in the collection
-        @rtype: generator
+        :rtype: generator
         """
         for dirpath, dirname, filenames in os.walk(self.base_path):
             for filename in filenames:

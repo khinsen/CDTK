@@ -4,8 +4,6 @@
 # distributed under the CeCILL-C licence. See the file LICENCE
 # for the full text of this licence.
 #
-# Written by Konrad Hinsen.
-#
 
 # The first stage of this parser (tokenizer) was inspired by the mmCIF parser
 # in PyMMLIB (http://pymmlib.sourceforge.net/). The regular expression for
@@ -25,6 +23,9 @@ mmCIF parser
 The functions in this module parse mmCIF files and return the contained
 data items. There are four different routines depending on the level of
 access that the application requires.
+
+.. moduleauthor:: Konrad Hinsen <konrad.hinsen@cnrs-orleans.fr>
+
 """
 
 from CDTK import Units
@@ -91,19 +92,19 @@ class MMCIFParser(object):
         """
         Specify the mmCIF file to be loaded. Only one of the four
         keyword parameters may be given a value.
-        @param file_name: the name of a file. Compressed or gzipped files
-               can be handled directly.
-        @type file_name: C{str}
-        @param file_object: a file object
-        @type file_object: C{file}
-        @param pdb_code: the PDB code for a structure file, which is
-               taken from a public or local PDB repository
-               (see L{CDTK.PDBRepository}.
-        @type pdb_code: C{str}
-        @param pdb_sf_code: the PDB code for a structure factor file, which
-               is taken from a public or local PDB repository
-               (see L{CDTK.PDBRepository}.
-        @type pdb_sf_code: C{str}
+
+        :param file_name: the name of a file. Compressed or gzipped files
+            can be handled directly
+        :type file_name: str
+        :param file_object: a file object
+        :type file_object: file
+        :param pdb_code: the PDB code for a structure file, which is
+            taken from a public or local PDB repository (see CDTK.PDBRepository)
+        :type pdb_code: str
+        :param pdb_sf_code: the PDB code for a structure factor file, which
+            is taken from a public or local PDB repository
+            (see CDTK.PDBRepository)
+        :type pdb_sf_code: str
         """
         self.line_number = 0
         if file_name is not None:
@@ -263,16 +264,16 @@ class MMCIFParser(object):
         """
         An iterator that yields a subset of the contents of the mmCIF file
         in the form of (type, data) pairs. The return values are the same
-        as for L{parse}. However, only items corresponding to the selection
+        as for parse. However, only items corresponding to the selection
         are yielded. The selection consists of a list of categories and of
         the specification of a data set by number (0 = first) or name.
         Note that most mmCIF files contain only a single data set.
 
-        @param categories: a sequence of category names
-        @type categories: sequence of C{str}
-        @param data: the selected data set, either by number (0 being the
-               first data set) or by name
-        @type data: C{int} or C{str}
+        :param categories: a sequence of category names
+        :type categories: sequence of str
+        :param data: the selected data set, either by number (0 being the
+            first data set) or by name
+        :type data: int or str
         """
         dataset = -1
         dataset_name = None
@@ -319,11 +320,11 @@ class MMCIFParser(object):
         given are 1) a dictionary mapping item labels to indices into
         the data list and 2) the items in the row as a list.
 
-        @param data: the selected data set, either by number (0 being the
-               first data set) or by name
-        @type data: C{int} or C{str}
-        @param categories: the category-specific handlers
-        @type categories: C{dict}
+        :param data: the selected data set, either by number (0 being the
+            first data set) or by name
+        :type data: int or str
+        :param categories: the category-specific handlers
+        :type categories: dict
         """
         accumulator = None
         for item_type, item in self.parseAndSelect(categories.keys(), data):
@@ -398,15 +399,15 @@ class MMCIFStructureFactorData(object):
     After successful initialization, the following attributes of
     a MMCIFStructureFactorData object contain the data:
 
-      - reflections: a L{CDTK.Reflections.ReflectionSet} object
+      - reflections: a CDTK.Reflections.ReflectionSet object
 
       - data: the experimental data stored in a
-        L{CDTK.ReflectionData.ExperimentalAmplitudes} or
-        L{CDTK.ReflectionData.ExperimentalIntensities} object.
+        CDTK.ReflectionData.ExperimentalAmplitudes or
+        CDTK.ReflectionData.ExperimentalIntensities object.
 
       - model: the calculated structure factor stored in a
-        L{CDTK.ReflectionData.StructureFactor} object. If no calculated
-        data is contained in the file, the value is C{None}.
+        CDTK.ReflectionData.StructureFactor object. If no calculated
+        data is contained in the file, the value is None.
     """
 
     def __init__(self, sf_file=None, structure_file=None, pdb_code=None,
@@ -425,24 +426,24 @@ class MMCIFStructureFactorData(object):
          - sf_file and structure_file: cell and/or symmetry information
            is read from structure_file if it is missing in sf_file
 
-        @param sf_file: the name of the structure factor mmCIF file
-        @type sf_file: C{str}
-        @param structure_file: the name of the structure mmCIT file
-        @type structure_file: C{str}
-        @param pdb_code: a four-letter PDB code
-        @type pdb_code: C{str}
-        @param fill: C{True} if the reflection set should contain all
+        :param sf_file: the name of the structure factor mmCIF file
+        :type sf_file: str
+        :param structure_file: the name of the structure mmCIT file
+        :type structure_file: str
+        :param pdb_code: a four-letter PDB code
+        :type pdb_code: str
+        :param fill: True if the reflection set should contain all
                reflections in the resolution sphere. With the default value
-               of C{False}, only the reflections listed in the mmCIF file
+               of False, only the reflections listed in the mmCIF file
                will be present in the reflection set.
-        @type fill: C{bool}
-        @param load_model_sf: C{True} if model structure factors (F_calc)
+        :type fill: bool
+        :param load_model_sf: True if model structure factors (F_calc)
                               should be loaded if present in the file
-        @type load_model_sf: C{bool}
-        @param require_sigma: if C{True}, ignore experimental data points
-                              without sigma. If C{False}, set sigma to zero
+        :type load_model_sf: bool
+        :param require_sigma: if True, ignore experimental data points
+                              without sigma. If False, set sigma to zero
                               if it is not given.
-        @type require_sigma: C{bool}
+        :type require_sigma: bool
         """
         if pdb_code is not None:
             self.pdb_code = pdb_code

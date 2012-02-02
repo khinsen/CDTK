@@ -6,7 +6,10 @@
 #
 
 """
-@undocumented: mmCIF
+CDTK package
+
+.. moduleauthor:: Konrad Hinsen <konrad.hinsen@cnrs-orleans.fr>
+
 """
 
 #

@@ -4,11 +4,12 @@
 # distributed under the CeCILL-C licence. See the file LICENCE
 # for the full text of this licence.
 #
-# Written by Konrad Hinsen.
-#
 
 """
 Description of a crystal
+
+.. moduleauthor:: Konrad Hinsen <konrad.hinsen@cnrs-orleans.fr>
+
 """
 
 from CDTK import Units
@@ -27,9 +28,14 @@ class UnitCell(object):
 
     def __init__(self, *parameters):
         """
-        @param parameters: one of 1) three lattice vectors or
-            2) six numbers: the lengths of the three lattice vectors (a, b, c)
-            followed by the three angles (alpha, beta, gamma).
+        :param parameters: one of
+
+            1) three lattice vectors or
+
+            2) six numbers: the lengths of the three lattice
+               vectors (a, b, c) followed by the three
+               angles (alpha, beta, gamma).
+
         """
         if len(parameters) == 6:
             self.a, self.b, self.c, self.alpha, self.beta, self.gamma = \
@@ -62,69 +68,71 @@ class UnitCell(object):
 
     def basisVectors(self):
         """
-        @return: a list containing the three lattice vectors
-        @rtype: C{list} of C{Scientific.Geometry.Vector}
+        :returns: a list containing the three lattice vectors
+        :rtype: list of Scientific.Geometry.Vector
         """
         return self.basis
 
     def reciprocalBasisVectors(self):
         """
-        @return: a list containing the three basis vectors
-                 of the reciprocal lattice
-        @rtype: C{list} of C{Scientific.Geometry.Vector}
+        :returns: a list containing the three basis vectors
+            of the reciprocal lattice
+        :rtype: list of Scientific.Geometry.Vector
         """
         return self.reciprocal_basis
 
     def cellVolume(self):
         """
-        @return: the volume of the unit cell
-        @rtype: C{float}
+        :returns: the volume of the unit cell
+        :rtype: float
         """
         e1, e2, e3 = self.basis
         return e1*e2.cross(e3)
 
     def cartesianToFractional(self, vector):
         """
-        @param vector: a vector in real Cartesian space
-        @type vector: C{Scientific.Geometry.Vector}
-        @return: the vector in fractional coordinates
-        @rtype: C{Scientific.N.array_type}
+        :param vector: a vector in real Cartesian space
+        :type vector: Scientific.Geometry.Vector
+        :returns: the vector in fractional coordinates
+        :rtype: Scientific.N.array_type
         """
         r1, r2, r3 = self.reciprocal_basis
         return N.array([r1*vector, r2*vector, r3*vector])
 
     def cartesianToFractionalMatrix(self):
         """
-        @return: the 3x3 conversion matrix from real Cartesian space
-                 coordinates to fractional coordinates
+        :returns: the 3x3 conversion matrix from real Cartesian space
+            coordinates to fractional coordinates
+        :rtype: Scientific.N.array_type
         """
         return N.array(self.reciprocal_basis)
 
     def fractionalToCartesian(self, array):
         """
-        @param array: a vector in fractional coordinates
-        @type array: C{Scientific.N.array_type}
-        @return: the vector in real Cartesian space
-        @rtype: C{Scientific.Geometry.Vector}
+        :param array: a vector in fractional coordinates
+        :type array: Scientific.N.array_type
+        :returns: the vector in real Cartesian space
+        :rtype: Scientific.Geometry.Vector
         """
         e1, e2, e3 = self.basis
         return array[0]*e1 + array[1]*e2 + array[2]*e3
 
     def fractionalToCartesianMatrix(self):
         """
-        @return: the 3x3 conversion matrix from fractional
-                 coordinates to real Cartesian space coordinates
+        :returns: the 3x3 conversion matrix from fractional
+            coordinates to real Cartesian space coordinates
+        :rtype: Scientific.N.array_type
         """
         return N.transpose(self.basis)
 
     def minimumImageDistanceVector(self, point1, point2):
         """
-        @param point1: a point in the unit cell
-        @type point1: C{Scientific.Geometry.Vector}
-        @param point2: a point in the unit cell
-        @type point2: C{Scientific.Geometry.Vector}
-        @return: the minimum-image vector from point1 to point2
-        @rtype: C{Scientific.Geometry.Vector}
+        :param point1: a point in the unit cell
+        :type point1: Scientific.Geometry.Vector
+        :param point2: a point in the unit cell
+        :type point2: Scientific.Geometry.Vector
+        :returns: the minimum-image vector from point1 to point2
+        :rtype: Scientific.Geometry.Vector
         """
         d = self.cartesianToFractional(point2-point1)
         d = d - (d > 0.5) + (d <= -0.5)
@@ -132,13 +140,13 @@ class UnitCell(object):
         
     def isCompatibleWith(self, other_cell, precision=1.e-5):
         """
-        @param other_cell: a unit cell
-        @type other_cell: L{UnitCell} or C{MMTK.Universe}
-        @param precision: the absolute precision of the comparison
-        @type precision: C{float}
-        @return: C{True} if the lattice vectors of the two unit cells differ
-                 by a vector of length < precision
-        @rtype: C{bool}
+        :param other_cell: a unit cell
+        :type other_cell: UnitCell or MMTK.Universe
+        :param precision: the absolute precision of the comparison
+        :type precision: float
+        :returns: True if the lattice vectors of the two unit cells differ
+            by a vector of length < precision
+        :rtype: bool
         """
         other_basis = other_cell.basisVectors()
         for i in range(3):
@@ -148,12 +156,12 @@ class UnitCell(object):
 
     def cartesianCoordinateSymmetryOperations(self, space_group):
         """
-        @param space_group: a space group
-        @type space_group: L{CDTK.SpaceGroups.SpaceGroup}
-        @return: a list of transformation objects representing the symmetry
-                 operations of the space group in the Cartesian coordinates
-                 of the unit cell
-        @rtype: C{list} of C{Scientific.Geometry.Transformation.Transformation}
+        :param space_group: a space group
+        :type space_group: CDTK.SpaceGroups.SpaceGroup
+        :returns: a list of transformation objects representing the symmetry
+            operations of the space group in the Cartesian coordinates of
+            the unit cell
+        :rtype: list of Scientific.Geometry.Transformation.Transformation
         """
         transformations = []
         to_fract = Shear(self.cartesianToFractionalMatrix())
@@ -179,17 +187,17 @@ class Atom(object):
 
     def __init__(self, atom_id, element, position, fluctuation, occupancy):
         """
-        @param atom_id: not used in any calculation. This value can be used
+        :param atom_id: not used in any calculation. This value can be used
                         as a unique atom identifier to establish a link
                         to other atomic models.
-        @param element: the chemical element
-        @type element: C{str}
-        @param position: the position vector
-        @type position: C{Scientific.Geometry.Vector}
-        @param fluctuation: the fluctuation parameter (B factor)
-        @type fluctuation: C{float} or L{CDTK.Utility.SymmetricTensor}
-        @param occupancy: the occupancy
-        @type occupancy: C{float}
+        :param element: the chemical element
+        :type element: str
+        :param position: the position vector
+        :type position: Scientific.Geometry.Vector
+        :param fluctuation: the fluctuation parameter (B factor)
+        :type fluctuation: float or CDTK.Utility.SymmetricTensor
+        :param occupancy: the occupancy
+        :type occupancy: float
         """
         self.atom_id = atom_id
         self.element = element
@@ -210,10 +218,10 @@ class Crystal(object):
 
     def __init__(self, cell, space_group):
         """
-        @param cell: the unit cell
-        @type cell: L{CDTK.Crystal.UnitCell}
-        @param space_group: the space group
-        @type space_group: L{CDTK.SpaceGroups.SpaceGroup}
+        :param cell: the unit cell
+        :type cell: CDTK.Crystal.UnitCell
+        :param space_group: the space group
+        :type space_group: CDTK.SpaceGroups.SpaceGroup
         """
         self.cell = cell
         self.space_group = space_group
@@ -221,15 +229,15 @@ class Crystal(object):
 
     def __len__(self):
         """
-        @return: the number of atoms in the asymmetric unit
-        @rtype: C{int}
+        :returns: the number of atoms in the asymmetric unit
+        :rtype: int
         """
         return len(self.atoms)
 
     def __iter__(self):
         """
-        @return: a generator yielding the atoms in the asymmetric unit
-        @rtype: generator
+        :returns: a generator yielding the atoms in the asymmetric unit
+        :rtype: generator
         """
         for a in self.atoms:
             yield (a.atom_id, a.element, a.position, a.fluctuation, a.occupancy)
@@ -242,16 +250,16 @@ class Crystal(object):
 
     def countAtomsByElement(self, in_unit_cell=False):
         """
-        @param in_unit_cell: if C{False}, count atoms in the
-                             asymmetric unit, if C{True} count
+        :param in_unit_cell: if False, count atoms in the
+                             asymmetric unit, if True count
                              atoms in the unit cell
-        @type in_unit_cell: C{bool}
-        @return: a dictionary mapping chemical element symbols
-                 to the number of atoms of that element in the
-                 crystal. Note that the number of atoms can be
-                 non-integer because the occupancies don't
-                 necessarily add up to integer values.
-        @rtype: C{dict}
+        :type in_unit_cell: bool
+        :returns: a dictionary mapping chemical element symbols
+            to the number of atoms of that element in the
+            crystal. Note that the number of atoms can be
+            non-integer because the occupancies don't
+            necessarily add up to integer values.
+        :rtype: dict
         """
         if in_unit_cell:
             z = len(self.space_group)
@@ -278,9 +286,9 @@ class Crystal(object):
         tensor to zero. (2) If there is a scalar fluctuation that is
         negative, replace it by zero.
         
-        @return: a generator yielding the atoms in the asymmetric unit
-                 after correction of the fluctuation tensor
-        @rtype: generator
+        :returns: a generator yielding the atoms in the asymmetric unit
+            after correction of the fluctuation tensor
+        :rtype: generator
         """
         for a in self.atoms:
             adp = a.fluctuation
@@ -299,9 +307,9 @@ class Crystal(object):
 
     def atomsWithNegativeFluctuations(self):
         """
-        @return: a generator yielding the atoms in the asymmetric unit
-                 whose fluctuation parameter has negative eigenvalues
-        @rtype: generator
+        :returns: a generator yielding the atoms in the asymmetric unit
+            whose fluctuation parameter has negative eigenvalues
+        :rtype: generator
         """
         for a in self.atoms:
             adp = a.fluctuation
@@ -324,15 +332,15 @@ class PDBCrystal(Crystal):
                  peptide_chains=True, nucleotide_chains=True,
                  residue_filter = None):
         """
-        @param file_or_filename: the name of a PDB file, or a file object
-        @type file_or_filename: C{str} or C{file}
-        @param peptide_chains: if True, include the peptide chains from
+        :param file_or_filename: the name of a PDB file, or a file object
+        :type file_or_filename: str or file
+        :param peptide_chains: if True, include the peptide chains from
                                the PDB file, otherwise discard them
-        @type peptide_chains: C{Boolean}
-        @param nucleotide_chains: if True, include the nucleotide chains from
+        :type peptide_chains: bool
+        :param nucleotide_chains: if True, include the nucleotide chains from
                                   the PDB file, otherwise discard them
-        @type nucleotide_chains: C{Boolean}
-        @param residue_filter: a function called for each non-peptide and
+        :type nucleotide_chains: bool
+        :param residue_filter: a function called for each non-peptide and
                                non-nucleotide residue with the residue name
                                and residue number as argument. If it returns
                                True, the residue is included, otherwise it

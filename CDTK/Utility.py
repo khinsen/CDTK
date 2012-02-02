@@ -4,8 +4,13 @@
 # distributed under the CeCILL-C licence. See the file LICENCE
 # for the full text of this licence.
 #
-# Written by Konrad Hinsen.
-#
+
+"""
+Various utility functions
+
+.. moduleauthor:: Konrad Hinsen <konrad.hinsen@cnrs-orleans.fr>
+
+"""
 
 from Scientific import N, LA
 from CDTK_symtensor import SymmetricTensor, delta
@@ -17,11 +22,11 @@ from CDTK_symtensor import SymmetricTensor, delta
 
 def symmetricTensorRotationMatrix(d):
     """
-    @param d: an array of shape (3,3) representing a rotation matrix
-    @type d: C{Scientific.N.array_type}
-    @return: an array of shape (6,6) representing the equivalent rotation
+    :param d: an array of shape (3,3) representing a rotation matrix
+    :type d: Scientific.N.array_type
+    :return: an array of shape (6,6) representing the equivalent rotation
              matrix for a symmetric tensor in compact storage
-    @rtype: C{Scientific.N.array_type}
+    :rtype: Scientific.N.array_type
     """
     assert d.shape == (3, 3)
     dd = d[:, :, N.NewAxis, N.NewAxis]*d[N.NewAxis, N.NewAxis, :, :]
@@ -58,9 +63,9 @@ def symmetricTensorBasis(cell, space_group):
 
 def largestAbsoluteElement(a):
     """
-    @param a: a numerical array
-    @type a: C{Scientific.N.array_type}
-    @return: the largest absolute value over all array elements
-    @rtype: C{float}
+    :param a: a numerical array
+    :type a: Scientific.N.array_type
+    :return: the largest absolute value over all array elements
+    :rtype: float
     """
     return N.maximum.reduce(N.absolute(N.ravel(a)))

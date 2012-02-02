@@ -21,6 +21,9 @@ of five elements each. The scattering factor for the atom is given by
 f(s) = N.sum( a * exp(-b * s**2) )
 
 where s is the length of the scattering vector.
+
+.. moduleauthor:: Konrad Hinsen <konrad.hinsen@cnrs-orleans.fr>
+
 """
 
 from Scientific import N

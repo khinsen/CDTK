@@ -4,35 +4,36 @@
 # distributed under the CeCILL-C licence. See the file LICENCE
 # for the full text of this licence.
 #
-# Written by Konrad Hinsen.
-#
 
 """
 Reflection data classes
 
-The subclasses of L{ReflectionData} represent the various kind of data
+The subclasses of ReflectionData represent the various kind of data
 that can be defined for each reflection in a
-L{CDTK.ReflectionSet.ReflectionSet}. Only the values for the minimal
+CDTK.ReflectionSet.ReflectionSet. Only the values for the minimal
 reflection set is stored explicitly, values for other reflections are
 reconstructed by applying symmetry operations.
 
-There are two subclasses of L{ReflectionData} for representing experimental
+There are two subclasses of ReflectionData for representing experimental
 data:
 
-  - L{ExperimentalIntensities}
-  - L{ExperimentalAmplitudes}
+  - ExperimentalIntensities
+  - ExperimentalAmplitudes
 
-There are three subclasses of L{ReflectionData} for representing data
+There are three subclasses of ReflectionData for representing data
 calculated from a model:
 
-  - L{StructureFactor}
-  - L{ModelIntensities}
-  - L{ModelAmplitudes}
+  - StructureFactor
+  - ModelIntensities
+  - ModelAmplitudes
 
 The classes for experimental data store standard deviations in addition to the
 values themselves and can handle missing data points. The classes for
 model data provide routines for the calculation of structure factors
 from an atomic model.
+
+.. moduleauthor:: Konrad Hinsen <konrad.hinsen@cnrs-orleans.fr>
+
 """
 
 from Scientific import N, LA
@@ -58,9 +59,9 @@ class ReflectionData(object):
     Base class for data defined per reflection
 
     The subclasses for use by applications are
-    L{ExperimentalIntensities}, L{ExperimentalAmplitudes},
-    L{StructureFactor}, L{ModelIntensities}, and
-    L{ModelAmplitudes}.
+    ExperimentalIntensities, ExperimentalAmplitudes,
+    StructureFactor, ModelIntensities, and
+    ModelAmplitudes.
     """
 
     def __init__(self, reflection_set):
@@ -69,10 +70,10 @@ class ReflectionData(object):
 
     def __getitem__(self, reflection):
         """
-        @param reflection: a reflection
-        @type reflection: L{Reflection}
-        @return: the data value for the given reflection
-        @rtype: C{float} or C{complex}
+        :param reflection: a reflection
+        :type reflection: Reflection
+        :return: the data value for the given reflection
+        :rtype: float or complex
         """
         index = reflection.index
         if index is None: # systematic absence
@@ -81,9 +82,9 @@ class ReflectionData(object):
 
     def __setitem__(self, reflection, value):
         """
-        @param reflection: a reflection
-        @type reflection: L{Reflection}
-        @param value: the new data value for the given reflection
+        :param reflection: a reflection
+        :type reflection: Reflection
+        :param value: the new data value for the given reflection
         """
         index = reflection.index
         if index is None: # systematic absence
@@ -93,28 +94,28 @@ class ReflectionData(object):
 
     def __iter__(self):
         """
-        @return: a generator yielding (reflection, value) tuples where
+        :return: a generator yielding (reflection, value) tuples where
                  reflection iterates over the elements of the minimal
                  reflection set
-        @rtype: generator
+        :rtype: generator
         """
         for r in self.reflection_set:
             yield (r, self[r])
 
     def __len__(self):
         """
-        @return: the number of data values, equal to the number of reflections
+        :return: the number of data values, equal to the number of reflections
                  in the minimal reflection set
-        @rtype: C{int}
+        :rtype: int
         """
         return self.number_of_reflections
 
     def __add__(self, other):
         """
-        @param other: reflection data of the same type
-        @type other: C{type(self)}
-        @return: the reflection-by-reflection sum of the two data sets
-        @rtype: C{type(self)}
+        :param other: reflection data of the same type
+        :type other: type(self)
+        :return: the reflection-by-reflection sum of the two data sets
+        :rtype: type(self)
         """
         assert self.__class__ is other.__class__
         assert self.reflection_set is other.reflection_set
@@ -124,8 +125,8 @@ class ReflectionData(object):
 
     def __iadd__(self, other):
         """
-        @param other: reflection data of the same type
-        @type other: C{type(self)}
+        :param other: reflection data of the same type
+        :type other: type(self)
         """
         assert self.__class__ is other.__class__
         assert self.reflection_set is other.reflection_set
@@ -134,10 +135,10 @@ class ReflectionData(object):
 
     def __sub__(self, other):
         """
-        @param other: reflection data of the same type
-        @type other: C{type(self)}
-        @return: the reflection-by-reflection difference of the two data sets
-        @rtype: C{type(self)}
+        :param other: reflection data of the same type
+        :type other: type(self)
+        :return: the reflection-by-reflection difference of the two data sets
+        :rtype: type(self)
         """
         assert self.__class__ is other.__class__
         assert self.reflection_set is other.reflection_set
@@ -147,8 +148,8 @@ class ReflectionData(object):
 
     def __isub__(self, other):
         """
-        @param other: reflection data of the same type
-        @type other: C{type(self)}
+        :param other: reflection data of the same type
+        :type other: type(self)
         """
         assert self.__class__ is other.__class__
         assert self.reflection_set is other.reflection_set
@@ -169,10 +170,10 @@ class ReflectionData(object):
 
     def __mul__(self, other):
         """
-        @param other: a scalar or reflection data of the same type
-        @type other: C{float} or C{type(self)}
-        @return: the reflection-by-reflection product of the two data sets
-        @rtype: C{type(self)}
+        :param other: a scalar or reflection data of the same type
+        :type other: float or type(self)
+        :return: the reflection-by-reflection product of the two data sets
+        :rtype: type(self)
         """
         result = self.__class__(self.reflection_set)
         if isinstance(other, ReflectionData):
@@ -194,8 +195,8 @@ class ReflectionData(object):
 
     def __imul__(self, other):
         """
-        @param other: a scalar or reflection data of the same type
-        @type other: C{float} or C{type(self)}
+        :param other: a scalar or reflection data of the same type
+        :type other: float or type(self)
         """
         if isinstance(other, ReflectionData):
             self.__imul_op__(other)
@@ -214,10 +215,10 @@ class ReflectionData(object):
 
     def __div__(self, other):
         """
-        @param other: a scalar or reflection data of the same type
-        @type other: C{float} or C{type(self)}
-        @return: the reflection-by-reflection quotient of the two data sets
-        @rtype: C{type(self)}
+        :param other: a scalar or reflection data of the same type
+        :type other: float or type(self)
+        :return: the reflection-by-reflection quotient of the two data sets
+        :rtype: type(self)
         """
         result = self.__class__(self.reflection_set)
         if isinstance(other, ReflectionData):
@@ -237,8 +238,8 @@ class ReflectionData(object):
 
     def __idiv__(self, other):
         """
-        @param other: a scalar or reflection data of the same type
-        @type other: C{float} or C{type(self)}
+        :param other: a scalar or reflection data of the same type
+        :type other: float or type(self)
         """
         if isinstance(other, ReflectionData):
             self.__idiv_op__(other)
@@ -283,8 +284,8 @@ class ReflectionData(object):
         Writes a VMD script containing the values as map data in
         reciprocal space.
 
-        @param filename: the name of the VMD script
-        @type filename: C{str}
+        :param filename: the name of the VMD script
+        :type filename: str
         """
         hmax, kmax, lmax = self.reflection_set.maxHKL()
         array = N.zeros((2*hmax+1, 2*kmax+1, 2*lmax+1), N.Float)
@@ -345,11 +346,11 @@ class ExperimentalReflectionData(ReflectionData):
 
     def __setitem__(self, reflection, value_sigma):
         """
-        @param reflection: a reflection
-        @type reflection: L{Reflection}
-        @param value_sigma: the new data value and standard deviations
+        :param reflection: a reflection
+        :type reflection: Reflection
+        :param value_sigma: the new data value and standard deviations
                             for the given reflection
-        @type value_sigma: sequence of length 2
+        :type value_sigma: sequence of length 2
         """
         index = reflection.index
         if index is None: # systematic absence
@@ -361,10 +362,10 @@ class ExperimentalReflectionData(ReflectionData):
 
     def __len__(self):
         """
-        @return: the number of data values, equal to the number of reflections
+        :return: the number of data values, equal to the number of reflections
                  in the minimal reflection set minus the number of missing
                  values
-        @rtype: C{int}
+        :rtype: int
         """
         return N.int_sum(self.data_available)
 
@@ -374,21 +375,21 @@ class ExperimentalReflectionData(ReflectionData):
         from information stored in multiple arrays, usually read from
         a file.
 
-        @param h: the array of the first Miller indices
-        @type h: C{Scientific.N.array_type}
-        @param k: the array of the second Miller indices
-        @type k: C{Scientific.N.array_type}
-        @param l: the array of the third Miller indices
-        @type l: C{Scientific.N.array_type}
-        @param value: the array of data values for each reflection
-        @type value: C{Scientific.N.array_type}
-        @param sigma: the array of standard deviation values for each reflection
-        @type sigma: C{Scientific.N.array_type}
-        @param missing: the array of missing value flags, or None if there
+        :param h: the array of the first Miller indices
+        :type h: Scientific.N.array_type
+        :param k: the array of the second Miller indices
+        :type k: Scientific.N.array_type
+        :param l: the array of the third Miller indices
+        :type l: Scientific.N.array_type
+        :param value: the array of data values for each reflection
+        :type value: Scientific.N.array_type
+        :param sigma: the array of standard deviation values for each reflection
+        :type sigma: Scientific.N.array_type
+        :param missing: the array of missing value flags, or None if there
                         are no missing values
-        @type missing: C{Scientific.N.array_type} or C{NoneType}
-        @raise AssertionError: if the input arrays have different lengths
-        @raise KeyError: if at least one (h, k, l) set corresponds to a
+        :type missing: Scientific.N.array_type or NoneType
+        :raise AssertionError: if the input arrays have different lengths
+        :raise KeyError: if at least one (h, k, l) set corresponds to a
                          reflection that is not in the reflection set
         """
         n = len(h)
@@ -407,13 +408,13 @@ class ExperimentalReflectionData(ReflectionData):
 
     def completeness(self, subset=None):
         """
-        @param subset: a subset of the reflections. If C{None}, use the
+        :param subset: a subset of the reflections. If None, use the
                        whole reflection set
-        @type subset: L{CDTK.Reflections.ReflectionSubset}
-        @return: the fraction of reflections in the subset
+        :type subset: CDTK.Reflections.ReflectionSubset
+        :return: the fraction of reflections in the subset
                  for which observations are available. If the subset is
                  empty, its completeness is 0.
-        @rtype: C{Scientific.N.array}
+        :rtype: Scientific.N.array
         """
         if subset is None:
             subset = self.reflection_set
@@ -489,18 +490,18 @@ class ExperimentalReflectionData(ReflectionData):
 class AmplitudeData(object):
 
     """
-    Mix-in class for L{ReflectionData} subclasses representing amplitude
+    Mix-in class for ReflectionData subclasses representing amplitude
     values
     """
 
     def rFactor(self, other, subset = None):
         """
-        @param other: reflection data containing amplitudes or structure factors
-        @param subset: a reflection subset over which the R factor is
+        :param other: reflection data containing amplitudes or structure factors
+        :param subset: a reflection subset over which the R factor is
                        calculated. The default value of None selects
                        the complete reflection set of the data.
-        @return: the R factor between the two data sets
-        @rtype: C{float}
+        :return: the R factor between the two data sets
+        :rtype: float
         """
         assert isinstance(other, AmplitudeData)
         if subset is None:
@@ -520,14 +521,14 @@ class AmplitudeData(object):
 
     def rFactorWithScale(self, other, subset=None):
         """
-        @param other: reflection data containing amplitudes or structure factors
-        @param subset: a reflection subset over which the R factor is
+        :param other: reflection data containing amplitudes or structure factors
+        :param subset: a reflection subset over which the R factor is
                        calculated. The default value of None selects
                        the complete reflection set of the data.
-        @return: a tuple (R, scale) where scale is the scale factor that must
+        :return: a tuple (R, scale) where scale is the scale factor that must
                  be applied to other to minimize the R factor and R is the
                  R factor obtained with this scale factor
-        @rtype: C{float}
+        :rtype: float
         """
         assert isinstance(other, AmplitudeData)
         if subset is None:
@@ -559,15 +560,15 @@ class AmplitudeData(object):
 
     def rFactorByResolution(self, other, subset = None, nbins = 50):
         """
-        @param other: reflection data containing amplitudes or structure factors
-        @param subset: a subset of the reflections to use,
-                       or C{None} for all reflections
-        @param nbins: the number of intervals into which the resolution range
+        :param other: reflection data containing amplitudes or structure factors
+        :param subset: a subset of the reflections to use,
+                       or None for all reflections
+        :param nbins: the number of intervals into which the resolution range
                       of set subset is divided before calculating the
                       R factor for each interval
-        @type nbins: C{int}
-        @return: the R factor between the two data sets for each interval
-        @rtype: C{Scientific.Functions.InterpolatingFunction}
+        :type nbins: int
+        :return: the R factor between the two data sets for each interval
+        :rtype: Scientific.Functions.InterpolatingFunction
         """
         from Scientific.Functions.Interpolation import InterpolatingFunction
         assert isinstance(other, AmplitudeData)
@@ -593,28 +594,28 @@ class AmplitudeData(object):
 
     def amplitudes(self):
         """
-        @return: self
-        @rtype: L{ReflectionData} and L{AmplitudeData}
+        :return: self
+        :rtype: ReflectionData and AmplitudeData
         """
         return self
 
     def intensities(self):
         """
-        @return: a reflection data set containing the reflection intensities
-        @rtype: L{ReflectionData} and L{IntensityData}
+        :return: a reflection data set containing the reflection intensities
+        :rtype: ReflectionData and IntensityData
         """
         return ModelIntensities(self.reflection_set,
                                 (self.array[:]*N.conjugate(self.array[:])).real)
 
     def applyDebyeWallerFactor(self, adp_or_scalar):
         """
-        @param adp_or_scalar: a symmetric ADP tensor or a scalar
+        :param adp_or_scalar: a symmetric ADP tensor or a scalar
                               position fluctuation value
-        @type adp_or_scalar: L{CDTK.Utility.SymmetricTensor} or C{float}
-        @return: a new reflection data set containing the amplitudes
+        :type adp_or_scalar: CDTK.Utility.SymmetricTensor or float
+        :return: a new reflection data set containing the amplitudes
                  multiplied by the Debye-Waller factor defined by
                  adp_or_scalar
-        @rtype: C{type(self)}
+        :rtype: type(self)
         """
         dwf = self._debyeWallerFactor(adp_or_scalar)
         return self.__class__(self.reflection_set, self.array*dwf)
@@ -631,19 +632,19 @@ class AmplitudeData(object):
         problem linear. These initial values can be improved in a specified
         number of Gauss-Newton iterations.
 
-        @param other: another amplitude data set
-        @param other: L{AmplitudeData}
-        @param iterations: the number of Gauss-Newton iterations
-        @type iterations: C{int}
-        @param filter: a function called for each reflection object. The
+        :param other: another amplitude data set
+        :param other: AmplitudeData
+        :param iterations: the number of Gauss-Newton iterations
+        :type iterations: int
+        :param filter: a function called for each reflection object. The
                        reflection is used in the fit only if the return
-                       value is C{True}. If no function is passed (C{None}),
+                       value is True. If no function is passed (None),
                        all reflections are used.
-        @type filter: callable
-        @return: a tuple (scaled_amplitudes, k, u), where scaled_amplitudes
+        :type filter: callable
+        :return: a tuple (scaled_amplitudes, k, u), where scaled_amplitudes
                  is the fitted amplitude data set, k is the global factor,
                  and u is the ADP tensor of the fitted Debye-Waller factor
-        @rtype: C{tuple}
+        :rtype: tuple
         """
         assert isinstance(other, AmplitudeData)
         if filter is None:
@@ -700,20 +701,20 @@ class AmplitudeData(object):
 class IntensityData(object):
 
     """
-    Mix-in class for L{ReflectionData} subclasses representing intensity
+    Mix-in class for ReflectionData subclasses representing intensity
     values
     """
 
     def isotropicAverage(self, shells = 50):
         """
-        @param shells: the resolution shell specification, either a sequence of
+        :param shells: the resolution shell specification, either a sequence of
                        s values delimiting the shells (one more value than
                        there will be shells), or an integer indicating the
                        number of shells into which the total resolution range
                        will be divided.
-        @type shells:  C{int} or sequence of C{float}
-        @return: the averaged intensities for each resolution shell
-        @rtype: C{Scientific.Functions.InterpolatingFunction}
+        :type shells:  int or sequence of float
+        :return: the averaged intensities for each resolution shell
+        :rtype: Scientific.Functions.InterpolatingFunction
         """
         from Scientific.Functions.Interpolation import InterpolatingFunction
         subsets = self.reflection_set.resolutionShells(shells)
@@ -728,12 +729,12 @@ class IntensityData(object):
         square of the scattering vector length. This is a Wilson plot only
         if applied to normalized intensity data.
 
-        @param nbins: the number of intervals into which the resolution range
+        :param nbins: the number of intervals into which the resolution range
                       is divided before averaging the intensities within each
                       interval
-        @type nbins: C{int}
-        @return: the logarithm of the averaged intensities
-        @rtype: C{Scientific.Functions.InterpolatingFunction}
+        :type nbins: int
+        :return: the logarithm of the averaged intensities
+        :rtype: Scientific.Functions.InterpolatingFunction
         """
         from Scientific.Functions.Interpolation import InterpolatingFunction
         av = self.isotropicAverage(nbins)
@@ -743,28 +744,28 @@ class IntensityData(object):
 
     def amplitudes(self):
         """
-        @return: the structure factor amplitudes corresponding to the
+        :return: the structure factor amplitudes corresponding to the
                  reflection intensities
-        @rtype: L{ReflectionData} and L{AmplitudeData}
+        :rtype: ReflectionData and AmplitudeData
         """
         return ModelAmplitudes(self.reflection_set, N.sqrt(self.array))
 
     def intensities(self):
         """
-        @return: self
-        @rtype: L{ReflectionData} and L{IntensityData}
+        :return: self
+        :rtype: ReflectionData and IntensityData
         """
         return self
 
     def applyDebyeWallerFactor(self, adp_or_scalar):
         """
-        @param adp_or_scalar: a symmetric ADP tensor or a scalar
+        :param adp_or_scalar: a symmetric ADP tensor or a scalar
                               position fluctuation value
-        @type adp_or_scalar: L{CDTK.Utility.SymmetricTensor} or C{float}
-        @return: a new reflection data set containing the intensities
+        :type adp_or_scalar: CDTK.Utility.SymmetricTensor or float
+        :return: a new reflection data set containing the intensities
                  multiplied by the Debye-Waller factor defined by
                  adp_or_scalar
-        @rtype: C{type(self)}
+        :rtype: type(self)
         """
         dwf = self._debyeWallerFactor(adp_or_scalar)
         return self.__class__(self.reflection_set, self.array*(dwf**2))
@@ -781,20 +782,20 @@ class IntensityData(object):
         problem linear. These initial values can be improved in a specified
         number of Gauss-Newton iterations.
 
-        @param other: another amplitude data set
-        @param other: L{AmplitudeData}
-        @param iterations: the number of Gauss-Newton iterations
-        @type iterations: C{int}
-        @param filter: a function called for each reflection object. The
+        :param other: another amplitude data set
+        :param other: AmplitudeData
+        :param iterations: the number of Gauss-Newton iterations
+        :type iterations: int
+        :param filter: a function called for each reflection object. The
                        reflection is used in the fit only if the return
-                       value is C{True}. If no function is passed (C{None}),
+                       value is True. If no function is passed (None),
                        all reflections are used.
-        @type filter: callable
-        @return: a tuple (scaled_intensities, k, u), where scaled_intensities
+        :type filter: callable
+        :return: a tuple (scaled_intensities, k, u), where scaled_intensities
                  is the fitted intensity data set, k is the global amplitude
                  factor, and u is the ADP tensor of the fitted Debye-Waller
                  factor. Note: the intensities have been scalled by k**2.
-        @rtype: C{tuple}
+        :rtype: tuple
         """
         a, k, u = self.amplitudes().scaleTo(other.amplitudes(),
                                             iterations, filter)
@@ -807,12 +808,12 @@ class IntensityData(object):
         atoms but with all positions distributed uniformly over the
         unit cell.
 
-        @param atom_count: a dictionary mapping chemical element symbols
+        :param atom_count: a dictionary mapping chemical element symbols
                            to the number of atoms of that element in the
                            system
-        @type atom_count: C{dict}
-        @return: the normalized intensities
-        @rtype: L{IntensityData}
+        :type atom_count: dict
+        :return: the normalized intensities
+        :rtype: IntensityData
         """
         i_random = ModelIntensities.fromUniformAtomDistribution(
                                           self.reflection_set, atom_count)
@@ -832,13 +833,13 @@ class StructureFactor(ReflectionData, AmplitudeData):
 
     def __init__(self, reflection_set, data=None):
         """
-        @param reflection_set: the reflection set for which the structure
+        :param reflection_set: the reflection set for which the structure
                                factor is defined
-        @type reflection_set: L{CDTK.ReflectionSet.ReflectionSet}
-        @param data: an optional array storing the data values, of the
-                     right shape and type (complex). If C{None}, a new array
+        :type reflection_set: CDTK.ReflectionSet.ReflectionSet
+        :param data: an optional array storing the data values, of the
+                     right shape and type (complex). If None, a new array
                      containing zero values is created.
-        @type data: C{Scientific.N.array_type}
+        :type data: Scientific.N.array_type
         """
         ReflectionData.__init__(self, reflection_set)
         if data is None:
@@ -855,16 +856,16 @@ class StructureFactor(ReflectionData, AmplitudeData):
         Create a StructureFactor object from a periodic MMTK universe
         representing a unit cell.
 
-        @param reflection_set: the reflection set for which the structure
+        :param reflection_set: the reflection set for which the structure
                                factor is defined
-        @type reflection_set: L{CDTK.ReflectionSet.ReflectionSet}
-        @param universe: the MMTK universe
-        @type universe: C{MMTK.Periodic3DUniverse}
-        @param adps: the anisotropic displacement parameters for all atoms
-        @type adps: C{MMTK.ParticleTensor}
-        @param conf: a configuration for the universe, defaults to the
+        :type reflection_set: CDTK.ReflectionSet.ReflectionSet
+        :param universe: the MMTK universe
+        :type universe: MMTK.Periodic3DUniverse
+        :param adps: the anisotropic displacement parameters for all atoms
+        :type adps: MMTK.ParticleTensor
+        :param conf: a configuration for the universe, defaults to the
                      current configuration
-        @type conf: C{MMTK.Configuration}
+        :type conf: MMTK.Configuration
         """
         obj = cls(reflection_set)
         obj.calculateFromUniverse(universe, adps, conf)
@@ -873,10 +874,10 @@ class StructureFactor(ReflectionData, AmplitudeData):
     @classmethod
     def fromUnitCellAtoms(cls, reflection_set, atom_iterator):
         """
-        @param reflection_set: the reflection set for which the structure
+        :param reflection_set: the reflection set for which the structure
                                factor is defined
-        @type reflection_set: L{CDTK.ReflectionSet.ReflectionSet}
-        @param atom_iterator: an iterator or sequence that yields
+        :type reflection_set: CDTK.ReflectionSet.ReflectionSet
+        :param atom_iterator: an iterator or sequence that yields
                               for each atom in the unit cell a
                               tuple of (atom_id, chemical element,
                               position vector, position fluctuation,
@@ -884,7 +885,7 @@ class StructureFactor(ReflectionData, AmplitudeData):
                               can be a symmetric tensor (ADP tensor)
                               or a scalar (implicitly multiplied by
                               the unit tensor).
-        @type atom_iterator: iterable
+        :type atom_iterator: iterable
         """
         obj = cls(reflection_set)
         obj.calculateFromUnitCellAtoms(atom_iterator)
@@ -893,10 +894,10 @@ class StructureFactor(ReflectionData, AmplitudeData):
     @classmethod
     def fromAsymmetricUnitAtoms(cls, reflection_set, atom_iterator):
         """
-        @param reflection_set: the reflection set for which the structure
+        :param reflection_set: the reflection set for which the structure
                                factor is defined
-        @type reflection_set: L{CDTK.ReflectionSet.ReflectionSet}
-        @param atom_iterator: an iterator or sequence that yields
+        :type reflection_set: CDTK.ReflectionSet.ReflectionSet
+        :param atom_iterator: an iterator or sequence that yields
                               for each atom in the asymmetric unit a
                               tuple of (atom_id, chemical element,
                               position vector, position fluctuation,
@@ -904,7 +905,7 @@ class StructureFactor(ReflectionData, AmplitudeData):
                               can be a symmetric tensor (ADP tensor)
                               or a scalar (implicitly multiplied by
                               the unit tensor).
-        @type atom_iterator: iterable
+        :type atom_iterator: iterable
         """
         obj = cls(reflection_set)
         obj.calculateFromAsymmetricUnitAtoms(atom_iterator)
@@ -913,11 +914,11 @@ class StructureFactor(ReflectionData, AmplitudeData):
     @classmethod
     def fromElectronDensityMap(cls, reflection_set, density_map):
         """
-        @param reflection_set: the reflection set for which the structure
+        :param reflection_set: the reflection set for which the structure
                                factor is defined
-        @type reflection_set: L{CDTK.ReflectionSet.ReflectionSet}
-        @param density_map: an electronic density map
-        @type density_map: L{CDTK.Maps.ElectronDensityMap}
+        :type reflection_set: CDTK.ReflectionSet.ReflectionSet
+        :param density_map: an electronic density map
+        :type density_map: CDTK.Maps.ElectronDensityMap
         """
         obj = cls(reflection_set)
         obj.calculateFromElectronDensityMap(density_map)
@@ -948,18 +949,18 @@ class StructureFactor(ReflectionData, AmplitudeData):
         from information stored in multiple arrays, usually read from
         a file.
 
-        @param h: the array of the first Miller indices
-        @type h: C{Scientific.N.array_type}
-        @param k: the array of the second Miller indices
-        @type k: C{Scientific.N.array_type}
-        @param l: the array of the third Miller indices
-        @type l: C{Scientific.N.array_type}
-        @param amplitude: the array of amplitude values for each reflection
-        @type amplitude: C{Scientific.N.array_type}
-        @param phase: the array of phase values for each reflection
-        @type phase: C{Scientific.N.array_type}
-        @raise AssertionError: if the input arrays have different lengths
-        @raise KeyError: if at least one (h, k, l) set corresponds to a
+        :param h: the array of the first Miller indices
+        :type h: Scientific.N.array_type
+        :param k: the array of the second Miller indices
+        :type k: Scientific.N.array_type
+        :param l: the array of the third Miller indices
+        :type l: Scientific.N.array_type
+        :param amplitude: the array of amplitude values for each reflection
+        :type amplitude: Scientific.N.array_type
+        :param phase: the array of phase values for each reflection
+        :type phase: Scientific.N.array_type
+        :raise AssertionError: if the input arrays have different lengths
+        :raise KeyError: if at least one (h, k, l) set corresponds to a
                          reflection that is not in the reflection set
         """
         n = len(h)
@@ -980,13 +981,13 @@ class StructureFactor(ReflectionData, AmplitudeData):
         Calculate the structure factor from a periodic MMTK universe
         representing a unit cell.
 
-        @param universe: the MMTK universe
-        @type universe: C{MMTK.Periodic3DUniverse}
-        @param adps: the anisotropic displacement parameters for all atoms
-        @type adps: C{MMTK.ParticleTensor}
-        @param conf: a configuration for the universe, defaults to the
+        :param universe: the MMTK universe
+        :type universe: MMTK.Periodic3DUniverse
+        :param adps: the anisotropic displacement parameters for all atoms
+        :type adps: MMTK.ParticleTensor
+        :param conf: a configuration for the universe, defaults to the
                      current configuration
-        @type conf: C{MMTK.Configuration}
+        :type conf: MMTK.Configuration
         """
         from AtomicScatteringFactors import atomic_scattering_factors
         from CDTK_sfcalc import sfTerm
@@ -1018,7 +1019,7 @@ class StructureFactor(ReflectionData, AmplitudeData):
 
     def calculateFromUnitCellAtoms(self, atom_iterator, cell=None):
         """
-        @param atom_iterator: an iterator or sequence that yields
+        :param atom_iterator: an iterator or sequence that yields
                               for each atom in the unit cell a
                               tuple of (atom_id, chemical element,
                               position vector, position fluctuation,
@@ -1026,10 +1027,10 @@ class StructureFactor(ReflectionData, AmplitudeData):
                               can be a symmetric tensor (ADP tensor)
                               or a scalar (implicitly multiplied by
                               the unit tensor).
-        @type atom_iterator: iterable
-        @param cell: a unit cell, which defaults to the unit cell for
+        :type atom_iterator: iterable
+        :param cell: a unit cell, which defaults to the unit cell for
                      which the reflection set is defined.
-        @type cell: L{CDTK.Crystal.UnitCell}
+        :type cell: CDTK.Crystal.UnitCell
         """
         from AtomicScatteringFactors import atomic_scattering_factors
         from CDTK_sfcalc import sfTerm
@@ -1055,7 +1056,7 @@ class StructureFactor(ReflectionData, AmplitudeData):
 
     def calculateFromAsymmetricUnitAtoms(self, atom_iterator, cell=None):
         """
-        @param atom_iterator: an iterator or sequence that yields
+        :param atom_iterator: an iterator or sequence that yields
                               for each atom in the asymmetric unit a
                               tuple of (atom_id, chemical element,
                               position vector, position fluctuation,
@@ -1063,10 +1064,10 @@ class StructureFactor(ReflectionData, AmplitudeData):
                               can be a symmetric tensor (ADP tensor)
                               or a scalar (implicitly multiplied by
                               the unit tensor).
-        @type atom_iterator: iterable
-        @param cell: a unit cell, which defaults to the unit cell for
+        :type atom_iterator: iterable
+        :param cell: a unit cell, which defaults to the unit cell for
                      which the reflection set is defined.
-        @type cell: L{CDTK.Crystal.UnitCell}
+        :type cell: CDTK.Crystal.UnitCell
         """
         from AtomicScatteringFactors import atomic_scattering_factors
         twopii = 2.j*N.pi
@@ -1097,8 +1098,8 @@ class StructureFactor(ReflectionData, AmplitudeData):
 
     def calculateFromElectronDensityMap(self, density_map):
         """
-        @param density_map: an electronic density map
-        @type density_map: L{CDTK.Maps.ElectronDensityMap}
+        :param density_map: an electronic density map
+        :type density_map: CDTK.Maps.ElectronDensityMap
         """
         from CDTK_sf_fft import map_to_sf
         m_fc = self.reflection_set.cell.fractionalToCartesianMatrix()
@@ -1112,19 +1113,19 @@ class ModelAmplitudes(ReflectionData,
     """
     Structure factor amplitudes (without phases) calculated from a model
 
-    ModelAmplitudes are the result of a conversion of L{ModelIntensities}
+    ModelAmplitudes are the result of a conversion of ModelIntensities
     to amplitudes.
     """
 
     def __init__(self, reflection_set, data=None):
         """
-        @param reflection_set: the reflection set for which the amplitudes
+        :param reflection_set: the reflection set for which the amplitudes
                                are defined
-        @type reflection_set: L{CDTK.ReflectionSet.ReflectionSet}
-        @param data: an optional array storing the data values, of the
-                     right shape and type (float). If C{None}, a new array
+        :type reflection_set: CDTK.ReflectionSet.ReflectionSet
+        :param data: an optional array storing the data values, of the
+                     right shape and type (float). If None, a new array
                      containing zero values is created.
-        @type data: C{Scientific.N.array_type}
+        :type data: Scientific.N.array_type
         """
         ReflectionData.__init__(self, reflection_set)
         if data is None:
@@ -1142,19 +1143,19 @@ class ModelIntensities(ReflectionData,
     """
     Reflection intensities calculated from a model
 
-    ModelIntensities are usually created by converting L{StructureFactor}
+    ModelIntensities are usually created by converting StructureFactor
     objects to intensities.
     """
 
     def __init__(self, reflection_set, data=None):
         """
-        @param reflection_set: the reflection set for which the intensities
+        :param reflection_set: the reflection set for which the intensities
                                are defined
-        @type reflection_set: L{CDTK.ReflectionSet.ReflectionSet}
-        @param data: an optional array storing the data values, of the
-                     right shape and type (float). If C{None}, a new array
+        :type reflection_set: CDTK.ReflectionSet.ReflectionSet
+        :param data: an optional array storing the data values, of the
+                     right shape and type (float). If None, a new array
                      containing zero values is created.
-        @type data: C{Scientific.N.array_type}
+        :type data: Scientific.N.array_type
         """
         ReflectionData.__init__(self, reflection_set)
         if data is None:
@@ -1172,13 +1173,13 @@ class ModelIntensities(ReflectionData,
         given combination of atoms whose positions are assumed to be
         distributed uniformly over the unit cell.
 
-        @param reflection_set: the reflection set for which the intensities
+        :param reflection_set: the reflection set for which the intensities
                                are defined
-        @type reflection_set: L{CDTK.ReflectionSet.ReflectionSet}
-        @param atom_count: a dictionary mapping chemical element symbols
+        :type reflection_set: CDTK.ReflectionSet.ReflectionSet
+        :param atom_count: a dictionary mapping chemical element symbols
                            to the number of atoms of that element in the
                            system
-        @type atom_count: C{dict}
+        :type atom_count: dict
         """
         obj = cls(reflection_set)
         obj.calculateFromUniformAtomDistribution(atom_count)
@@ -1190,10 +1191,10 @@ class ModelIntensities(ReflectionData,
         of atoms whose positions are assumed to be distributed uniformly
         over the unit cell.
 
-        @param atom_count: a dictionary mapping chemical element symbols
+        :param atom_count: a dictionary mapping chemical element symbols
                            to the number of atoms of that element in the
                            system
-        @type atom_count: C{dict}
+        :type atom_count: dict
         """
         from AtomicScatteringFactors import atomic_scattering_factors
         sv = self.reflection_set.sVectorArray()

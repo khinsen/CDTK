@@ -4,17 +4,18 @@
 # distributed under the CeCILL-C licence. See the file LICENCE
 # for the full text of this licence.
 #
-# Written by Konrad Hinsen.
-#
 
 """
 Basic structure refinement support
 
-The class L{RefinementEngine} calculates a target function as well as
+The class RefinementEngine calculates a target function as well as
 its derivatives with respect to the model parameters (positions and
 ADPs). There is only minimal minimization support and none at all for
 restraints of any kind. Two subclasses implement a least-squares
 target and a maximum-likelihood target.
+
+.. moduleauthor:: Konrad Hinsen <konrad.hinsen@cnrs-orleans.fr>
+
 """
 
 #
@@ -49,9 +50,9 @@ class RefinementEngine(object):
     def __init__(self, exp_amplitudes, asu_iterator, working_subset=None,
                  validation_subset=None):
         """
-        @param exp_amplitudes: experimental structure factor amplitudes
-        @type exp_amplitudes: L{CDTK.ReflectionData.ExperimentalAmplitudes}
-        @param asu_iterator: an iterator or sequence that yields
+        :param exp_amplitudes: experimental structure factor amplitudes
+        :type exp_amplitudes: CDTK.ReflectionData.ExperimentalAmplitudes
+        :param asu_iterator: an iterator or sequence that yields
                              for each atom in the asymmetric unit a
                              tuple of (id, chemical element,
                              position vector, ADP tensor,
@@ -59,14 +60,14 @@ class RefinementEngine(object):
                              that uniquely identifies an atom; it is used
                              later for updating or retrieving the parameters
                              of this atom.
-        @type asu_iterator: iterator
-        @param working_subset: a subset of the reflections used in the
+        :type asu_iterator: iterator
+        :param working_subset: a subset of the reflections used in the
                                calculation of the target function. If None,
                                all reflections are used.
-        @type working_subset: L{CDTK.Reflection.ReflectionSubset}
-        @param validation_subset: a subset of the reflections used for
+        :type working_subset: CDTK.Reflection.ReflectionSubset
+        :param validation_subset: a subset of the reflections used for
                                   validation. If None, all reflections are used.
-        @type validation_subset: L{CDTK.Reflection.ReflectionSubset}
+        :type validation_subset: CDTK.Reflection.ReflectionSubset
         """
         # Store the atomic model
         ids = []
@@ -172,15 +173,17 @@ class RefinementEngine(object):
 
     def atoms(self):
         """
-        @return: an iterator over the atom_id objects of the atoms in the model
+        :returns: an iterator over the atom_id objects of the atoms in the model
+        :rtype:   iterator
         """
         for atom_id in self.ids:
             yield atom_id
 
     def atomicParameters(self):
         """
-        @return: an iterator over the atoms in the model yielding a tuple
-                 (atom_id, position, ADP_tensor, occupancy)
+        :returns: an iterator over the atoms in the model yielding a tuple
+                  (atom_id, position, ADP_tensor, occupancy)
+        :rtype:   iterator
         """
         for atom_id in self.ids:
             yield (atom_id, Vector(self.positions[self.id_dict[atom_id]]),
@@ -189,51 +192,51 @@ class RefinementEngine(object):
 
     def getPosition(self, atom_id):
         """
-        @param atom_id: id of the atom whose position is requested
-        @return: the position of the atom
-        @rtype: C{Scientific.Geometry.Vector}
+        :param atom_id: id of the atom whose position is requested
+        :return: the position of the atom
+        :rtype: Scientific.Geometry.Vector
         """
         return Vector(self.positions[self.id_dict[atom_id]])
 
     def getADP(self, atom_id):
         """
-        @param atom_id: id of the atom whose ADP tensor is requested
-        @return: the ADP tensor of the atom
-        @rtype: C{Scientific.Geometry.Tensor}
+        :param atom_id: id of the atom whose ADP tensor is requested
+        :return: the ADP tensor of the atom
+        :rtype: Scientific.Geometry.Tensor
         """
         return SymmetricTensor(self.adps[self.id_dict[atom_id]])
 
     def getOccupancy(self, atom_id):
         """
-        @param atom_id: id of the atom whose occupancy is requested
-        @return: the occupancy the atom
-        @rtype: C{float}
+        :param atom_id: id of the atom whose occupancy is requested
+        :return: the occupancy the atom
+        :rtype: float
         """
         return self.occupancies[self.id_dict[atom_id]]
 
     def setPosition(self, atom_id, position):
         """
-        @param atom_id: id of the atom whose position is changed
-        @param position: the new position for the atom
-        @type position: C{Scientific.Geometry.Vector}
+        :param atom_id: id of the atom whose position is changed
+        :param position: the new position for the atom
+        :type position: Scientific.Geometry.Vector
         """
         self.positions[self.id_dict[atom_id]] = position.array
         self.state_valid = False
 
     def setADP(self, atom_id, adp):
         """
-        @param atom_id: id of the atom whose ADP tensor is changed
-        @param adp: the new ADP tensor for the atom
-        @type adp: C{CDTK_symtensor.SymmetricTensor}
+        :param atom_id: id of the atom whose ADP tensor is changed
+        :param adp: the new ADP tensor for the atom
+        :type adp: CDTK_symtensor.SymmetricTensor
         """
         self.adps[self.id_dict[atom_id]] = adp.array
         self.state_valid = False
 
     def setOccupancy(self, atom_id, occupancy):
         """
-        @param atom_id: id of the atom whose position is changed
-        @param occupancy: the new position for the atom
-        @type occupancy: C{float}
+        :param atom_id: id of the atom whose position is changed
+        :param occupancy: the new position for the atom
+        :type occupancy: float
         """
         assert occupancy >= 0. and occupancy <= 1.
         self.occupancies[self.id_dict[atom_id]] = occupancy
@@ -324,8 +327,8 @@ class RefinementEngine(object):
 
     def rFactors(self):
         """
-        @return: the R factors for the working and the validation subset
-        @rtype: C{(float, float)}
+        :return: the R factors for the working and the validation subset
+        :rtype: (float, float)
         """
         self.updateInternalState()
         scale = N.sum(self.working_model_amplitudes
@@ -343,8 +346,8 @@ class RefinementEngine(object):
         """
         Calculate the target function of the refinement (the function whose
         global minimum corresponds to the ideal refined model).
-        @return: target
-        @rtype: C{float}
+        :return: target
+        :rtype: float
         """
         return self.targetFunctionAndAmplitudeDerivatives()[0]
 
@@ -354,8 +357,8 @@ class RefinementEngine(object):
         global minimum corresponds to the ideal refined model) and its
         derivatives with respect to the structure factor amplitudes
         of the model.
-        @return: (target, derivatives)
-        @rtype: (C{float}, C{N.array_type}) 
+        :return: (target, derivatives)
+        :rtype: (float, N.array_type) 
         """
         return NotImplementedError
 
@@ -363,8 +366,8 @@ class RefinementEngine(object):
         """
         Calculate the target function and its derivatives with respect to the
         atomic position parameters of the model.
-        @return: (target, derivatives)
-        @rtype: (C{float}, C{N.array_type}) 
+        :return: (target, derivatives)
+        :rtype: (float, N.array_type) 
         """
         target, deriv = self.targetFunctionAndAmplitudeDerivatives()
         pd = N.zeros(self.positions.shape, N.Float)
@@ -375,8 +378,8 @@ class RefinementEngine(object):
         """
         Calculate the target function and its derivatives with respect to the
         six elements of the ADP tensor of all atoms.
-        @return: (target, derivatives)
-        @rtype: (C{float}, C{N.array_type}) 
+        :return: (target, derivatives)
+        :rtype: (float, N.array_type) 
         """
         target, deriv = self.targetFunctionAndAmplitudeDerivatives()
         adpd = N.zeros(self.adps.shape, N.Float)
@@ -387,10 +390,10 @@ class RefinementEngine(object):
         """
         Calculate the derivative of the target function with respect to the
         scale factor of the model amplitudes.
-        @param f: the scale factor value
-        @type f: C{float}
-        @return: scale factor derivative
-        @rtype: C{float}
+        :param f: the scale factor value
+        :type f: float
+        :return: scale factor derivative
+        :rtype: float
         """
         self.scale = f
         target, deriv = self.targetFunctionAndAmplitudeDerivatives()
@@ -401,10 +404,10 @@ class RefinementEngine(object):
         """
         Modify the position parameters by adding the negative gradient
         of the target function multiplied by a scale factor.
-        @param scale_factor: the scale factor
-        @type scale_factor: C{float}
-        @return: the target function and the gradient array
-        @rtype: (C{float}, L{AtomPositionDataArray})
+        :param scale_factor: the scale factor
+        :type scale_factor: float
+        :return: the target function and the gradient array
+        :rtype: (float, AtomPositionDataArray)
         """
         target, deriv = self.targetFunctionAndPositionDerivatives()
         self.positions -= scale_factor*deriv.array
@@ -415,10 +418,10 @@ class RefinementEngine(object):
         """
         Modify the ADPs by adding the negative gradient
         of the target function multiplied by a scale factor.
-        @param scale_factor: the scale factor
-        @type scale_factor: C{float}
-        @return: the target function and the gradient array
-        @rtype: (C{float}, L{AtomDataArray})
+        :param scale_factor: the scale factor
+        :type scale_factor: float
+        :return: the target function and the gradient array
+        :rtype: (float, AtomDataArray)
         """
         target, deriv = self.targetFunctionAndADPDerivatives()
         self.adps -= scale_factor*deriv.array

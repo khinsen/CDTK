@@ -4,8 +4,6 @@
 # distributed under the CeCILL-C licence. See the file LICENCE
 # for the full text of this licence.
 #
-# Written by Konrad Hinsen.
-#
 
 """This module defines constants and prefactors that convert between
 CDTK's internal unit system and other units. There are also some
@@ -49,6 +47,9 @@ hbar = (Planck constant divided by 2*Pi),
 k_B = (Boltzmann constant),
 eps0 = (permittivity of vacuum),
 me = (electron mass)
+
+.. moduleauthor:: Konrad Hinsen <konrad.hinsen@cnrs-orleans.fr>
+
 """
 
 # Change the name because N stands for Newton in this module

@@ -4,8 +4,12 @@
 # distributed under the CeCILL-C licence. See the file LICENCE
 # for the full text of this licence.
 #
-# Written by Konrad Hinsen.
-#
+
+"""
+Parallel versions of the most time-consuming routines in CDTK
+
+.. moduleauthor:: Konrad Hinsen <konrad.hinsen@cnrs-orleans.fr>
+"""
 
 #import Scientific.DistributedComputing.TaskManager
 #Scientific.DistributedComputing.TaskManager.debug = True

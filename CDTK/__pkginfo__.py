@@ -4,7 +4,5 @@
 # distributed under the CeCILL-C licence. See the file LICENCE
 # for the full text of this licence.
 #
-# Written by Konrad Hinsen.
-#
 
-__version__ = '0.4'
+__version__ = '1.0'

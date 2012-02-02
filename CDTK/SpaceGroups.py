@@ -7,12 +7,15 @@
 #
 
 """
-Space groups in crystallography
+Space groups
 
 This module contains a list of all the 230 space groups that can occur in
 a crystal. The variable space_groups contains a dictionary that maps
 space group numbers and space group names to the corresponding space
 group objects.
+
+.. moduleauthor:: Konrad Hinsen <konrad.hinsen@cnrs-orleans.fr>
+
 """
 
 from Scientific import N
@@ -29,20 +32,20 @@ class SpaceGroup(object):
 
     def __init__(self, number, symbol, transformations):
         """
-        @param number: the number assigned to the space group by
+        :param number: the number assigned to the space group by
                        international convention
-        @type number: C{int}
-        @param symbol: the Hermann-Mauguin space-group symbol as used
+        :type number: int
+        :param symbol: the Hermann-Mauguin space-group symbol as used
                        in PDB and mmCIF files
-        @type symbol: C{str}
-        @param transformations: a list of space group transformations,
+        :type symbol: str
+        :param transformations: a list of space group transformations,
                                 each consisting of a tuple of three
                                 integer arrays (rot, tn, td), where
                                 rot is the rotation matrix and tn/td
                                 are the numerator and denominator of the
                                 translation vector. The transformations
                                 are defined in fractional coordinates.
-        @type transformations: C{list}
+        :type transformations: list
         """
         self.number = number
         self.symbol = symbol
@@ -57,16 +60,16 @@ class SpaceGroup(object):
 
     def __len__(self):
         """
-        @return: the number of space group transformations
-        @rtype: C{int}
+        :return: the number of space group transformations
+        :rtype: int
         """
         return len(self.transformations)
 
     def symmetryEquivalentMillerIndices(self, hkl):
         """
-        @param hkl: a set of Miller indices
-        @type hkl: C{Scientific.N.array_type}
-        @return: a tuple (miller_indices, phase_factor) of two arrays
+        :param hkl: a set of Miller indices
+        :type hkl: Scientific.N.array_type
+        :return: a tuple (miller_indices, phase_factor) of two arrays
                  of length equal to the number of space group
                  transformations. miller_indices contains the Miller
                  indices of each reflection equivalent by symmetry to the
@@ -74,7 +77,7 @@ class SpaceGroup(object):
                  phase_factor contains the phase factors that must be applied
                  to the structure factor of reflection hkl to obtain the
                  structure factor of the symmetry equivalent reflection.
-        @rtype: C{tuple}
+        :rtype: tuple
         """
         hkls = N.dot(self.transposed_rotations, hkl)
         p = N.multiply.reduce(self.phase_factors**hkl, -1)
