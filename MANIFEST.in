@@ -1,6 +1,8 @@
 include README LICENCE LICENSE
 include Src/*.pyx Src/*.c Src/*.pxi
-include Tests/*.py Tests/*.gz Tests/run_all_tests
+include Tests/*.py Tests/*.gz
 include Scripts/*
 include Doc/*.tex Doc/*.pdf
-include Doc/reference/*
+include Doc/module_reference/*
+include Doc/*.rst Doc/conf.py Doc/Makefile
+

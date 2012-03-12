@@ -12,7 +12,7 @@ licence.
 Konrad Hinsen
 Centre de Biophysique MolÅÈculaire (CNRS)
 and Synchrotron Soleil
-E-Mail: hinsen@cnrs-orleans.fr
+E-Mail: konrad.hinsen@cnrs-orleans.fr
 
 ---------------------------------------------------------------------------
 
@@ -21,13 +21,13 @@ Installation:
 
 Prerequisites: 
 
-- Python 2.5 or higher: 
+- Python 2.6 or higher: 
       http://www.python.org/
 
-- Numerical Python or its successor NumPy:
+- NumPy:
       http://numpy.scipy.org/
 
-- ScientificPython 2.7 or higher:
+- ScientificPython 2.8 or higher:
       http://dirac.cnrs-orleans.fr/ScientificPython/
 
 - FFTW3:
@@ -47,7 +47,7 @@ whose location should be indicated by the environment variable 'CCP4'.
 
 Alternatively, the freely distributable GPP4 library,
 
-     http://www.bioxray.dk/~mok/node/100
+     http://launchpad.net/gpp4
 
 can be used, whose location should be indicated by the environment
 variable 'GPP4'. If neither CCP4 nor GPP4 is defined, the MTZ file
