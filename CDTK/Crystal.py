@@ -242,6 +242,16 @@ class Crystal(object):
         for a in self.atoms:
             yield (a.atom_id, a.element, a.position, a.fluctuation, a.occupancy)
 
+    def symmetryTransformations(self):
+        """
+        :returns: a list of transformation objects representing the symmetry
+                  operations that must be applied to the asymmetric unit in
+                  order to obtain the contents of the unit cell
+        :rtype: list of Scientific.Geometry.Transformation.Transformation
+        """
+        return self.cell.cartesianCoordinateSymmetryTransformations(
+                                                          self.space_group)
+
     def updateAtomParametersFromRefinementEngine(self, refinement_engine):
         for a in self.atoms:
             a.position = refinement_engine.getPosition(a.atom_id)
