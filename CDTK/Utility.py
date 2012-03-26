@@ -46,7 +46,7 @@ def symmetricTensorRotationMatrix(d):
 def symmetricTensorBasis(cell, space_group):
     from CDTK.Crystal import UnitCell
     subspace = 1.*N.equal.outer(N.arange(6), N.arange(6))
-    for tr in cell.cartesianCoordinateSymmetryOperations(space_group):
+    for tr in cell.cartesianCoordinateSymmetryTransformations(space_group):
         rot = symmetricTensorRotationMatrix(tr.tensor.array)
         ev, axes = LA.eigenvectors(rot)
         new_subspace = []

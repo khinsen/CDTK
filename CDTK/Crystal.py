@@ -154,7 +154,7 @@ class UnitCell(object):
                 return False
         return True
 
-    def cartesianCoordinateSymmetryOperations(self, space_group):
+    def cartesianCoordinateSymmetryTransformations(self, space_group):
         """
         :param space_group: a space group
         :type space_group: CDTK.SpaceGroups.SpaceGroup

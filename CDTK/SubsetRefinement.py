@@ -4,11 +4,12 @@
 # distributed under the CeCILL-C licence. See the file LICENCE
 # for the full text of this licence.
 #
-# Written by Konrad Hinsen.
-#
 
 """
 Structure refinement using a subset of representative atoms
+
+.. moduleauthor:: Konrad Hinsen <konrad.hinsen@cnrs-orleans.fr>
+
 """
 
 from CDTK.Refinement import RefinementEngine, \
@@ -49,17 +50,17 @@ class AtomSubsetRefinementEngine(RefinementEngine):
     """
 
     def __init__(self, all_atom_refinement_engine, subset_atom_ids,
-                 distance_power=2):
+                 distance_power=4):
         """
-        @param all_atom_refinement_engine: the underlying all-atom
+        :param all_atom_refinement_engine: the underlying all-atom
                                            refinement engine
-        @type all_atom_refinement_engine: L{CDTK.Refinement.RefinementEngine}
-        @param subset_atom_ids: the ids of the atoms that are part of the
+        :type all_atom_refinement_engine: CDTK.Refinement.RefinementEngine
+        :param subset_atom_ids: the ids of the atoms that are part of the
                                 subset to be used in refinement
-        @type subset_atom_ids: sequence
-        @param distance_power: the power of the length of the distance
+        :type subset_atom_ids: sequence
+        :param distance_power: the power of the length of the distance
                                vector in the calculation of the weight
-        @type distance_power: C{int}
+        :type distance_power: int
         """
         assert isinstance(all_atom_refinement_engine, RefinementEngine)
         self.re = all_atom_refinement_engine
@@ -80,7 +81,7 @@ class AtomSubsetRefinementEngine(RefinementEngine):
 
         sg = self.re.reflection_set.space_group
         cell = self.re.reflection_set.cell
-        symops = cell.cartesianCoordinateSymmetryOperations(sg)
+        symops = cell.cartesianCoordinateSymmetryTransformations(sg)
         unit_cell_subset = []
         for id in self.ids:
             for tr in symops:
@@ -167,4 +168,66 @@ class AtomSubsetRefinementEngine(RefinementEngine):
         adpd = N.reshape(N.dot(N.transpose(self.adp_interpolation),
                                N.reshape(adpd.array, (6*self.re.natoms,))),
                          (self.natoms, 6))
+        return target, AtomDataArray(self, adpd)
+
+
+
+class AtomSubsetWithContactsRefinementEngine(AtomSubsetRefinementEngine):
+
+    def __init__(self, all_atom_refinement_engine, subset_atom_ids,
+                 distance_power=4, contact_decay=0.03, contact_scale=None):
+        AtomSubsetRefinementEngine.__init__(self, all_atom_refinement_engine,
+                                            subset_atom_ids, distance_power)
+        self._countContacts()
+        if contact_scale is None:
+            av_adp = N.sum(self.adps)/self.natoms
+            contact_scale = 0.1*N.sum(av_adp[:3])
+        self.cparams = N.array([contact_scale, contact_decay])
+        subset_contacts = N.take(self.contacts, self.aa_indices)
+        self.adps[:, :3] -= self.cparams[0] * \
+                        N.exp(-self.cparams[1]*subset_contacts)[:, N.NewAxis]
+
+    def _countContacts(self):
+        sg = self.re.reflection_set.space_group
+        cell = self.re.reflection_set.cell
+        symops = cell.cartesianCoordinateSymmetryTransformations(sg)
+        unit_cell = []
+        for tr in symops:
+            for index in range(self.re.natoms):
+                unit_cell.append((index, tr(Vector(self.re.positions[index]))))
+        self.contacts = N.zeros((self.re.natoms), N.Int)
+        for i in range(self.re.natoms):
+            index1, p1 = unit_cell[i]
+            for j in range(i+1, len(unit_cell)):
+                index2, p2 = unit_cell[j]
+                r = cell.minimumImageDistanceVector(p1, p2).length()
+                if r < 0.7:
+                    self.contacts[index1] += 1
+                    self.contacts[index2] += 1
+
+    def _updateInternalState(self):
+        dr = N.dot(self.position_interpolation,
+                   N.reshape(self.position_updates, (3*self.natoms,)))
+        self.re.positions += N.reshape(dr, self.re.positions.shape)
+        dadp = N.dot(self.adp_interpolation,
+                     N.reshape(self.adps, (6*self.natoms,)))
+        self.re.adps = N.reshape(dadp, self.re.adps.shape)
+        self.re.adps[:, :3] += \
+             self.cparams[0]*N.exp(-self.cparams[1]*self.contacts)[:, N.NewAxis]
+        self.position_updates[:] = 0.
+        self.re.state_valid = False
+
+    def steepestDescentADPMinimizationStep(self, scale_factor):
+        self.updateInternalState()
+        target, deriv = self.re.targetFunctionAndADPDerivatives()
+        adpd = N.reshape(N.dot(N.transpose(self.adp_interpolation),
+                               N.reshape(deriv.array, (6*self.re.natoms,))),
+                         (self.natoms, 6))
+        self.adps -= scale_factor*adpd
+        deriv_trace = N.sum(deriv.array[:, :3], axis=1)
+        exp_factor = N.exp(-self.cparams[1]*self.contacts)
+        self.cparams[0] -= scale_factor*N.sum(deriv_trace*exp_factor)
+        self.cparams[1] += scale_factor * \
+                   self.cparams[0]*N.sum(deriv_trace*exp_factor*self.contacts)
+        self.state_valid = False
         return target, AtomDataArray(self, adpd)
