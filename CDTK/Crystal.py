@@ -216,17 +216,48 @@ class Crystal(object):
     engines.
     """
 
-    def __init__(self, cell, space_group):
+    def __init__(self, cell, space_group, atoms=None):
         """
         :param cell: the unit cell
         :type cell: CDTK.Crystal.UnitCell
         :param space_group: the space group
         :type space_group: CDTK.SpaceGroups.SpaceGroup
+        :param atoms: a sequence or iterator of tuples describing atoms
         """
         self.cell = cell
         self.space_group = space_group
-        self.atoms = []
+        if atoms is None:
+            self.atoms = []
+        else:
+            self.atoms = [Atom(*spec) for spec in atoms]
 
+    def addAtom(self, atom_id,
+                element=None, position=None, fluctuation=None, occupancy=None):
+        """
+        :param atom_id: not used in any calculation. This value can be used
+                        as a unique atom identifier to establish a link
+                        to other atomic models.
+                        If atom_id is the only parameter, it must be of
+                        type CDTK.Crystal.Atom.
+        :param element: the chemical element
+        :type element: str
+        :param position: the position vector
+        :type position: Scientific.Geometry.Vector
+        :param fluctuation: the fluctuation parameter (B factor)
+        :type fluctuation: float or CDTK.Utility.SymmetricTensor
+        :param occupancy: the occupancy
+        :type occupancy: float
+        """
+        if element is None:
+            assert isinstance(atom_id, Atom)
+            atom = atom_id
+        else:
+            assert position is not None
+            assert fluctuation is not None
+            assert occupancy is not None
+            atom = Atom(atom_id, element, position, fluctuation, occupancy)
+        self.atoms.append(atom)
+        
     def __len__(self):
         """
         :returns: the number of atoms in the asymmetric unit
