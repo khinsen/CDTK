@@ -428,7 +428,7 @@ class MMCIFStructureFactorData(object):
 
         :param sf_file: the name of the structure factor mmCIF file
         :type sf_file: str
-        :param structure_file: the name of the structure mmCIT file
+        :param structure_file: the name of the structure mmCIF file
         :type structure_file: str
         :param pdb_code: a four-letter PDB code
         :type pdb_code: str
