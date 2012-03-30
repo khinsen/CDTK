@@ -130,7 +130,7 @@ class UtilityTests(unittest.TestCase):
         for params, rb, sg, nb in datasets:
             cell = UnitCell(*params)
             sg = space_groups[sg]
-            trs = cell.cartesianCoordinateSymmetryOperations(sg)
+            trs = cell.cartesianCoordinateSymmetryTransformations(sg)
             basis = symmetricTensorBasis(cell, sg)
             assert len(basis) == nb
             for t in basis:

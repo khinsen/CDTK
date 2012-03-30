@@ -124,7 +124,7 @@ class UnitCellTests(unittest.TestCase):
         for params, rb, sg in datasets:
             cell = UnitCell(*params)
             sg = space_groups[sg]
-            transformations = cell.cartesianCoordinateSymmetryOperations(sg)
+            transformations = cell.cartesianCoordinateSymmetryTransformations(sg)
             for t in transformations:
                 # Check that the transformation is a rotation-translation.
                 error = N.absolute(N.multiply.reduce(t.tensor.eigenvalues())-1.)
