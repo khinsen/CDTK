@@ -30,6 +30,10 @@ CDTK.ReflectionData.
 from CDTK.Crystal import Crystal
 from Scientific import N
 
+# Some expensive computations that are likely to be reused are cached.
+import weakref
+_cache = weakref.WeakKeyDictionary()
+
 #
 # A Reflection object stores Miller indices and a reference to the
 # ReflectionSet to which it belongs, plus some bookkeeping information.
@@ -660,8 +664,15 @@ class ReflectionSet(ReflectionSelector):
             array with the corresponding phases
         :rtype: Scientific.N.array_type
         """
+        global _cache
         if cell is None:
             cell = self.cell
+        cached_data = _cache.get(self, {})
+        try:
+            return cached_data[('sVectorArrayAndPhasesForASU', cell)]
+        except KeyError:
+            pass
+
         sg = self.space_group
         ntrans = len(sg)
         sv = N.zeros((ntrans, len(self.minimal_reflection_list), 3), N.Float)
@@ -678,11 +689,10 @@ class ReflectionSet(ReflectionSelector):
                      + r.k*float(tr_num[1])/float(tr_den[1]) \
                      + r.l*float(tr_num[2])/float(tr_den[2])
                 p[i, r.index] = N.exp(twopii*st)
-        return sv, p
 
-        sv = N.zeros((len(self.minimal_reflection_list), 3), N.Float)
-        for r in self:
-            sv[r.index] = r.sVector(cell).array
+        cached_data[('sVectorArrayAndPhasesForASU', cell)] = (sv, p)
+        _cache[self] = cached_data
+        return sv, p
 
     def symmetryAndCentricityArrays(self):
         """

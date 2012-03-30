@@ -47,7 +47,7 @@ class UnitCell(object):
                    / N.sin(self.gamma)
             e3_z = N.sqrt(1.-e3_x**2-e3_y**2)
             e3 = self.c*Vector(e3_x, e3_y, e3_z)
-            self.basis = [e1, e2, e3]
+            self.basis = (e1, e2, e3)
         elif len(parameters) == 3:
             assert isVector(parameters[0])
             assert isVector(parameters[1])
