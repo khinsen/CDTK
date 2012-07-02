@@ -149,6 +149,37 @@ class ElectronDensityMap(Map):
         return obj
 
     @classmethod
+    def fromAsymmetricUnitAtoms(cls, cell, n1, n2, n3,
+                                atom_iterator, space_group):
+        """
+        :param cell: the unit cell for which the map is defined
+        :type cell: CDTK.Crystal.UnitCell
+        :param n1: the number of points in the grid along the
+                   first lattice vector
+        :type n1: int
+        :param n2: the number of points in the grid along the
+                   second lattice vector
+        :type n2: int
+        :param n3: the number of points in the grid along the
+                   third lattice vector
+        :type n3: int
+        :param atom_iterator: an iterator or sequence that yields
+                              for each atom in the asymmetric unit a
+                              tuple of (atom_id, chemical element,
+                              position vector, position fluctuation,
+                              occupancy). The position fluctuation
+                              can be a symmetric tensor (ADP tensor)
+                              or a scalar (implicitly multiplied by
+                              the unit tensor).
+        :type atom_iterator: iterable
+        :param space_group: the space group of the crystal
+        :type space_group: CDTK.SpaceGroups.SpaceGroup
+        """
+        obj = cls(cell, n1, n2, n3)
+        obj.calculateFromAsymmetricUnitAtoms(atom_iterator, space_group, None)
+        return obj
+
+    @classmethod
     def fromStructureFactor(cls, cell, n1, n2, n3, sf):
         """
         :param cell: the unit cell for which the map is defined
@@ -245,6 +276,45 @@ class ElectronDensityMap(Map):
                                           adps[atom], 1.)
                                          for atom in universe.atomList()),
                                         cell)
+
+    def calculateFromAsymmetricUnitAtoms(self, atom_iterator, space_group,
+                                         cell=None):
+        """
+        :param atom_iterator: an iterator or sequence that yields
+                              for each atom in the asymmetric unit a
+                              tuple of (atom_id, chemical element,
+                              position vector, position fluctuation,
+                              occupancy). The position fluctuation
+                              can be a symmetric tensor (ADP tensor)
+                              or a scalar (implicitly multiplied by
+                              the unit tensor).
+        :param space_group: the space group of the crystal
+        :type space_group: CDTK.SpaceGroups.SpaceGroup
+        :type atom_iterator: iterable
+        :param cell: a unit cell, which defaults to the unit cell for
+                     which the map object is defined. If a different
+                     unit cell is given, the map is calculated for
+                     this cell in fractional coordinates and converted
+                     to Cartesian coordinates using the unit cell of
+                     the map object. This is meaningful only if the two
+                     unit cells are very similar, such as for unit cells
+                     corresponding to different steps in a constant-pressure
+                     Molecular Dynamics simulation.
+        :type cell: CDTK.Crystal.UnitCell
+        """
+        if cell is None:
+            cell = self.cell
+        st = cell.cartesianCoordinateSymmetryTransformations(space_group)
+        def check(adp):
+            # Only isotropic B factors are handled for now
+            if not isinstance(adp, float):
+                raise NotImplementedError("Symmetry transformation of ADPs"
+                                          " not yet implemented")
+            return adp
+        it = ((atom_id, element, tr(position), check(adp), occupancy)
+              for atom_id, element, position, adp, occupancy in atom_iterator
+              for tr in st)
+        self.calculateFromUnitCellAtoms(it, cell)
 
     def calculateFromStructureFactor(self, sf):
         """
