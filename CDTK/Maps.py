@@ -351,6 +351,81 @@ class ElectronDensityMap(Map):
         self.array += reflections_to_map(sf, n1, n2, n3, det_m_cf)
 
 
+class SolventMap(Map):
+
+    """
+    Solvent map
+
+    A solvent map is 0 in the areas occupied by explicitly
+    modelled atoms and 1 outside, with a smooth transition between
+    the two zones.
+
+    The solvent model is the polynomial switch model described
+    in Fenn et al., Acta Cryst. D66, 1024-1031 (2010)
+    """
+
+    default_label = "Solvent"
+
+    def calculateFromUnitCellAtoms(self, atom_iterator, cell=None):
+        """
+        :param atom_iterator: an iterator or sequence that yields
+                              for each atom in the unit cell a
+                              tuple of (atom_id, chemical element,
+                              position vector, position fluctuation,
+                              occupancy). The position fluctuation
+                              can be a symmetric tensor (ADP tensor)
+                              or a scalar (implicitly multiplied by
+                              the unit tensor).
+        :type atom_iterator: iterable
+        :param cell: a unit cell, which defaults to the unit cell for
+                     which the map object is defined. If a different
+                     unit cell is given, the map is calculated for
+                     this cell in fractional coordinates and converted
+                     to Cartesian coordinates using the unit cell of
+                     the map object. This is meaningful only if the two
+                     unit cells are very similar, such as for unit cells
+                     corresponding to different steps in a constant-pressure
+                     Molecular Dynamics simulation.
+        :type cell: CDTK.Crystal.UnitCell
+        """
+        if cell is None:
+            cell = self.cell
+        from ChemicalData import vdW_radii
+        m_fc = cell.fractionalToCartesianMatrix()
+        m = N.dot(N.transpose(m_fc), m_fc)
+        w = 0.08 # window width
+        self.array[...] = 1.
+        for atom_id, element, position, adp, occupancy in atom_iterator:
+            a = vdW_radii[element.lower()]
+
+            xa = cell.cartesianToFractional(position)+0.5
+            xa -= N.floor(xa)+0.5
+            dx1 = self.x1-xa[0]
+            dx1 += (dx1 < -0.5).astype(N.Int) - (dx1 >= 0.5).astype(N.Int)
+            dx2 = self.x2-xa[1]
+            dx2 += (dx2 < -0.5).astype(N.Int) - (dx2 >= 0.5).astype(N.Int)
+            dx3 = self.x3-xa[2]
+            dx3 += (dx3 < -0.5).astype(N.Int) - (dx3 >= 0.5).astype(N.Int)
+
+            rsq = N.zeros(self.shape, N.Float)
+            N.add(rsq, m[0,0]*(dx1*dx1)[:, N.NewAxis, N.NewAxis], rsq)
+            N.add(rsq, m[1,1]*(dx2*dx2)[N.NewAxis, :, N.NewAxis], rsq)
+            N.add(rsq, m[2,2]*(dx3*dx3)[N.NewAxis, N.NewAxis, :], rsq)
+            N.add(rsq, (2.*m[0, 1]) *
+                  dx1[:, N.NewAxis, N.NewAxis]*dx2[N.NewAxis, :, N.NewAxis],
+                  rsq)
+            N.add(rsq, (2.*m[0, 2]) *
+                  dx1[:, N.NewAxis, N.NewAxis]*dx3[N.NewAxis, N.NewAxis, :],
+                  rsq)
+            N.add(rsq, (2.*m[1, 2]) *
+                  dx2[N.NewAxis, :, N.NewAxis]*dx3[N.NewAxis, N.NewAxis, :],
+                  rsq)
+            dw = (N.sqrt(rsq)-a+w)/w
+            rho = N.where(dw <= 0., 0.,
+                          N.where(dw >= 2., 1., (0.75-0.25*dw)*dw*dw))
+            self.array *= rho
+
+
 class PattersonMap(Map):
 
     """
