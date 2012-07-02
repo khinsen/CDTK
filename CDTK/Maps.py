@@ -82,18 +82,6 @@ class Map(object):
         vmd_script.write('mol addrep top\nmol modstyle 0 top isosurface\n')
         vmd_script.close()
 
-
-class ElectronDensityMap(Map):
-
-    """
-    Electron density map
-
-    An electron density map can be calculated from a StructureFactor
-    by Fourier transform or directly from an atomic model.
-    """
-
-    default_label = "Electron density"
-
     @classmethod
     def fromUnitCellAtoms(cls, cell, n1, n2, n3, atom_iterator):
         """
@@ -200,6 +188,96 @@ class ElectronDensityMap(Map):
         obj.calculateFromStructureFactor(sf)
         return obj
 
+    @classmethod
+    def fromIntensities(cls, cell, n1, n2, n3, intensities):
+        """
+        :param cell: the unit cell for which the map is defined
+        :type cell: CDTK.Crystal.UnitCell
+        :param n1: the number of points in the grid along the
+                   first lattice vector
+        :type n1: int
+        :param n2: the number of points in the grid along the
+                   second lattice vector
+        :type n2: int
+        :param n3: the number of points in the grid along the
+                   third lattice vector
+        :type n3: int
+        :param intensities: a set of reflection intensities
+        :type intensities: CDTK.Reflections.IntensityData
+        """
+        obj = cls(cell, n1, n2, n3)
+        obj.calculateFromIntensities(intensities)
+        
+    def calculateFromAsymmetricUnitAtoms(self, atom_iterator, space_group,
+                                         cell=None):
+        """
+        :param atom_iterator: an iterator or sequence that yields
+                              for each atom in the asymmetric unit a
+                              tuple of (atom_id, chemical element,
+                              position vector, position fluctuation,
+                              occupancy). The position fluctuation
+                              can be a symmetric tensor (ADP tensor)
+                              or a scalar (implicitly multiplied by
+                              the unit tensor).
+        :param space_group: the space group of the crystal
+        :type space_group: CDTK.SpaceGroups.SpaceGroup
+        :type atom_iterator: iterable
+        :param cell: a unit cell, which defaults to the unit cell for
+                     which the map object is defined. If a different
+                     unit cell is given, the map is calculated for
+                     this cell in fractional coordinates and converted
+                     to Cartesian coordinates using the unit cell of
+                     the map object. This is meaningful only if the two
+                     unit cells are very similar, such as for unit cells
+                     corresponding to different steps in a constant-pressure
+                     Molecular Dynamics simulation.
+        :type cell: CDTK.Crystal.UnitCell
+        """
+        if cell is None:
+            cell = self.cell
+        st = cell.cartesianCoordinateSymmetryTransformations(space_group)
+        def check(adp):
+            # Only isotropic B factors are handled for now
+            if not isinstance(adp, float):
+                raise NotImplementedError("Symmetry transformation of ADPs"
+                                          " not yet implemented")
+            return adp
+        it = ((atom_id, element, tr(position), check(adp), occupancy)
+              for atom_id, element, position, adp, occupancy in atom_iterator
+              for tr in st)
+        self.calculateFromUnitCellAtoms(it, cell)
+
+    def calculateFromUniverse(self, universe, adps, conf=None):
+        """
+        :param universe: a periodic MMTK universe
+        :type universe: MMTK.Periodic3DUniverse
+        :param adps: the anisotropic displacement parameters for all atoms
+        :type adps: MMTK.ParticleTensor
+        :param conf: a configuration for the universe, defaults to the
+                     current configuration
+        :type conf: MMTK.Configuration
+        """
+        if conf is None:
+            conf = universe.configuration()
+        cell = universe.__class__()
+        cell.setCellParameters(conf.cell_parameters)
+        self.calculateFromUnitCellAtoms(((atom, atom.symbol, conf[atom],
+                                          adps[atom], 1.)
+                                         for atom in universe.atomList()),
+                                        cell)
+
+
+class ElectronDensityMap(Map):
+
+    """
+    Electron density map
+
+    An electron density map can be calculated from a StructureFactor
+    by Fourier transform or directly from an atomic model.
+    """
+
+    default_label = "Electron density"
+
     def calculateFromUnitCellAtoms(self, atom_iterator, cell=None):
         """
         :param atom_iterator: an iterator or sequence that yields
@@ -258,64 +336,6 @@ class ElectronDensityMap(Map):
                    dx2[N.NewAxis, :, N.NewAxis]*dx3[N.NewAxis, N.NewAxis, :], e)
                 N.add(self.array, weight*N.exp(e), self.array)
 
-    def calculateFromUniverse(self, universe, adps, conf=None):
-        """
-        :param universe: a periodic MMTK universe
-        :type universe: MMTK.Periodic3DUniverse
-        :param adps: the anisotropic displacement parameters for all atoms
-        :type adps: MMTK.ParticleTensor
-        :param conf: a configuration for the universe, defaults to the
-                     current configuration
-        :type conf: MMTK.Configuration
-        """
-        if conf is None:
-            conf = universe.configuration()
-        cell = universe.__class__()
-        cell.setCellParameters(conf.cell_parameters)
-        self.calculateFromUnitCellAtoms(((atom, atom.symbol, conf[atom],
-                                          adps[atom], 1.)
-                                         for atom in universe.atomList()),
-                                        cell)
-
-    def calculateFromAsymmetricUnitAtoms(self, atom_iterator, space_group,
-                                         cell=None):
-        """
-        :param atom_iterator: an iterator or sequence that yields
-                              for each atom in the asymmetric unit a
-                              tuple of (atom_id, chemical element,
-                              position vector, position fluctuation,
-                              occupancy). The position fluctuation
-                              can be a symmetric tensor (ADP tensor)
-                              or a scalar (implicitly multiplied by
-                              the unit tensor).
-        :param space_group: the space group of the crystal
-        :type space_group: CDTK.SpaceGroups.SpaceGroup
-        :type atom_iterator: iterable
-        :param cell: a unit cell, which defaults to the unit cell for
-                     which the map object is defined. If a different
-                     unit cell is given, the map is calculated for
-                     this cell in fractional coordinates and converted
-                     to Cartesian coordinates using the unit cell of
-                     the map object. This is meaningful only if the two
-                     unit cells are very similar, such as for unit cells
-                     corresponding to different steps in a constant-pressure
-                     Molecular Dynamics simulation.
-        :type cell: CDTK.Crystal.UnitCell
-        """
-        if cell is None:
-            cell = self.cell
-        st = cell.cartesianCoordinateSymmetryTransformations(space_group)
-        def check(adp):
-            # Only isotropic B factors are handled for now
-            if not isinstance(adp, float):
-                raise NotImplementedError("Symmetry transformation of ADPs"
-                                          " not yet implemented")
-            return adp
-        it = ((atom_id, element, tr(position), check(adp), occupancy)
-              for atom_id, element, position, adp, occupancy in atom_iterator
-              for tr in st)
-        self.calculateFromUnitCellAtoms(it, cell)
-
     def calculateFromStructureFactor(self, sf):
         """
         :param sf: a structure factor set
@@ -348,26 +368,6 @@ class PattersonMap(Map):
         # facilitate comparisons
         self.vmd_origin = -0.5*(e1+e2+e3)
 
-    @classmethod
-    def fromIntensities(cls, cell, n1, n2, n3, intensities):
-        """
-        :param cell: the unit cell for which the map is defined
-        :type cell: CDTK.Crystal.UnitCell
-        :param n1: the number of points in the grid along the
-                   first lattice vector
-        :type n1: int
-        :param n2: the number of points in the grid along the
-                   second lattice vector
-        :type n2: int
-        :param n3: the number of points in the grid along the
-                   third lattice vector
-        :type n3: int
-        :param intensities: a set of reflection intensities
-        :type intensities: CDTK.Reflections.IntensityData
-        """
-        obj = cls(cell, n1, n2, n3)
-        obj.calculateFromIntensities(intensities)
-        
     def calculateFromIntensities(self, intensities):
         """
         :param intensities: a set of reflection intensities
@@ -386,3 +386,10 @@ class PattersonMap(Map):
         array = N.concatenate([array[:, n2/2:, :], array[:, :n2/2, :]], axis=1)
         array = N.concatenate([array[:, :, n3/2:], array[:, :, :n3/2]], axis=2)
         self.array += array
+
+    def calculateFromStructureFactor(self, sf):
+        """
+        :param sf: a structure factor set
+        :type sf: CDTK.Reflections.StructureFactor
+        """
+        return self.calculateFromIntensities(self, sf.intensities())
