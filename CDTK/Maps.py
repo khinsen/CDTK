@@ -425,6 +425,17 @@ class SolventMap(Map):
                           N.where(dw >= 2., 1., (0.75-0.25*dw)*dw*dw))
             self.array *= rho
 
+    # reimplementation that ignores ADPs
+    def calculateFromAsymmetricUnitAtoms(self, atom_iterator, space_group,
+                                         cell=None):
+        if cell is None:
+            cell = self.cell
+        st = cell.cartesianCoordinateSymmetryTransformations(space_group)
+        it = ((atom_id, element, tr(position), 0., occupancy)
+              for atom_id, element, position, adp, occupancy in atom_iterator
+              for tr in st)
+        self.calculateFromUnitCellAtoms(it, cell)
+
 
 class PattersonMap(Map):
 
