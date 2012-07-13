@@ -589,7 +589,7 @@ class ReflectionSet(ReflectionSelector):
                        for r in self.minimal_reflection_list]
         absences = [(r.h, r.k, r.l)
                     for r in self.systematic_absences]
-        return (tuple(self.cell.basis),
+        return (tuple(self.cell.basisVectors()),
                 self.space_group.number,
                 self.s_min, self.s_max, self.compact,
                 self.completeness_range,

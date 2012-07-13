@@ -279,6 +279,32 @@ class ReflectionData(object):
             return 0.
         return data_sum/nr
 
+    def correlation(self, other, subset = None):
+        """
+        :param other: reflection data containing amplitudes or structure factors
+        :param subset: a reflection subset over which the R factor is
+                       calculated. The default value of None selects
+                       the complete reflection set of the data.
+        :return: the correlation between the two reflection data sets
+                 (a value between -1 and 1)
+        :rtype: float
+        """
+        assert self.reflection_set is other.reflection_set
+        if subset is None:
+            subset = self.reflection_set
+        sum_self = 0.
+        sum_other = 0.
+        sum_self_sq = 0.
+        sum_other_sq = 0.
+        sum_prod = 0.
+        data = N.array([(self[r], other[r])
+                        for r in subset
+                        if self[r] is not None and other[r] is not None])
+        fluct = data-N.average(data, axis=0)
+        return N.absolute(N.sum(fluct[:, 0].conjugate()*fluct[:, 1]) / \
+                              N.sqrt(N.sum(fluct[:, 0].conjugate()*fluct[:, 0]) *
+                                     N.sum(fluct[:, 1].conjugate()*fluct[:, 1])))
+
     def writeToVMDScript(self, filename):
         """
         Writes a VMD script containing the values as map data in
@@ -504,6 +530,7 @@ class AmplitudeData(object):
         :rtype: float
         """
         assert isinstance(other, AmplitudeData)
+        assert self.reflection_set is other.reflection_set
         if subset is None:
             subset = self.reflection_set
         sum_self = 0.
@@ -531,6 +558,7 @@ class AmplitudeData(object):
         :rtype: float
         """
         assert isinstance(other, AmplitudeData)
+        assert self.reflection_set is other.reflection_set
         if subset is None:
             subset = self.reflection_set
         sum_self = 0.
@@ -572,6 +600,7 @@ class AmplitudeData(object):
         """
         from Scientific.Functions.Interpolation import InterpolatingFunction
         assert isinstance(other, AmplitudeData)
+        assert self.reflection_set is other.reflection_set
         if subset is None:
             subset = self.reflection_set
         s_min, s_max = subset.sRange()
@@ -647,6 +676,7 @@ class AmplitudeData(object):
         :rtype: tuple
         """
         assert isinstance(other, AmplitudeData)
+        assert self.reflection_set is other.reflection_set
         if filter is None:
             reflections = self.reflection_set
         else:
@@ -851,7 +881,8 @@ class StructureFactor(ReflectionData, AmplitudeData):
         self.value_array = self.array
 
     @classmethod
-    def fromUniverse(cls, reflection_set, universe, adps=None, conf=None):
+    def fromUniverse(cls, reflection_set, universe, adps=None,
+                     conf=None, subset=None):
         """
         Create a StructureFactor object from a periodic MMTK universe
         representing a unit cell.
@@ -866,9 +897,12 @@ class StructureFactor(ReflectionData, AmplitudeData):
         :param conf: a configuration for the universe, defaults to the
                      current configuration
         :type conf: MMTK.Configuration
+        :param subset: a subset of the atoms in the universe for which
+                       the strufture factor is calculated
+        :type subset: MMTK.Collections.GroupOfAtoms
         """
         obj = cls(reflection_set)
-        obj.calculateFromUniverse(universe, adps, conf)
+        obj.calculateFromUniverse(universe, adps, conf, subset)
         return obj
 
     @classmethod
@@ -976,7 +1010,8 @@ class StructureFactor(ReflectionData, AmplitudeData):
             else:
                 self.array[r.index] = f/r.phase_factor
 
-    def calculateFromUniverse(self, universe, adps=None, conf=None):
+    def calculateFromUniverse(self, universe, adps=None,
+                              conf=None, subset=None):
         """
         Calculate the structure factor from a periodic MMTK universe
         representing a unit cell.
@@ -988,11 +1023,16 @@ class StructureFactor(ReflectionData, AmplitudeData):
         :param conf: a configuration for the universe, defaults to the
                      current configuration
         :type conf: MMTK.Configuration
+        :param subset: a subset of the atoms in the universe for which
+                       the strufture factor is calculated
+        :type subset: MMTK.Collections.GroupOfAtoms
         """
         from AtomicScatteringFactors import atomic_scattering_factors
         from CDTK_sfcalc import sfTerm
         if conf is None:
             conf = universe.configuration()
+        if subset is None:
+            subset = universe
 
         cell = universe.__class__()
         cell.setCellParameters(conf.cell_parameters)
@@ -1000,7 +1040,7 @@ class StructureFactor(ReflectionData, AmplitudeData):
         ssq = N.sum(sv*sv, axis=-1)
 
         f_atom = {}
-        for atom in universe.atomList():
+        for atom in subset.atomList():
             key = atom.symbol
             if f_atom.has_key(key):
                 continue
@@ -1009,7 +1049,7 @@ class StructureFactor(ReflectionData, AmplitudeData):
                                 * N.exp(-b[:, N.NewAxis]*ssq[N.NewAxis, :]))
 
         self.array[:] = 0j
-        for atom in universe.atomList():
+        for atom in subset.atomList():
             if adps is None:
                 sfTerm(self.array, sv, f_atom[atom.symbol],
                        conf[atom].array, sv, 0., 0)

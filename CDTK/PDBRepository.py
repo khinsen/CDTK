@@ -73,7 +73,7 @@ class PDBFileCollection(object):
         assert len(pdb_code) == 4, "Invalid PDB code " + repr(pdb_code)
         if self.base_path is None:
             raise IOError("Directory path undefined")
-        pdb_code = pdb_code.lower()
+        pdb_code = pdb_code.upper()
         subdir = pdb_code[1:3]
         return os.path.join(self.base_path, subdir,
                             self.filename_pattern % pdb_code)
@@ -96,7 +96,7 @@ class PDBFileCollection(object):
         """
         if not self.is_local:
             assert len(pdb_code) == 4, "Invalid PDB code " + repr(pdb_code)
-            pdb_code = pdb_code.lower()
+            pdb_code = pdb_code.upper()
             if self.url_pattern is None:
                 raise IOError("No URL pattern for PDB repository")
             url = self.url_pattern % pdb_code
@@ -131,3 +131,6 @@ mmcif_files = PDBFileCollection(pdb_mmcif_path, '%s.cif.gz',
                                 'http://www.rcsb.org/pdb/files/%s.cif.gz')
 sf_files = PDBFileCollection(pdb_sf_path, 'r%ssf.ent.gz',
                              'http://www.rcsb.org/pdb/files/r%ssf.ent.gz')
+
+# wget -O 193L.pdb 'http://www.rcsb.org/pdb/download/downloadFile.do?fileFormat=PDB&structureId=193L'
+# wget -O 193L.cif 'http://www.rcsb.org/pdb/download/downloadFile.do?fileFormat=cif&structureId=193L'

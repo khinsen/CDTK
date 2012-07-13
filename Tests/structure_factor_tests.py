@@ -51,9 +51,13 @@ class StructureFactorTests2ONX(unittest.TestCase):
         # Tests on read-in data
         self.assert_(len(self.reflections) == 380)
         self.assert_(self.exp_amplitudes.rFactor(self.exp_amplitudes) == 0.)
+        self.assert_(self.exp_amplitudes.correlation(self.exp_amplitudes) == 1.)
         self.assert_(self.model_sf.rFactor(self.model_sf) == 0.)
+        self.assert_(self.model_sf.correlation(self.model_sf) == 1.)
         self.assert_(N.fabs(self.exp_amplitudes.rFactor(self.model_sf)-0.1842)
                      < 5.e-5)
+        self.assert_(N.fabs(self.exp_amplitudes.correlation(
+                               self.model_sf.intensities())-0.8855) < 1e-3)
         self.assertAlmostEqual(self.exp_amplitudes.completeness(),
                                0.67755682, 6)
         self.checkSymmetry(self.model_sf)
