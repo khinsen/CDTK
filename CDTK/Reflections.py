@@ -590,23 +590,26 @@ class ReflectionSet(ReflectionSelector):
                         pass
         return False
 
-    def getReflection(self, hkl):
+    def getReflection(self, h, k, l):
         """
         Return the reflection object corresponding to the given Miller indices.
         If the reflection is not yet part of the reflection set, it is added
         first and all its symmetry equivalents are added as well.
 
-        :param hkl: a set of Miller indices (h, k, l)
-        :type hkl: tuple of int
+        :param h: the first Miller index
+        :type h: int
+        :param k: the second Miller index
+        :type k: int
+        :param l: the third Miller index
+        :type l: int
         :return: the corresponding reflection object
         :rtype: CDTK.Reflections.Reflection
         """
         try:
-            return self[hkl]
+            return self[(h, k, l)]
         except KeyError:
-            h, k, l = hkl
             self.addReflection(h, k, l)
-            return self[hkl]
+            return self[(h, k, l)]
 
     def intersection(self, other):
         """

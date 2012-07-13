@@ -568,7 +568,7 @@ class MMCIFStructureFactorData(object):
         k = int(data[indices['index_k']])
         l = int(data[indices['index_l']])
         if h*h+k*k+l*l > 0:
-            ri = self.reflections.getReflection((h, k, l))
+            ri = self.reflections.getReflection(h, k, l)
             # The status field is often used incorrectly.
             # Accept a 0/1 flag (presumably meant as "r_free flag")
             # in addition to what mmCIF defines.
