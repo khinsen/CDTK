@@ -43,6 +43,15 @@ class ReflectionSetTests(unittest.TestCase):
         for r in reflections:
             self.assert_(r.in_subset)
 
+    def _intersectionTest(self, reflections):
+        subset = reflections.randomlyAssignedSubsets([0.3])[0]
+        inter = reflections.intersection(subset)
+        self.assert_(inter.cell, subset.reflection_set.cell)
+        self.assert_(inter.space_group, subset.reflection_set.space_group)
+        in_subset = set((r.h, r.k, r.l) for r in subset)
+        in_inter = set((r.h, r.k, r.l) for r in inter)
+        self.assertEqual(in_subset, in_inter)
+
     def _symmetryTest(self, reflections):
         max_h, max_k, max_l = reflections.maxHKL()
         min_s, max_s = reflections.sRange()
@@ -95,6 +104,7 @@ class ReflectionSetTests(unittest.TestCase):
         self._shellTest(reflections)
         self._subsetTest(reflections)
         self._symmetryTest(reflections)
+        self._intersectionTest(reflections)
 
     def test_P31(self):
         cell = UnitCell(3., 3., 4.,
@@ -118,6 +128,7 @@ class ReflectionSetTests(unittest.TestCase):
         self._shellTest(reflections)
         self._subsetTest(reflections)
         self._symmetryTest(reflections)
+        self._intersectionTest(reflections)
 
     def test_P43212(self):
         cell = UnitCell(Vector(1., 0., 0.),
@@ -163,6 +174,7 @@ class ReflectionSetTests(unittest.TestCase):
         self._shellTest(reflections)
         self._subsetTest(reflections)
         self._symmetryTest(reflections)
+        self._intersectionTest(reflections)
 
     def test_pickle(self):
         cell = UnitCell(3., 3., 4.,

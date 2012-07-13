@@ -562,6 +562,34 @@ class ReflectionSet(ReflectionSelector):
                             pass
             raise KeyError(item)
 
+    def hasReflection(self, h, k, l):
+        """
+        :param h: the first Miller index
+        :type h: int
+        :param k: the second Miller index
+        :type k: int
+        :param l: the third Miller index
+        :type l: int
+        :return: True if there is a corresponding reflection
+        :rtype: boolean
+        """
+        item = (h, k, l)
+        if self.reflection_map.has_key(item):
+            return True
+        if self.compact:
+            hkl = N.array(item)
+            for hkl in self.crystal.space_group.\
+                          symmetryEquivalentMillerIndices(hkl)[0]:
+                for sign in [1., -1.]:
+                    try:
+                        r = self.reflection_map[tuple(sign*hkl)]
+                        for re in r.symmetryEquivalents():
+                            if (re.h, re.k, re.l) == item:
+                                return True
+                    except KeyError:
+                        pass
+        return False
+
     def getReflection(self, hkl):
         """
         Return the reflection object corresponding to the given Miller indices.
@@ -579,6 +607,21 @@ class ReflectionSet(ReflectionSelector):
             h, k, l = hkl
             self.addReflection(h, k, l)
             return self[hkl]
+
+    def intersection(self, other):
+        """
+        Return a new ReflectionSet that is the intersection of self
+        with other.
+
+        :param other: a second reflectionset
+        :type other: CDTK.Reflections.ReflectionSet
+        """
+        new =  ReflectionSet(self.cell, self.space_group,
+                             None, None, self.compact)
+        for r in self:
+            if other.hasReflection(r.h, r.k, r.l):
+                new.addReflection(r.h, r.k, r.l)
+        return new
 
     # When pickling, store only a minimal information set in order to
     # reduce pickle file size and CPU time. The lost information is
@@ -755,3 +798,20 @@ class ReflectionSubset(ReflectionSelector):
         """
         s_min, s_max = self.sRange()
         return 1./s_max, 1./s_min
+
+    def hasReflection(self, h, k, l):
+        """
+        :param h: the first Miller index
+        :type h: int
+        :param k: the second Miller index
+        :type k: int
+        :param l: the third Miller index
+        :type l: int
+        :return: True if there is a corresponding reflection
+        :rtype: boolean
+        """
+        try:
+            r = self.reflection_set[(h, k, l)]
+        except KeyError:
+            return False
+        return r in self.reflection_list
