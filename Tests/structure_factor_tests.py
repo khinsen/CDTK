@@ -133,6 +133,15 @@ class StructureFactorTests2ONX(unittest.TestCase):
         self.assert_(largestAbsoluteElement((u-u_fit).array) < 2.5e-4)
         self.assert_(self.exp_amplitudes.rFactor(sf_scaled) < 0.185)
 
+    def test_resampling(self):
+        subset = self.reflections.select(lambda r: r.h < 5)
+        new_rset = self.reflections.intersection(subset)
+        for data in [self.exp_amplitudes, self.model_sf]:
+            new_data = data.resample(new_rset)
+            for r in new_rset:
+                self.assert_(r.h < 5)
+                eq_r = self.reflections[(r.h, r.k, r.l)]
+                self.assertEqual(new_data[r], data[eq_r])
 
 class StructureFactorAssignmentTests(unittest.TestCase):
 

@@ -110,6 +110,23 @@ class ReflectionData(object):
         """
         return self.number_of_reflections
 
+    def resample(self, reflection_set):
+        """
+        Make a new ReflectionData object with the given reflection_set
+        and copy the reflection data into it.
+
+        :param reflection_set: a reflection set
+        :type reflection_set: CDTK.Reflections.ReflectionSet
+        :raise KeyError: if reflection_set contains reflections for
+                         which there is no data
+        """
+        rd = self.__class__(reflection_set)
+        for r in reflection_set:
+            if r.index is not None:
+                eq_r = self.reflection_set[(r.h, r.k, r.l)]
+                rd.array[r.index] = self.array[eq_r.index]
+        return rd
+
     def __add__(self, other):
         """
         :param other: reflection data of the same type
@@ -375,16 +392,21 @@ class ExperimentalReflectionData(ReflectionData):
         :param reflection: a reflection
         :type reflection: Reflection
         :param value_sigma: the new data value and standard deviations
-                            for the given reflection
-        :type value_sigma: sequence of length 2
+                            for the given reflection, or None for unavailable
+        :type value_sigma: sequence of length 2, or NoneType
         """
         index = reflection.index
         if index is None: # systematic absence
-            raise ValueError("Cannot set value: "
-                             "reflection is absent due to symmetry")
-        self.data_available[index] = True
-        self.array[index, 0] = value_sigma[0]
-        self.array[index, 1] = value_sigma[1]
+            if value_sigma != self.absent_value:
+                raise ValueError("Cannot set value: "
+                                 "reflection is absent due to symmetry")
+        else:
+            if value_sigma is None:
+                self.data_available[index] = False
+            else:
+                self.data_available[index] = True
+                self.array[index, 0] = value_sigma[0]
+                self.array[index, 1] = value_sigma[1]
 
     def __len__(self):
         """
@@ -394,6 +416,15 @@ class ExperimentalReflectionData(ReflectionData):
         :rtype: int
         """
         return N.int_sum(self.data_available)
+
+    def resample(self, reflection_set):
+        rd = self.__class__(reflection_set)
+        for r in reflection_set:
+            if r.index is not None:
+                eq_r = self.reflection_set[(r.h, r.k, r.l)]
+                rd.array[r.index] = self.array[eq_r.index]
+                rd.data_available[r.index] = self.data_available[eq_r.index]
+        return rd
 
     def setFromArrays(self, h, k, l, value, sigma, missing=None):
         """
