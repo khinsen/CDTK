@@ -13,7 +13,35 @@ Various utility functions
 """
 
 from Scientific import N, LA
+from Scientific.Geometry import Vector
+from Scientific.Geometry.Transformation import Rotation, Translation, Shear
 from CDTK_symtensor import SymmetricTensor, delta
+
+# A space group defines symmetry transformations in fractional coordinates.
+# The following functions provides the symmetry transformations in
+# Cartesian coordinates for a specific unit cell.
+
+def cartesianCoordinateSymmetryTransformations(cell, space_group):
+    """
+    :param cell: a unit cell
+    :type cell: CDTK.Crystal.UnitCell or MMTK.Universe
+    :param space_group: a space group
+    :type space_group: CDTK.SpaceGroups.SpaceGroup
+    :returns: a list of transformation objects representing the symmetry
+        operations of the space group in the Cartesian coordinates of
+        the unit cell
+    :rtype: list of Scientific.Geometry.Transformation.Transformation
+    """
+    transformations = []
+    to_fract = Shear(cell.cartesianToFractionalMatrix())
+    from_fract = Shear(cell.fractionalToCartesianMatrix())
+    for rot, trans_num, trans_den in space_group.transformations:
+        trans = Vector((1.*trans_num)/trans_den)
+        tr_fract = Translation(trans)*Rotation(rot)
+        transformations.append(from_fract*tr_fract*to_fract)
+    return transformations
+
+
 
 # Symmetry operations can be applied to ADP tensors in compact storage
 # by a matrix multiplication with a "tensor rotation matrix" of shape (6,6).
@@ -46,7 +74,7 @@ def symmetricTensorRotationMatrix(d):
 def symmetricTensorBasis(cell, space_group):
     from CDTK.Crystal import UnitCell
     subspace = 1.*N.equal.outer(N.arange(6), N.arange(6))
-    for tr in cell.cartesianCoordinateSymmetryTransformations(space_group):
+    for tr in cartesianCoordinateSymmetryTransformations(cell, space_group):
         rot = symmetricTensorRotationMatrix(tr.tensor.array)
         ev, axes = LA.eigenvectors(rot)
         new_subspace = []

@@ -14,9 +14,9 @@ Description of a crystal
 
 from CDTK import Units
 from CDTK.SpaceGroups import space_groups
-from CDTK.Utility import SymmetricTensor
+from CDTK.Utility import SymmetricTensor, \
+                         cartesianCoordinateSymmetryTransformations
 from Scientific.Geometry import Vector, isVector
-from Scientific.Geometry.Transformation import Rotation, Translation, Shear
 from Scientific import N, LA
 import copy
 
@@ -154,24 +154,6 @@ class UnitCell(object):
                 return False
         return True
 
-    def cartesianCoordinateSymmetryTransformations(self, space_group):
-        """
-        :param space_group: a space group
-        :type space_group: CDTK.SpaceGroups.SpaceGroup
-        :returns: a list of transformation objects representing the symmetry
-            operations of the space group in the Cartesian coordinates of
-            the unit cell
-        :rtype: list of Scientific.Geometry.Transformation.Transformation
-        """
-        transformations = []
-        to_fract = Shear(self.cartesianToFractionalMatrix())
-        from_fract = Shear(self.fractionalToCartesianMatrix())
-        for rot, trans_num, trans_den in space_group.transformations:
-            trans = Vector((1.*trans_num)/trans_den)
-            tr_fract = Translation(trans)*Rotation(rot)
-            transformations.append(from_fract*tr_fract*to_fract)
-        return transformations
-
 
 class Atom(object):
 
@@ -280,7 +262,7 @@ class Crystal(object):
                   order to obtain the contents of the unit cell
         :rtype: list of Scientific.Geometry.Transformation.Transformation
         """
-        return self.cell.cartesianCoordinateSymmetryTransformations(
+        return cartesianCoordinateSymmetryTransformations(cell,
                                                           self.space_group)
 
     def updateAtomParametersFromRefinementEngine(self, refinement_engine):

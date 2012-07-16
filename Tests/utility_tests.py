@@ -17,6 +17,7 @@ from CDTK.SpaceGroups import space_groups
 from CDTK.Units import deg
 from CDTK.Utility import SymmetricTensor, symmetricTensorBasis
 from CDTK.Utility import largestAbsoluteElement
+from CDTK.Utility import cartesianCoordinateSymmetryTransformations
 
 from CDTK import Utility
 
@@ -130,7 +131,7 @@ class UtilityTests(unittest.TestCase):
         for params, rb, sg, nb in datasets:
             cell = UnitCell(*params)
             sg = space_groups[sg]
-            trs = cell.cartesianCoordinateSymmetryTransformations(sg)
+            trs = cartesianCoordinateSymmetryTransformations(cell, sg)
             basis = symmetricTensorBasis(cell, sg)
             assert len(basis) == nb
             for t in basis:

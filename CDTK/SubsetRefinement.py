@@ -14,7 +14,8 @@ Structure refinement using a subset of representative atoms
 
 from CDTK.Refinement import RefinementEngine, \
                             AtomDataArray, AtomPositionDataArray
-from CDTK.Utility import symmetricTensorRotationMatrix
+from CDTK.Utility import symmetricTensorRotationMatrix, \
+                         cartesianCoordinateSymmetryTransformations
 from Scientific.Geometry import Vector, Tensor
 from Scientific import N, LA
 import itertools
@@ -81,7 +82,7 @@ class AtomSubsetRefinementEngine(RefinementEngine):
 
         sg = self.re.reflection_set.space_group
         cell = self.re.reflection_set.cell
-        symops = cell.cartesianCoordinateSymmetryTransformations(sg)
+        symops = cartesianCoordinateSymmetryTransformations(cell, sg)
         unit_cell_subset = []
         for id in self.ids:
             for tr in symops:
@@ -190,7 +191,7 @@ class AtomSubsetWithContactsRefinementEngine(AtomSubsetRefinementEngine):
     def _countContacts(self):
         sg = self.re.reflection_set.space_group
         cell = self.re.reflection_set.cell
-        symops = cell.cartesianCoordinateSymmetryTransformations(sg)
+        symops = cartesianCoordinateSymmetryTransformations(cell, sg)
         unit_cell = []
         for tr in symops:
             for index in range(self.re.natoms):

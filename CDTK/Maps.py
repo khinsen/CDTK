@@ -13,7 +13,8 @@ Electron density maps and Patterson maps
 """
 
 from CDTK import Units
-from CDTK.Utility import SymmetricTensor, delta
+from CDTK.Utility import SymmetricTensor, delta, \
+                         cartesianCoordinateSymmetryTransformations
 from Scientific.Geometry import Vector, isVector
 from Scientific import N, LA
 
@@ -235,7 +236,7 @@ class Map(object):
         """
         if cell is None:
             cell = self.cell
-        st = cell.cartesianCoordinateSymmetryTransformations(space_group)
+        st = cartesianCoordinateSymmetryTransformations(cell, space_group)
         def check(adp):
             # Only isotropic B factors are handled for now
             if not isinstance(adp, float):
@@ -430,7 +431,7 @@ class SolventMap(Map):
                                          cell=None):
         if cell is None:
             cell = self.cell
-        st = cell.cartesianCoordinateSymmetryTransformations(space_group)
+        st = cartesianCoordinateSymmetryTransformations(cell, space_group)
         it = ((atom_id, element, tr(position), 0., occupancy)
               for atom_id, element, position, adp, occupancy in atom_iterator
               for tr in st)

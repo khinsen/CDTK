@@ -10,7 +10,8 @@
 import unittest
 from CDTK.Crystal import UnitCell
 from CDTK.SpaceGroups import space_groups
-from CDTK.Utility import largestAbsoluteElement
+from CDTK.Utility import largestAbsoluteElement, \
+                         cartesianCoordinateSymmetryTransformations
 from Scientific.Geometry import Vector, delta
 from Scientific import N
 
@@ -124,7 +125,7 @@ class UnitCellTests(unittest.TestCase):
         for params, rb, sg in datasets:
             cell = UnitCell(*params)
             sg = space_groups[sg]
-            transformations = cell.cartesianCoordinateSymmetryTransformations(sg)
+            transformations = cartesianCoordinateSymmetryTransformations(cell, sg)
             for t in transformations:
                 # Check that the transformation is a rotation-translation.
                 error = N.absolute(N.multiply.reduce(t.tensor.eigenvalues())-1.)
