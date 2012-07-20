@@ -691,9 +691,25 @@ class ReflectionSet(ReflectionSelector):
         :return: an array containing the s vectors for all reflections
         :rtype: N.array
         """
+        global _cache
+        if cell is None:
+            cell = self.cell
+        cached_data = _cache.get(self, {})
+        try:
+            return cached_data[('sVectorArray', id(cell))]
+        except KeyError:
+            pass
+
+        r1, r2, r3 = cell.reciprocalBasisVectors()
+        r1 = r1.array
+        r2 = r2.array
+        r3 = r3.array
         sv = N.zeros((len(self.minimal_reflection_list), 3), N.Float)
         for r in self:
-            sv[r.index] = r.sVector(cell).array
+            sv[r.index, :] = r.h*r1 + r.k*r2 + r.l*r3
+
+        cached_data[('sVectorArray', id(cell))] = sv
+        _cache[self] = cached_data
         return sv
 
     def sVectorArrayAndPhasesForASU(self, cell=None):
@@ -715,7 +731,7 @@ class ReflectionSet(ReflectionSelector):
             cell = self.cell
         cached_data = _cache.get(self, {})
         try:
-            return cached_data[('sVectorArrayAndPhasesForASU', cell)]
+            return cached_data[('sVectorArrayAndPhasesForASU', id(cell))]
         except KeyError:
             pass
 
@@ -725,18 +741,21 @@ class ReflectionSet(ReflectionSelector):
         p = N.zeros((ntrans, len(self.minimal_reflection_list)), N.Complex)
         twopii = 2.j*N.pi
         r1, r2, r3 = cell.reciprocalBasisVectors()
+        r1 = r1.array
+        r2 = r2.array
+        r3 = r3.array
         for r in self:
             hkl_list = sg.symmetryEquivalentMillerIndices(r.array)[0]
             for i in range(ntrans):
                 h, k, l = hkl_list[i]
-                sv[i, r.index] = (h*r1+k*r2+l*r3).array
+                sv[i, r.index] = h*r1+k*r2+l*r3
                 tr_num, tr_den = sg.transformations[i][1:]
                 st = r.h*float(tr_num[0])/float(tr_den[0]) \
                      + r.k*float(tr_num[1])/float(tr_den[1]) \
                      + r.l*float(tr_num[2])/float(tr_den[2])
                 p[i, r.index] = N.exp(twopii*st)
 
-        cached_data[('sVectorArrayAndPhasesForASU', cell)] = (sv, p)
+        cached_data[('sVectorArrayAndPhasesForASU', id(cell))] = (sv, p)
         _cache[self] = cached_data
         return sv, p
 
