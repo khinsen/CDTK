@@ -262,7 +262,7 @@ class Crystal(object):
                   order to obtain the contents of the unit cell
         :rtype: list of Scientific.Geometry.Transformation.Transformation
         """
-        return cartesianCoordinateSymmetryTransformations(cell,
+        return cartesianCoordinateSymmetryTransformations(self.cell,
                                                           self.space_group)
 
     def updateAtomParametersFromRefinementEngine(self, refinement_engine):
