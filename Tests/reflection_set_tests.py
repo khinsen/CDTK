@@ -81,6 +81,11 @@ class ReflectionSetTests(unittest.TestCase):
                             p_test = N.conjugate(p_test)
                         self.assert_(abs(p_test - p_r) < 1.e-13)
 
+    def _equalityTest(self, reflections):
+        self.assertEqual(reflections, reflections)
+        subset = reflections.randomlyAssignedSubsets([0.3])[0]
+        self.assertNotEqual(reflections, subset)
+
     def test_P1(self):
         cell = UnitCell(Vector(1., 0., 0.),
                         Vector(0., 1., 0.),
@@ -105,6 +110,7 @@ class ReflectionSetTests(unittest.TestCase):
         self._subsetTest(reflections)
         self._symmetryTest(reflections)
         self._intersectionTest(reflections)
+        self._equalityTest(reflections)
 
     def test_P31(self):
         cell = UnitCell(3., 3., 4.,
@@ -129,6 +135,7 @@ class ReflectionSetTests(unittest.TestCase):
         self._subsetTest(reflections)
         self._symmetryTest(reflections)
         self._intersectionTest(reflections)
+        self._equalityTest(reflections)
 
     def test_P43212(self):
         cell = UnitCell(Vector(1., 0., 0.),
@@ -175,6 +182,7 @@ class ReflectionSetTests(unittest.TestCase):
         self._subsetTest(reflections)
         self._symmetryTest(reflections)
         self._intersectionTest(reflections)
+        self._equalityTest(reflections)
 
     def test_pickle(self):
         cell = UnitCell(3., 3., 4.,

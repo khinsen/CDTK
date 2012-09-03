@@ -683,6 +683,17 @@ class ReflectionSet(ReflectionSelector):
         else:
             self.total_reflection_count = len(self.reflection_map)
 
+    # Use the same minimal state for equality checks
+    def __eq__(self, other):
+        for v1, v2 in zip(self.__getstate__(), other.__getstate__()):
+            if type(v1) is N.array_type:
+                if (v1 != v2).any():
+                    return False
+            else:
+                if v1 != v2:
+                    return False
+        return True
+
     def sVectorArray(self, cell=None):
         """
         :param cell: a unit cell, which defaults to the unit cell for

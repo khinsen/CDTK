@@ -135,7 +135,7 @@ class ReflectionData(object):
         :rtype: type(self)
         """
         assert self.__class__ is other.__class__
-        assert self.reflection_set is other.reflection_set
+        assert self.reflection_set == other.reflection_set
         result = self.__class__(self.reflection_set)
         self.__add_op__(other, result)
         return result
@@ -146,7 +146,7 @@ class ReflectionData(object):
         :type other: type(self)
         """
         assert self.__class__ is other.__class__
-        assert self.reflection_set is other.reflection_set
+        assert self.reflection_set == other.reflection_set
         self.__iadd_op__(other)
         return self
 
@@ -158,7 +158,7 @@ class ReflectionData(object):
         :rtype: type(self)
         """
         assert self.__class__ is other.__class__
-        assert self.reflection_set is other.reflection_set
+        assert self.reflection_set == other.reflection_set
         result = self.__class__(self.reflection_set)
         self.__sub_op__(other, result)
         return result
@@ -169,7 +169,7 @@ class ReflectionData(object):
         :type other: type(self)
         """
         assert self.__class__ is other.__class__
-        assert self.reflection_set is other.reflection_set
+        assert self.reflection_set == other.reflection_set
         self.__isub_op__(other)
         return self
 
@@ -306,7 +306,7 @@ class ReflectionData(object):
                  (a value between -1 and 1)
         :rtype: float
         """
-        assert self.reflection_set is other.reflection_set
+        assert self.reflection_set == other.reflection_set
         if subset is None:
             subset = self.reflection_set
         sum_self = 0.
@@ -561,7 +561,7 @@ class AmplitudeData(object):
         :rtype: float
         """
         assert isinstance(other, AmplitudeData)
-        assert self.reflection_set is other.reflection_set
+        assert self.reflection_set == other.reflection_set
         if subset is None:
             subset = self.reflection_set
         sum_self = 0.
@@ -589,7 +589,7 @@ class AmplitudeData(object):
         :rtype: float
         """
         assert isinstance(other, AmplitudeData)
-        assert self.reflection_set is other.reflection_set
+        assert self.reflection_set == other.reflection_set
         if subset is None:
             subset = self.reflection_set
         sum_self = 0.
@@ -631,7 +631,7 @@ class AmplitudeData(object):
         """
         from Scientific.Functions.Interpolation import InterpolatingFunction
         assert isinstance(other, AmplitudeData)
-        assert self.reflection_set is other.reflection_set
+        assert self.reflection_set == other.reflection_set
         if subset is None:
             subset = self.reflection_set
         s_min, s_max = subset.sRange()
@@ -707,7 +707,7 @@ class AmplitudeData(object):
         :rtype: tuple
         """
         assert isinstance(other, AmplitudeData)
-        assert self.reflection_set is other.reflection_set
+        assert self.reflection_set == other.reflection_set
         if filter is None:
             reflections = self.reflection_set
         else:
