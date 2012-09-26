@@ -12,11 +12,13 @@ Electron density maps and Patterson maps
 
 """
 
+import CDTK
 from CDTK import Units
 from CDTK.Utility import SymmetricTensor, delta, \
                          cartesianCoordinateSymmetryTransformations
 from Scientific.Geometry import Vector, isVector
 from Scientific import N, LA
+import numpy as np
 
 class Map(object):
 
@@ -45,7 +47,7 @@ class Map(object):
         self.x2 = N.arange(n2)/float(n2)-0.5
         self.x3 = N.arange(n3)/float(n3)-0.5
         e1, e2, e3 = self.cell.basisVectors()
-        self.vmd_origin = -0.5*(e1+e2+e3)
+        self.volume_origin = -0.5*(e1+e2+e3)
 
     def makePositive(self):
         """
@@ -54,6 +56,79 @@ class Map(object):
         """
         smallest = N.minimum.reduce(N.ravel(self.array))
         self.array -= smallest
+
+    def writeMRC(self, filename, labels=None):
+        """
+        Write the map to a file in MRC format.
+        :param filename: the name of the file
+        :type filename: str
+        :param labels: a list of max. 10 labels of max. 80 characters
+        :type labels: sequence
+        """
+        volume = self.array
+        dtype = self._closestMRCType(volume.dtype)
+        with file(filename, 'wb') as f:
+            f.write(self._MRCHeader(volume, dtype, labels))
+            for k in range(volume.shape[2]):
+                for j in range(volume.shape[1]):
+                    line = volume[:, j, k].astype(dtype)
+                    f.write(line.tostring())
+
+    def _closestMRCType(self, dtype):
+        if dtype in (np.float32, np.float64, np.float,
+                     np.int32, np.int, np.uint32, np.uint, np.uint16):
+            return np.float32
+        elif dtype in (np.int16, np.uint8):
+            return np.int16
+        elif dtype in (np.int8, np.int0, np.character):
+            return np.int8
+        else:
+            raise TypeError('Volume data of unknown type %s' % dtype)
+
+    def _MRCHeader(self, volume, map_dtype, labels=None):
+
+        cell_size = (self.cell.a/Units.Ang,
+                     self.cell.b/Units.Ang,
+                     self.cell.c/Units.Ang)
+        cell_angles = (self.cell.alpha/Units.deg,
+                       self.cell.beta/Units.deg,
+                       self.cell.gamma/Units.deg,)
+
+        if labels is None:
+            import time
+            labels = ["Created by CDTK " + CDTK.__version__,
+                      time.asctime()]
+
+        nlabels = len(labels)
+        labels = labels + (10-nlabels) * [""]
+        labels = [l + (80-len(l))*'\0' for l in labels]
+
+        def bytes(values, dtype):
+            return np.array(values, dtype).tostring()
+
+        return ''.join([
+            bytes(volume.shape, np.int32),  # nc, nr, ns
+            bytes({np.int8: 0, np.int16: 1, np.float32: 2}[map_dtype],
+                  np.int32),  # mode
+            bytes((0, 0, 0), np.int32), # ncstart, nrstart, nsstart
+            bytes(volume.shape, np.int32),  # nx, ny, nz
+            bytes(cell_size, np.float32), # x_length, y_length, z_length
+            bytes(cell_angles, np.float32), # alpha, beta, gamma
+            bytes((1, 2, 3), np.int32), # mapc, mapr, maps
+            bytes((volume.min(), volume.max(), volume.mean()),
+                  np.float32), # dmin, dmax, dmean
+            bytes(0, np.int32), # ispg
+            bytes(0, np.int32), # nsymbt
+            bytes([0]*25, np.int32), # extra
+            bytes(self.volume_origin/Units.Ang,
+                  np.float32), # origin (MRC extension to CCP4)
+            'MAP ', # map
+            bytes(0x00004144 if np.little_endian else 0x11110000,
+                  np.int32), # machst
+            bytes(np.sqrt(volume.var()), np.float32), # rms
+            bytes(nlabels, np.int32), # nlabl
+            ''.join(labels), # label
+        ])
 
     def writeToVMDScript(self, filename, label=None):
         """
@@ -69,7 +144,7 @@ class Map(object):
         vmd_script.write('mol new\n')
         vmd_script.write('mol volume top "%s" \\\n' % label)
         e1, e2, e3 = self.cell.basisVectors()
-        vmd_script.write('  {%f %f %f} \\\n' % tuple(self.vmd_origin/Units.Ang))
+        vmd_script.write('  {%f %f %f} \\\n' % tuple(self.volume_origin/Units.Ang))
         vmd_script.write('  {%f %f %f} \\\n' % tuple(e1/Units.Ang))
         vmd_script.write('  {%f %f %f} \\\n' % tuple(e2/Units.Ang))
         vmd_script.write('  {%f %f %f} \\\n' % tuple(e3/Units.Ang))
@@ -453,7 +528,7 @@ class PattersonMap(Map):
         e1, e2, e3 = self.cell.basisVectors()
         # display Patterson maps centered on (0, 0, 0) to
         # facilitate comparisons
-        self.vmd_origin = -0.5*(e1+e2+e3)
+        self.volume_origin = -0.5*(e1+e2+e3)
 
     def calculateFromIntensities(self, intensities):
         """
