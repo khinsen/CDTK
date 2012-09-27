@@ -17,8 +17,8 @@ from CDTK import Units
 from CDTK.Utility import SymmetricTensor, delta, \
                          cartesianCoordinateSymmetryTransformations
 from Scientific.Geometry import Vector, isVector
-from Scientific import N, LA
 import numpy as np
+import numpy.linalg as la
 
 class Map(object):
 
@@ -41,11 +41,11 @@ class Map(object):
         :type n3: int
         """
         self.cell = cell
-        self.array = N.zeros((n1, n2, n3), N.Float)
+        self.array = np.zeros((n1, n2, n3), np.float)
         self.shape = (n1, n2, n3)
-        self.x1 = N.arange(n1)/float(n1)-0.5
-        self.x2 = N.arange(n2)/float(n2)-0.5
-        self.x3 = N.arange(n3)/float(n3)-0.5
+        self.x1 = np.arange(n1)/float(n1)-0.5
+        self.x2 = np.arange(n2)/float(n2)-0.5
+        self.x3 = np.arange(n3)/float(n3)-0.5
         e1, e2, e3 = self.cell.basisVectors()
         self.volume_origin = -0.5*(e1+e2+e3)
 
@@ -54,7 +54,7 @@ class Map(object):
         Subtract the smallest map value from all other map values,
         such that the smallest value becomes 0.
         """
-        smallest = N.minimum.reduce(N.ravel(self.array))
+        smallest = self.array.min()
         self.array -= smallest
 
     def writeMRC(self, filename, labels=None):
@@ -139,7 +139,7 @@ class Map(object):
         """
         if label is None:
             label = self.default_label
-        factor = 1./N.maximum.reduce(N.ravel(self.array))
+        factor = 1./self.array.max()
         vmd_script = file(filename, 'w')
         vmd_script.write('mol new\n')
         vmd_script.write('mol volume top "%s" \\\n' % label)
@@ -382,35 +382,40 @@ class ElectronDensityMap(Map):
         from AtomicScatteringFactors import atomic_scattering_factors
         for atom_id, element, position, adp, occupancy in atom_iterator:
             a, b = atomic_scattering_factors[element.lower()]
-            bdiv = b / (2.*N.pi**2)
+            bdiv = b / (2.*np.pi**2)
             xa = cell.cartesianToFractional(position)+0.5
-            xa -= N.floor(xa)+0.5
+            xa -= np.floor(xa)+0.5
             dx1 = self.x1-xa[0]
-            dx1 += (dx1 < -0.5).astype(N.Int) - (dx1 >= 0.5).astype(N.Int)
+            dx1 += (dx1 < -0.5).astype(np.int) - (dx1 >= 0.5).astype(np.int)
             dx2 = self.x2-xa[1]
-            dx2 += (dx2 < -0.5).astype(N.Int) - (dx2 >= 0.5).astype(N.Int)
+            dx2 += (dx2 < -0.5).astype(np.int) - (dx2 >= 0.5).astype(np.int)
             dx3 = self.x3-xa[2]
-            dx3 += (dx3 < -0.5).astype(N.Int) - (dx3 >= 0.5).astype(N.Int)
+            dx3 += (dx3 < -0.5).astype(np.int) - (dx3 >= 0.5).astype(np.int)
             for i in range(5):
                 if isinstance(adp, float):
                     sigma = (adp + bdiv[i])*delta
                 else:
                     sigma = SymmetricTensor(adp) + bdiv[i]*delta
                 sigma_inv = sigma.inverse()
-                weight = a[i] * N.sqrt(sigma_inv.determinant()) * occupancy
-                m = -0.5*N.dot(N.transpose(m_fc),
-                               N.dot(sigma_inv.array2d, m_fc))
-                e = N.zeros(self.shape, N.Float)
-                N.add(e, m[0, 0]*(dx1*dx1)[:, N.NewAxis, N.NewAxis], e)
-                N.add(e, m[1, 1]*(dx2*dx2)[N.NewAxis, :, N.NewAxis], e)
-                N.add(e, m[2, 2]*(dx3*dx3)[N.NewAxis, N.NewAxis, :], e)
-                N.add(e, (2.*m[0, 1]) *
-                   dx1[:, N.NewAxis, N.NewAxis]*dx2[N.NewAxis, :, N.NewAxis], e)
-                N.add(e, (2.*m[0, 2]) *
-                   dx1[:, N.NewAxis, N.NewAxis]*dx3[N.NewAxis, N.NewAxis, :], e)
-                N.add(e, (2.*m[1, 2]) *
-                   dx2[N.NewAxis, :, N.NewAxis]*dx3[N.NewAxis, N.NewAxis, :], e)
-                N.add(self.array, weight*N.exp(e), self.array)
+                weight = a[i] * np.sqrt(sigma_inv.determinant()) * occupancy
+                m = -0.5*np.dot(m_fc.T, np.dot(sigma_inv.array2d, m_fc))
+                e = np.zeros(self.shape, np.float)
+                np.add(e, m[0, 0]*(dx1*dx1)[:, np.newaxis, np.newaxis], e)
+                np.add(e, m[1, 1]*(dx2*dx2)[np.newaxis, :, np.newaxis], e)
+                np.add(e, m[2, 2]*(dx3*dx3)[np.newaxis, np.newaxis, :], e)
+                np.add(e,
+                       (2.*m[0, 1]) *
+                         dx1[:, np.newaxis, np.newaxis] *
+                         dx2[np.newaxis, :, np.newaxis], e)
+                np.add(e,
+                       (2.*m[0, 2]) *
+                         dx1[:, np.newaxis, np.newaxis] *
+                         dx3[np.newaxis, np.newaxis, :], e)
+                np.add(e,
+                       (2.*m[1, 2]) *
+                         dx2[np.newaxis, :, np.newaxis] *
+                         dx3[np.newaxis, np.newaxis, :], e)
+                np.add(self.array, weight*np.exp(e), self.array)
 
     def calculateFromStructureFactor(self, sf):
         """
@@ -422,7 +427,7 @@ class ElectronDensityMap(Map):
         if not isinstance(sf, StructureFactor):
             raise TypeError("%s is not a StructureFactor instance" % str(sf))
         m_cf = self.cell.cartesianToFractionalMatrix()
-        det_m_cf = LA.determinant(m_cf)
+        det_m_cf = la.det(m_cf)
         n1, n2, n3 = self.shape
         self.array += reflections_to_map(sf, n1, n2, n3, det_m_cf)
 
@@ -468,37 +473,43 @@ class SolventMap(Map):
             cell = self.cell
         from ChemicalData import vdW_radii
         m_fc = cell.fractionalToCartesianMatrix()
-        m = N.dot(N.transpose(m_fc), m_fc)
+        m = np.dot(m_fc.T, m_fc)
         w = 0.08 # window width
         self.array[...] = 1.
         for atom_id, element, position, adp, occupancy in atom_iterator:
             a = vdW_radii[element.lower()]
 
             xa = cell.cartesianToFractional(position)+0.5
-            xa -= N.floor(xa)+0.5
+            xa -= np.floor(xa)+0.5
             dx1 = self.x1-xa[0]
-            dx1 += (dx1 < -0.5).astype(N.Int) - (dx1 >= 0.5).astype(N.Int)
+            dx1 += (dx1 < -0.5).astype(np.int) - (dx1 >= 0.5).astype(np.int)
             dx2 = self.x2-xa[1]
-            dx2 += (dx2 < -0.5).astype(N.Int) - (dx2 >= 0.5).astype(N.Int)
+            dx2 += (dx2 < -0.5).astype(np.int) - (dx2 >= 0.5).astype(np.int)
             dx3 = self.x3-xa[2]
-            dx3 += (dx3 < -0.5).astype(N.Int) - (dx3 >= 0.5).astype(N.Int)
+            dx3 += (dx3 < -0.5).astype(np.int) - (dx3 >= 0.5).astype(np.int)
 
-            rsq = N.zeros(self.shape, N.Float)
-            N.add(rsq, m[0,0]*(dx1*dx1)[:, N.NewAxis, N.NewAxis], rsq)
-            N.add(rsq, m[1,1]*(dx2*dx2)[N.NewAxis, :, N.NewAxis], rsq)
-            N.add(rsq, m[2,2]*(dx3*dx3)[N.NewAxis, N.NewAxis, :], rsq)
-            N.add(rsq, (2.*m[0, 1]) *
-                  dx1[:, N.NewAxis, N.NewAxis]*dx2[N.NewAxis, :, N.NewAxis],
-                  rsq)
-            N.add(rsq, (2.*m[0, 2]) *
-                  dx1[:, N.NewAxis, N.NewAxis]*dx3[N.NewAxis, N.NewAxis, :],
-                  rsq)
-            N.add(rsq, (2.*m[1, 2]) *
-                  dx2[N.NewAxis, :, N.NewAxis]*dx3[N.NewAxis, N.NewAxis, :],
-                  rsq)
-            dw = (N.sqrt(rsq)-a+w)/w
-            rho = N.where(dw <= 0., 0.,
-                          N.where(dw >= 2., 1., (0.75-0.25*dw)*dw*dw))
+            rsq = np.zeros(self.shape, np.float)
+            np.add(rsq, m[0,0]*(dx1*dx1)[:, np.newaxis, np.newaxis], rsq)
+            np.add(rsq, m[1,1]*(dx2*dx2)[np.newaxis, :, np.newaxis], rsq)
+            np.add(rsq, m[2,2]*(dx3*dx3)[np.newaxis, np.newaxis, :], rsq)
+            np.add(rsq,
+                   (2.*m[0, 1]) *
+                     dx1[:, np.newaxis, np.newaxis] *
+                     dx2[np.newaxis, :, np.newaxis],
+                   rsq)
+            np.add(rsq,
+                   (2.*m[0, 2]) *
+                     dx1[:, np.newaxis, np.newaxis] * 
+                     dx3[np.newaxis, np.newaxis, :],
+                   rsq)
+            np.add(rsq,
+                   (2.*m[1, 2]) *
+                     dx2[np.newaxis, :, np.newaxis] *
+                     dx3[np.newaxis, np.newaxis, :],
+                   rsq)
+            dw = (np.sqrt(rsq)-a+w)/w
+            rho = np.where(dw <= 0., 0.,
+                           np.where(dw >= 2., 1., (0.75-0.25*dw)*dw*dw))
             self.array *= rho
 
     # reimplementation that ignores ADPs
@@ -541,12 +552,12 @@ class PattersonMap(Map):
             raise TypeError("%s is not an IntensityData instance"
                             % str(intensities))
         m_cf = self.cell.cartesianToFractionalMatrix()
-        det_m_cf = LA.determinant(m_cf)
+        det_m_cf = la.det(m_cf)
         n1, n2, n3 = self.shape
         array = reflections_to_map(intensities, n1, n2, n3, det_m_cf)
-        array = N.concatenate([array[n1/2:, :, :], array[:n1/2, :, :]], axis=0)
-        array = N.concatenate([array[:, n2/2:, :], array[:, :n2/2, :]], axis=1)
-        array = N.concatenate([array[:, :, n3/2:], array[:, :, :n3/2]], axis=2)
+        array = np.concatenate([array[n1/2:, :, :], array[:n1/2, :, :]], axis=0)
+        array = np.concatenate([array[:, n2/2:, :], array[:, :n2/2, :]], axis=1)
+        array = np.concatenate([array[:, :, n3/2:], array[:, :, :n3/2]], axis=2)
         self.array += array
 
     def calculateFromStructureFactor(self, sf):
