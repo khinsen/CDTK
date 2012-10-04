@@ -782,6 +782,70 @@ class ReflectionSet(ReflectionSelector):
             sm[r.index, 1] = r.isCentric()
         return sm
 
+    def storeHDF5(self, parent_group, path):
+        """
+        :param parent_group: HDF5 group in which the dataset is created
+        :type parent_group: h5py.Group
+        :param path: the path from parent_group to the dataset
+                     for the ReflectionSet.
+        :type : str
+        :return: the HDF5 dataset and the index permutation corresponding
+                 to the sort order used in the file
+        :rtype: (h5py.Dataset, np.ndarray)
+        """
+        import h5py
+        import numpy as np
+        rs = np.array([(r.h, r.k, r.l, r.index)
+                       for r in self.minimal_reflection_list],
+                      dtype=[('h', np.int32), ('k', np.int32), ('l', np.int32),
+                             ('index', np.int32)])
+        si = N.argsort(rs["index"])
+        # indices should run from 0 to n-1
+        assert rs["index"][si[-1]] == len(rs)-1
+        rs = N.take(rs[['h', 'k', 'l']], si)
+
+        # Sort Miller indices and create the inverse index vector
+        # for the rearrangement which is needed for converting
+        # ReflectionData arrays.
+        si = np.argsort(rs, order=('h', 'k', 'l'))
+        rs = np.take(rs, si)
+        sinv = np.argsort(si)
+        assert (np.take(si, sinv) == np.arange(len(si))).all()
+
+        dataset = parent_group.create_dataset(path, data = rs)
+        a1, a2, a3 = self.cell.basisVectors()
+        dataset.attrs['a'] = a1.length()
+        dataset.attrs['b'] = a2.length()
+        dataset.attrs['c'] = a3.length()
+        dataset.attrs['alpha'] = a2.angle(a3)
+        dataset.attrs['beta'] = a1.angle(a3)
+        dataset.attrs['gamma'] = a1.angle(a2)
+        dataset.attrs['space_group'] = self.space_group.number
+        dataset.attrs['DATA_MODEL'] = 'CDTK'
+        dataset.attrs['DATA_MODEL_MAJOR_VERSION'] = 0
+        dataset.attrs['DATA_MODEL_MINOR_VERSION'] = 1
+        return dataset, sinv
+
+    @classmethod
+    def fromHDF5(cls, dataset):
+        if dataset.attrs['DATA_MODEL'] != 'CDTK' \
+           or dataset.attrs['DATA_MODEL_MAJOR_VERSION'] > 0 \
+           or dataset.attrs['DATA_MODEL_MINOR_VERSION'] > 1:
+            raise ValueError("HDF5 dataset does not contain a ReflectionSet")
+        from CDTK.SpaceGroups import space_groups
+        from CDTK.Crystal import UnitCell
+        space_group = space_groups[dataset.attrs['space_group']]
+        cell = UnitCell(dataset.attrs['a'],
+                        dataset.attrs['b'],
+                        dataset.attrs['c'],
+                        dataset.attrs['alpha'],
+                        dataset.attrs['beta'],
+                        dataset.attrs['gamma'])
+        self = cls(cell, space_group)
+        for h, k, l in dataset:
+            self.addReflection(h, k, l)
+        return self
+
 #
 # A ReflectionSubset object is an iterator over a subset of a
 # ReflectionSet.

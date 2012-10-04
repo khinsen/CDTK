@@ -39,6 +39,7 @@ from an atomic model.
 from Scientific import N, LA
 from CDTK import Units
 from CDTK.Utility import SymmetricTensor
+from CDTK.Reflections import ReflectionSet
 from Scientific.Geometry import Tensor
 
 #
@@ -359,6 +360,74 @@ class ReflectionData(object):
         vmd_script.close()
 
 
+    def storeHDF5(self, parent_group, path, reflection_set_ds, order):
+        import h5py
+        import numpy as np
+        if self.value_label == 'structure_factor':
+            # complex structure factor data
+            dt = np.dtype([(self.value_label+'_real', np.float32),
+                           (self.value_label+'_imag', np.float32)])
+            values = np.take(self.array.astype(np.complex64), order).view(dt)
+        elif len(self.array.shape) == 2:
+            # experimental data with sigma values
+            dt = np.dtype([(self.value_label, np.float32),
+                           ('sigma', np.float32),
+                           ('missing', np.bool)])
+            values = np.zeros((len(order),), dtype=dt)
+            values[self.value_label] = np.take(self.array[:, 0], order)
+            values['sigma'] = np.take(self.array[:, 1], order)
+            values['missing'] = np.logical_not(np.take(self.data_available,
+                                                       order))
+        else:
+            # model/theoretical data
+            dt = np.dtype([(self.value_label, np.float32)])
+            values = np.take(self.array.astype(dt), order)
+        dataset = parent_group.create_dataset(path, data = values)
+        dataset.attrs['reflections'] = reflection_set_ds.ref
+        dataset.attrs['DATA_MODEL'] = 'CDTK'
+        dataset.attrs['DATA_MODEL_MAJOR_VERSION'] = 0
+        dataset.attrs['DATA_MODEL_MINOR_VERSION'] = 1
+        return dataset
+
+    @classmethod
+    def fromHDF5(cls, dataset):
+        import numpy as np
+        if dataset.attrs['DATA_MODEL'] != 'CDTK' \
+           or dataset.attrs['DATA_MODEL_MAJOR_VERSION'] > 0 \
+           or dataset.attrs['DATA_MODEL_MINOR_VERSION'] > 1:
+            raise ValueError("HDF5 dataset does not contain a ReflectionSet")
+        reflections = dataset.file[dataset.attrs['reflections']]
+        fields = dataset.dtype.fields.keys()
+        if 'sigma' in fields:
+            # experimental data
+            if 'amplitude' in fields:
+                cls = ExperimentalAmplitudes
+            elif 'intensity' in fields:
+                cls = ExperimentalIntensities
+            else:
+                raise ValueError("undefined values: " + str(fields))
+            self = cls(ReflectionSet.fromHDF5(reflections))
+            self.array[:, 0] = dataset[self.value_label]
+            self.array[:, 1] = dataset['sigma']
+            self.data_available[:] = np.logical_not(dataset['missing'])
+        else:
+            # model data
+            if 'amplitude' in fields:
+                cls = ModelAmplitudes
+            elif 'intensity' in fields:
+                cls = ModelIntensities
+            elif 'structure_factor_real' in fields:
+                cls = StructureFactor
+            else:
+                raise ValueError("undefined values: " + str(fields))
+            self = cls(ReflectionSet.fromHDF5(reflections))
+            if 'structure_factor_real' in fields:
+                self.array[:] = dataset[...].view(np.complex64)
+            else:
+                self.array[:] = dataset[self.value_label]
+        return self
+
+
 class ExperimentalReflectionData(ReflectionData):
 
     """
@@ -550,6 +619,8 @@ class AmplitudeData(object):
     Mix-in class for ReflectionData subclasses representing amplitude
     values
     """
+
+    value_label = 'amplitude'
 
     def rFactor(self, other, subset = None):
         """
@@ -766,6 +837,8 @@ class IntensityData(object):
     values
     """
 
+    value_label = 'intensity'
+
     def isotropicAverage(self, shells = 50):
         """
         :param shells: the resolution shell specification, either a sequence of
@@ -891,6 +964,8 @@ class StructureFactor(ReflectionData, AmplitudeData):
     3) a sequence of data describing the atoms in the asymmetric unit, or
     4) from an electron density map by Fourier transform.
     """
+
+    value_label = 'structure_factor'
 
     def __init__(self, reflection_set, data=None):
         """
