@@ -387,16 +387,18 @@ class ReflectionData(object):
         dataset.attrs['DATA_MODEL'] = 'CDTK'
         dataset.attrs['DATA_MODEL_MAJOR_VERSION'] = 0
         dataset.attrs['DATA_MODEL_MINOR_VERSION'] = 1
+        dataset.attrs['DATA_CLASS'] = 'ReflectionData'
         return dataset
 
     @classmethod
-    def fromHDF5(cls, dataset):
+    def fromHDF5(cls, store, dataset):
         import numpy as np
         if dataset.attrs['DATA_MODEL'] != 'CDTK' \
            or dataset.attrs['DATA_MODEL_MAJOR_VERSION'] > 0 \
-           or dataset.attrs['DATA_MODEL_MINOR_VERSION'] > 1:
-            raise ValueError("HDF5 dataset does not contain a ReflectionSet")
-        reflections = dataset.file[dataset.attrs['reflections']]
+           or dataset.attrs['DATA_MODEL_MINOR_VERSION'] > 1 \
+           or dataset.attrs['DATA_CLASS'] != 'ReflectionData':
+            raise ValueError("HDF5 dataset does not contain ReflectionData")
+        reflections = store.retrieve(dataset.attrs['reflections'])
         fields = dataset.dtype.fields.keys()
         if 'sigma' in fields:
             # experimental data
@@ -406,7 +408,7 @@ class ReflectionData(object):
                 cls = ExperimentalIntensities
             else:
                 raise ValueError("undefined values: " + str(fields))
-            self = cls(ReflectionSet.fromHDF5(reflections))
+            self = cls(reflections)
             self.array[:, 0] = dataset[self.value_label]
             self.array[:, 1] = dataset['sigma']
             self.data_available[:] = np.logical_not(dataset['missing'])
@@ -420,7 +422,7 @@ class ReflectionData(object):
                 cls = StructureFactor
             else:
                 raise ValueError("undefined values: " + str(fields))
-            self = cls(ReflectionSet.fromHDF5(reflections))
+            self = cls(reflections)
             if 'structure_factor_real' in fields:
                 self.array[:] = dataset[...].view(np.complex64)
             else:

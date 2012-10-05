@@ -824,13 +824,15 @@ class ReflectionSet(ReflectionSelector):
         dataset.attrs['DATA_MODEL'] = 'CDTK'
         dataset.attrs['DATA_MODEL_MAJOR_VERSION'] = 0
         dataset.attrs['DATA_MODEL_MINOR_VERSION'] = 1
+        dataset.attrs['DATA_CLASS'] = 'ReflectionSet'
         return dataset, sinv
 
     @classmethod
-    def fromHDF5(cls, dataset):
+    def fromHDF5(cls, store, dataset):
         if dataset.attrs['DATA_MODEL'] != 'CDTK' \
            or dataset.attrs['DATA_MODEL_MAJOR_VERSION'] > 0 \
-           or dataset.attrs['DATA_MODEL_MINOR_VERSION'] > 1:
+           or dataset.attrs['DATA_MODEL_MINOR_VERSION'] > 1 \
+           or dataset.attrs['DATA_CLASS'] != 'ReflectionSet':
             raise ValueError("HDF5 dataset does not contain a ReflectionSet")
         from CDTK.SpaceGroups import space_groups
         from CDTK.Crystal import UnitCell
