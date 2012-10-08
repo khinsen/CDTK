@@ -8,6 +8,8 @@
 # Written by Konrad Hinsen.
 #
 
+cimport cython
+
 include "numeric.pxi"
 
 from Scientific import N
@@ -23,16 +25,17 @@ cdef extern from "fftw3.h":
     unsigned FFTW_EXHAUSTIVE
     fftw_plan fftw_plan_dft_r2c_3d(int nx, int ny, int nz,
                                    double *in_array, fftw_complex *out_array,
-                                   unsigned flags)
+                                   unsigned flags) nogil
     fftw_plan fftw_plan_dft_c2r_3d(int nx, int ny, int nz,
                                    fftw_complex *in_array, double *out_array,
-                                   unsigned flags)
-    void fftw_execute(fftw_plan plan)
-    void fftw_destroy_plan(fftw_plan plan)
+                                   unsigned flags) nogil
+    void fftw_execute(fftw_plan plan) nogil
+    void fftw_destroy_plan(fftw_plan plan) nogil
 
 #
 # Convert density map to structure factors
 #
+@cython.cdivision(True)
 def map_to_sf(array_type map_array, sf, double factor):
     """
     @param map_array: an 3D array containing an electronic density map
@@ -64,10 +67,12 @@ def map_to_sf(array_type map_array, sf, double factor):
     nx, ny, nz = map_array.shape
     sf_array = N.zeros((nx, ny, nz/2+1), N.Complex)
     out_data = <fftw_complex *>sf_array.data
-    plan = fftw_plan_dft_r2c_3d(nx, ny, nz, in_data, out_data, FFTW_ESTIMATE)
-    fftw_execute(plan)
-    fftw_destroy_plan(plan)
-    
+    with nogil:
+        plan = fftw_plan_dft_r2c_3d(nx, ny, nz, in_data, out_data,
+                                    FFTW_ESTIMATE)
+        fftw_execute(plan)
+        fftw_destroy_plan(plan)
+
     factor = factor/(<double>nx*<double>ny*<double>nz)/(N.sqrt(2.*N.pi)**3)
     for r in sf.reflection_set:
         h = r.h
@@ -97,6 +102,7 @@ def map_to_sf(array_type map_array, sf, double factor):
 #
 # Convert structure factors or intensities to density/Patterson map
 #
+@cython.cdivision(True)
 def reflections_to_map(data, int n1, int n2, int n3, double factor,
                        int check_resolution=1):
     """
@@ -173,10 +179,12 @@ def reflections_to_map(data, int n1, int n2, int n3, double factor,
                 complex_data[(h*n2+k)*(n3/2+1)+l][1] = \
                                   factor*vimag*imag_sign
 
-    plan = fftw_plan_dft_c2r_3d(n1, n2, n3,
-                                complex_data, <double*>complex_data,
-                                FFTW_ESTIMATE)
-    fftw_execute(plan)
-    fftw_destroy_plan(plan)
+    with nogil:
+        plan = fftw_plan_dft_c2r_3d(n1, n2, n3,
+                                    complex_data, <double*>complex_data,
+                                    FFTW_ESTIMATE)
+        fftw_execute(plan)
+        fftw_destroy_plan(plan)
+
     return map_array[:,:,:n3]
 
