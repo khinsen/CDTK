@@ -382,7 +382,9 @@ class ReflectionData(object):
             # model/theoretical data
             dt = np.dtype([(self.value_label, np.float32)])
             values = np.take(self.array.astype(dt), order)
-        dataset = parent_group.create_dataset(path, data = values)
+        dataset = parent_group.require_dataset(path, shape=values.shape,
+                                               dtype=values.dtype, exact=True)
+        dataset[...] = values
         dataset.attrs['reflections'] = reflection_set_ds.ref
         dataset.attrs['DATA_MODEL'] = 'CDTK'
         dataset.attrs['DATA_MODEL_MAJOR_VERSION'] = 0

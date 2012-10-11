@@ -812,7 +812,9 @@ class ReflectionSet(ReflectionSelector):
         sinv = np.argsort(si)
         assert (np.take(si, sinv) == np.arange(len(si))).all()
 
-        dataset = parent_group.create_dataset(path, data = rs)
+        dataset = parent_group.require_dataset(path, shape=rs.shape,
+                                               dtype=rs.dtype, exact=True)
+        dataset[...] = rs
         a1, a2, a3 = self.cell.basisVectors()
         dataset.attrs['a'] = a1.length()
         dataset.attrs['b'] = a2.length()
