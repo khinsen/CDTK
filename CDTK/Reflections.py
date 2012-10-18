@@ -70,12 +70,18 @@ class Reflection(object):
         self.index = index
         self.phase_factor = 1.
         self.sf_conjugate = False
-        self.n_symmetry_equivalents = None
+        self._n_symmetry_equivalents = None
 
-    def _getarray(self):
+    @property
+    def array(self):
         return N.array([self.h, self.k, self.l])
-    array = property(_getarray)
 
+    @property
+    def n_symmetry_equivalents(self):
+        if self._n_symmetry_equivalents is None:
+            self._n_symmetry_equivalents = len(self.symmetryEquivalents())
+        return self._n_symmetry_equivalents
+    
     def __repr__(self):
         return "Reflection(%d, %d, %d)" % (self.h, self.k, self.l)
 
@@ -180,7 +186,7 @@ class Reflection(object):
                 unique_reflections.add(r)
         n = len(unique_reflections)
         for r in unique_reflections:
-            r.n_symmetry_equivalents = n
+            r._n_symmetry_equivalents = n
         return unique_reflections
 
     def symmetryFactor(self):
@@ -702,94 +708,6 @@ class ReflectionSet(ReflectionSelector):
                     return False
         return True
 
-    def sVectorArray(self, cell=None):
-        """
-        :param cell: a unit cell, which defaults to the unit cell for
-                     which the reflection set is defined.
-        :type cell: CDTK.Crystal.UnitCell
-        :return: an array containing the s vectors for all reflections
-        :rtype: N.array
-        """
-        global _cache
-        if cell is None:
-            cell = self.cell
-        cached_data = _cache.get(self, {})
-        try:
-            return cached_data[('sVectorArray', id(cell))]
-        except KeyError:
-            pass
-
-        r1, r2, r3 = cell.reciprocalBasisVectors()
-        r1 = r1.array
-        r2 = r2.array
-        r3 = r3.array
-        sv = N.zeros((len(self), 3), N.Float)
-        for r in self:
-            sv[r.index, :] = r.h*r1 + r.k*r2 + r.l*r3
-
-        cached_data[('sVectorArray', id(cell))] = sv
-        _cache[self] = cached_data
-        return sv
-
-    def sVectorArrayAndPhasesForASU(self, cell=None):
-        """
-        Calculates the transformed s vectors and phases that are used
-        for calculating the structure factor from the atoms in the
-        asymmetric unit.
-
-        :param cell: a unit cell, which defaults to the unit cell for
-            which the reflection set is defined.
-        :type cell: CDTK.Crystal.UnitCell
-        :returns: a tuple (s, p), where s is an array containing the s vectors
-            for all reflections and space group operations and p is an
-            array with the corresponding phases
-        :rtype: Scientific.N.array_type
-        """
-        global _cache
-        if cell is None:
-            cell = self.cell
-        cached_data = _cache.get(self, {})
-        try:
-            return cached_data[('sVectorArrayAndPhasesForASU', id(cell))]
-        except KeyError:
-            pass
-
-        sg = self.space_group
-        ntrans = len(sg)
-        sv = N.zeros((ntrans, len(self.minimal_reflection_list), 3), N.Float)
-        p = N.zeros((ntrans, len(self.minimal_reflection_list)), N.Complex)
-        twopii = 2.j*N.pi
-        r1, r2, r3 = cell.reciprocalBasisVectors()
-        r1 = r1.array
-        r2 = r2.array
-        r3 = r3.array
-        for r in self:
-            hkl_list = sg.symmetryEquivalentMillerIndices(r.array)[0]
-            for i in range(ntrans):
-                h, k, l = hkl_list[i]
-                sv[i, r.index] = h*r1+k*r2+l*r3
-                tr_num, tr_den = sg.transformations[i][1:]
-                st = r.h*float(tr_num[0])/float(tr_den[0]) \
-                     + r.k*float(tr_num[1])/float(tr_den[1]) \
-                     + r.l*float(tr_num[2])/float(tr_den[2])
-                p[i, r.index] = N.exp(twopii*st)
-
-        cached_data[('sVectorArrayAndPhasesForASU', id(cell))] = (sv, p)
-        _cache[self] = cached_data
-        return sv, p
-
-    def symmetryAndCentricityArrays(self):
-        """
-        :return: an array containing the symmetry factors and centricity flags
-                 for all reflections
-        :rtype: N.array
-        """
-        sm = N.zeros((len(self.minimal_reflection_list), 2), N.Int)
-        for r in self:
-            sm[r.index, 0] = r.symmetryFactor()
-            sm[r.index, 1] = r.isCentric()
-        return sm
-
     def storeHDF5(self, parent_group, path):
         """
         :param parent_group: HDF5 group in which the dataset is created
@@ -983,6 +901,93 @@ class FrozenReflectionSet(ReflectionSet):
         self.cell = UnitCell(*cell_basis)
         self.space_group = space_groups[space_group_number]
         self.crystal = Crystal(self.cell, self.space_group)
+
+    def sVectorArray(self, cell=None):
+        """
+        :param cell: a unit cell, which defaults to the unit cell for
+                     which the reflection set is defined.
+        :type cell: CDTK.Crystal.UnitCell
+        :return: an array containing the s vectors for all reflections
+        :rtype: N.array
+        """
+        global _cache
+        if cell is None:
+            cell = self.cell
+        cached_data = _cache.get(self, {})
+        try:
+            return cached_data[('sVectorArray', id(cell))]
+        except KeyError:
+            pass
+
+        r1, r2, r3 = cell.reciprocalBasisVectors()
+        sv = self.reflections['h'][:, np.newaxis]*r1.array + \
+             self.reflections['k'][:, np.newaxis]*r2.array + \
+             self.reflections['l'][:, np.newaxis]*r3.array
+
+        cached_data[('sVectorArray', id(cell))] = sv
+        _cache[self] = cached_data
+        return sv
+
+    def sVectorArrayAndPhasesForASU(self, cell=None):
+        """
+        Calculates the transformed s vectors and phases that are used
+        for calculating the structure factor from the atoms in the
+        asymmetric unit.
+
+        :param cell: a unit cell, which defaults to the unit cell for
+            which the reflection set is defined.
+        :type cell: CDTK.Crystal.UnitCell
+        :returns: a tuple (s, p), where s is an array containing the s vectors
+            for all reflections and space group operations and p is an
+            array with the corresponding phases
+        :rtype: Scientific.N.array_type
+        """
+        global _cache
+        if cell is None:
+            cell = self.cell
+        cached_data = _cache.get(self, {})
+        try:
+            return cached_data[('sVectorArrayAndPhasesForASU', id(cell))]
+        except KeyError:
+            pass
+
+        sg = self.space_group
+        ntrans = len(sg)
+        nr = len(self.reflections)
+        sv = N.zeros((ntrans, nr, 3), N.Float)
+        p = N.zeros((ntrans, nr), N.Complex)
+        twopii = 2.j*N.pi
+        r1, r2, r3 = cell.reciprocalBasisVectors()
+        r1 = r1.array
+        r2 = r2.array
+        r3 = r3.array
+        for index, r in enumerate(self.reflections):
+            hkl_list = sg.symmetryEquivalentMillerIndices(r.view('3i4'))[0]
+            rh, rk, rl = r
+            for i in range(ntrans):
+                h, k, l = hkl_list[i]
+                sv[i, index] = h*r1+k*r2+l*r3
+                tr_num, tr_den = sg.transformations[i][1:]
+                st = rh*float(tr_num[0])/float(tr_den[0]) \
+                     + rk*float(tr_num[1])/float(tr_den[1]) \
+                     + rl*float(tr_num[2])/float(tr_den[2])
+                p[i, index] = N.exp(twopii*st)
+
+        cached_data[('sVectorArrayAndPhasesForASU', id(cell))] = (sv, p)
+        _cache[self] = cached_data
+        return sv, p
+
+    def symmetryAndCentricityArrays(self):
+        """
+        :return: an array containing the symmetry factors and centricity flags
+                 for all reflections
+        :rtype: N.array
+        """
+        sm = N.zeros((len(self.reflections), 2), N.Int)
+        for r in self:
+            sm[r.index, 0] = r.symmetryFactor()
+            sm[r.index, 1] = r.isCentric()
+        return sm
 
     def storeHDF5(self, parent_group, path):
         import h5py

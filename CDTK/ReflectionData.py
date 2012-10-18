@@ -66,7 +66,7 @@ class ReflectionData(object):
     """
 
     def __init__(self, reflection_set):
-        self.reflection_set = reflection_set
+        self.reflection_set = reflection_set.freeze()
         self.number_of_reflections = len(self.reflection_set)
 
     def __getitem__(self, reflection):
