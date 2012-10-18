@@ -97,8 +97,8 @@ class ReflectionSetTests(unittest.TestCase):
         nr = sum([r.n_symmetry_equivalents for r in reflections]) + \
              sum([r.n_symmetry_equivalents
                   for r in reflections.systematic_absences])
-        self.assertEqual(reflections.total_reflection_count, nr)
-        self.assert_(reflections.total_reflection_count ==
+        self.assertEqual(reflections.totalReflectionCount(), nr)
+        self.assert_(reflections.totalReflectionCount() ==
                      2*len(reflections.minimal_reflection_list))
         for r in reflections:
             self.assert_(len(r.symmetryEquivalents()) == 2)
@@ -115,7 +115,7 @@ class ReflectionSetTests(unittest.TestCase):
         self.assert_(frozen is reflections.freeze())
         self.assert_(frozen is frozen.freeze())
         self.assert_(frozen.isComplete())
-        self.assert_(frozen.total_reflection_count ==
+        self.assert_(frozen.totalReflectionCount() ==
                      2*len(frozen.reflections))
         for r in frozen:
             self.assert_(reflections.hasReflection(r.h, r.k, r.l))
@@ -144,7 +144,7 @@ class ReflectionSetTests(unittest.TestCase):
         nr = sum([r.n_symmetry_equivalents for r in reflections]) + \
              sum([r.n_symmetry_equivalents
                   for r in reflections.systematic_absences])
-        self.assertEqual(reflections.total_reflection_count, nr)
+        self.assertEqual(reflections.totalReflectionCount(), nr)
         for r in reflections:
             self.assert_(res_max <= r.resolution() <= res_min)
         for r in reflections.systematic_absences:
@@ -186,7 +186,7 @@ class ReflectionSetTests(unittest.TestCase):
         nr = sum([r.n_symmetry_equivalents for r in reflections]) + \
              sum([r.n_symmetry_equivalents
                   for r in reflections.systematic_absences])
-        self.assertEqual(reflections.total_reflection_count, nr)
+        self.assertEqual(reflections.totalReflectionCount(), nr)
         for r in reflections:
             self.assert_(res_max <= r.resolution() <= res_min)
             is_centric = r.isCentric()
@@ -255,8 +255,8 @@ class ReflectionSetTests(unittest.TestCase):
                          len(unpickled.reflection_map))
         self.assertEqual(len(reflections.systematic_absences),
                          len(unpickled.systematic_absences))
-        self.assertEqual(reflections.total_reflection_count,
-                         unpickled.total_reflection_count)
+        self.assertEqual(reflections.totalReflectionCount(),
+                         unpickled.totalReflectionCount())
         for r in reflections:
             for re in r.symmetryEquivalents():
                 rp = unpickled[(re.h, re.k, re.l)]

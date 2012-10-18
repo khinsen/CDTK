@@ -356,7 +356,6 @@ class ReflectionSet(ReflectionSelector):
         self.minimal_reflection_list = []
         self.reflection_map = {}
         self.systematic_absences = set()
-        self.total_reflection_count = 0
         self.s_min = None
         self.s_max = None
         self.completeness_range = (None, None)
@@ -422,7 +421,6 @@ class ReflectionSet(ReflectionSelector):
             else:
                 self.minimal_reflection_list.append(hkl)
 
-        self.total_reflection_count += hkl.n_symmetry_equivalents
         s = hkl.sVector().length()
         if self.s_min is None:
             self.s_min = s
@@ -625,6 +623,18 @@ class ReflectionSet(ReflectionSelector):
             self.addReflection(h, k, l)
             return self[(h, k, l)]
 
+    def totalReflectionCount(self):
+        """
+        :return: the total number of reflections (explicitly stored
+                 reflections plus symmetry equivalents)
+        :rtype: int
+        """
+        if self.compact:
+            return sum([r.n_symmetry_equivalents
+                        for r in self.reflection_map.values()])
+        else:
+            return len(self.reflection_map)
+        
     def intersection(self, other):
         """
         Return a new ReflectionSet that is the intersection of self
@@ -690,12 +700,6 @@ class ReflectionSet(ReflectionSelector):
                     if self.compact:
                         self.reflection_map[(h, k, l)] = re
                         break
-        if self.compact:
-            self.total_reflection_count = \
-                               sum([r.n_symmetry_equivalents
-                                    for r in self.reflection_map.values()])
-        else:
-            self.total_reflection_count = len(self.reflection_map)
 
     # Use the same minimal state for equality checks
     def __eq__(self, other):
@@ -789,7 +793,6 @@ class FrozenReflectionSet(ReflectionSet):
         self.s_min = reflection_set.s_min
         self.s_max = reflection_set.s_max
         self.completeness_range = reflection_set.completeness_range
-        self.total_reflection_count = reflection_set.total_reflection_count
         self.compact = True
 
         rs = reflection_set.minimal_reflection_list
@@ -880,12 +883,15 @@ class FrozenReflectionSet(ReflectionSet):
             hkl = np.array((h, k, l), dtype=self._dtype)
             return (self.systematic_absences == hkl).any()
 
+    def totalReflectionCount(self):
+        return sum([r.n_symmetry_equivalents for r in self],
+                   len(self.systematic_absences))
+        
     def __getstate__(self):
         return (tuple(self.cell.basisVectors()),
                 self.space_group.number,
                 self.s_min, self.s_max,
                 self.completeness_range,
-                self.total_reflection_count,
                 self.reflections,
                 self.systematic_absences)
 
@@ -895,7 +901,6 @@ class FrozenReflectionSet(ReflectionSet):
         cell_basis, space_group_number, \
                     self.s_min, self.s_max, \
                     self.completeness_range, \
-                    self.total_reflection_count, \
                     self.reflections, \
                     self.systematic_absences = state
         self.cell = UnitCell(*cell_basis)
@@ -1039,8 +1044,6 @@ class FrozenReflectionSet(ReflectionSet):
         self = cls(ReflectionSet(cell, space_group))
         self.reflections = dataset[...]
         self.systematic_absences = dataset.attrs['systematic_absences']
-        self.total_reflection_count = \
-                sum([r.n_symmetry_equivalents for r in self])
         return self
 
 #
