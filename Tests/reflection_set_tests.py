@@ -31,17 +31,16 @@ class ReflectionSetTests(unittest.TestCase):
                 s = r.sVector().length()
                 self.assert_(s >= shell.s_min)
                 self.assert_(s < shell.s_max)
-        self.assertEqual(len(reflections.minimal_reflection_list), nr)
+        self.assertEqual(len(reflections), nr)
 
     def _subsetTest(self, reflections):
         subsets = reflections.randomlyAssignedSubsets([0.1, 0.5, 0.4])
-        for r in reflections:
-            r.in_subset = False
+        rs = set((r.h, r.k, r.l, r.index)
+                 for r in reflections)
         for s in subsets:
             for r in s:
-                r.in_subset = True
-        for r in reflections:
-            self.assert_(r.in_subset)
+                rs.remove((r.h, r.k, r.l, r.index))
+        self.assert_(len(rs) == 0)
 
     def _intersectionTest(self, reflections):
         subset = reflections.randomlyAssignedSubsets([0.3])[0]
@@ -102,7 +101,7 @@ class ReflectionSetTests(unittest.TestCase):
         self.assert_(reflections.total_reflection_count ==
                      2*len(reflections.minimal_reflection_list))
         for r in reflections:
-            self.assert_(r.n_symmetry_equivalents == 2)
+            self.assert_(len(r.symmetryEquivalents()) == 2)
             self.assert_(res_max <= r.resolution() <= res_min)
             self.assert_(not r.isCentric())
             self.assert_(r.symmetryFactor() == 1)
@@ -111,6 +110,27 @@ class ReflectionSetTests(unittest.TestCase):
         self._symmetryTest(reflections)
         self._intersectionTest(reflections)
         self._equalityTest(reflections)
+
+        frozen = reflections.freeze()
+        self.assert_(frozen is reflections.freeze())
+        self.assert_(frozen is frozen.freeze())
+        self.assert_(frozen.isComplete())
+        self.assert_(frozen.total_reflection_count ==
+                     2*len(frozen.reflections))
+        for r in frozen:
+            self.assert_(reflections.hasReflection(r.h, r.k, r.l))
+            self.assert_(len(r.symmetryEquivalents()) == 2)
+            self.assert_(res_max <= r.resolution() <= res_min)
+            self.assert_(not r.isCentric())
+            self.assert_(r.symmetryFactor() == 1)
+        for r in reflections:
+            self.assert_(frozen.hasReflection(r.h, r.k, r.l))
+            self.assert_(r.index == frozen[(r.h, r.k, r.l)].index)
+        self._shellTest(frozen)
+        self._subsetTest(frozen)
+        self._symmetryTest(frozen)
+        self._intersectionTest(frozen)
+        self._equalityTest(frozen)
 
     def test_P31(self):
         cell = UnitCell(3., 3., 4.,
@@ -136,6 +156,22 @@ class ReflectionSetTests(unittest.TestCase):
         self._symmetryTest(reflections)
         self._intersectionTest(reflections)
         self._equalityTest(reflections)
+
+        frozen = reflections.freeze()
+        self.assert_(frozen is reflections.freeze())
+        self.assert_(frozen is frozen.freeze())
+        self.assert_(frozen.isComplete())
+        for r in frozen:
+            self.assert_(reflections.hasReflection(r.h, r.k, r.l))
+            self.assert_(res_max <= r.resolution() <= res_min)
+        for r in reflections:
+            self.assert_(frozen.hasReflection(r.h, r.k, r.l))
+            self.assert_(r.index == frozen[(r.h, r.k, r.l)].index)
+        self._shellTest(frozen)
+        self._subsetTest(frozen)
+        self._symmetryTest(frozen)
+        self._intersectionTest(frozen)
+        self._equalityTest(frozen)
 
     def test_P43212(self):
         cell = UnitCell(Vector(1., 0., 0.),
@@ -183,6 +219,22 @@ class ReflectionSetTests(unittest.TestCase):
         self._symmetryTest(reflections)
         self._intersectionTest(reflections)
         self._equalityTest(reflections)
+
+        frozen = reflections.freeze()
+        self.assert_(frozen is reflections.freeze())
+        self.assert_(frozen is frozen.freeze())
+        self.assert_(frozen.isComplete())
+        for r in frozen:
+            self.assert_(reflections.hasReflection(r.h, r.k, r.l))
+            self.assert_(res_max <= r.resolution() <= res_min)
+        for r in reflections:
+            self.assert_(frozen.hasReflection(r.h, r.k, r.l))
+            self.assert_(r.index == frozen[(r.h, r.k, r.l)].index)
+        self._shellTest(frozen)
+        self._subsetTest(frozen)
+        self._symmetryTest(frozen)
+        self._intersectionTest(frozen)
+        self._equalityTest(frozen)
 
     def test_pickle(self):
         cell = UnitCell(3., 3., 4.,

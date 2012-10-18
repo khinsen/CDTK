@@ -29,6 +29,7 @@ CDTK.ReflectionData.
 
 from CDTK.Crystal import Crystal
 from Scientific import N
+import numpy as np
 
 # Some expensive computations that are likely to be reused are cached.
 import weakref
@@ -355,6 +356,12 @@ class ReflectionSet(ReflectionSelector):
         self.completeness_range = (None, None)
         if max_resolution is not None:
             self.fillResolutionSphere(max_resolution, min_resolution)
+        self.frozen = None
+
+    def freeze(self):
+        if self.frozen is None:
+            self.frozen = FrozenReflectionSet(self)
+        return self.frozen
 
     def addReflection(self, h, k, l):
         """
@@ -368,6 +375,7 @@ class ReflectionSet(ReflectionSelector):
         :param l: the third Miller index
         :type l: int
         """
+        self.frozen = None
         hkl = Reflection(h, k, l, self.crystal,
                          len(self.minimal_reflection_list))
         if self.compact:
@@ -715,7 +723,7 @@ class ReflectionSet(ReflectionSelector):
         r1 = r1.array
         r2 = r2.array
         r3 = r3.array
-        sv = N.zeros((len(self.minimal_reflection_list), 3), N.Float)
+        sv = N.zeros((len(self), 3), N.Float)
         for r in self:
             sv[r.index, :] = r.h*r1 + r.k*r2 + r.l*r3
 
@@ -848,6 +856,186 @@ class ReflectionSet(ReflectionSelector):
         self = cls(cell, space_group)
         for h, k, l in dataset:
             self.addReflection(h, k, l)
+        return self
+
+#
+# A FrozenReflectionSet is a ReflectionSet that cannot be modified.
+# Its reflections are stored in an array for compactness and rapid access.
+#
+class FrozenReflectionSet(ReflectionSet):
+
+    def __init__(self, reflection_set):
+        self.cell = reflection_set.cell
+        self.space_group = reflection_set.space_group
+        self.crystal = reflection_set.crystal
+        self.s_min = reflection_set.s_min
+        self.s_max = reflection_set.s_max
+        self.completeness_range = reflection_set.completeness_range
+        self.total_reflection_count = reflection_set.total_reflection_count
+        self.compact = True
+
+        rs = reflection_set.minimal_reflection_list
+        self.reflections = np.zeros((len(rs),), dtype=self._dtype)
+        for r in rs:
+            self.reflections[r.index] = (r.h, r.k, r.l)
+
+        rs = reflection_set.systematic_absences
+        self.systematic_absences = np.zeros((len(rs),), dtype=self._dtype)
+        for index, r in enumerate(rs):
+            self.systematic_absences[index] = (r.h, r.k, r.l)
+
+    _dtype = np.dtype([('h', np.int32),
+                       ('k', np.int32),
+                       ('l', np.int32)])
+
+    def freeze(self):
+        return self
+
+    def addReflection(self, h, k, l):
+        raise ValueError("Can't modify FrozenReflectionSet")
+
+    def fillResolutionSphere(self, max_resolution=None, min_resolution=None):
+        raise ValueError("Can't modify FrozenReflectionSet")
+
+    def sRange(self):
+        if len(self.reflections) == 0:
+            raise ValueError("Empty ReflectionSet")
+        return self.s_min, self.s_max
+
+    def resolutionRange(self):
+        if len(self.reflections) == 0:
+            raise ValueError("Empty ReflectionSet")
+        return 1./self.s_max, 1./self.s_min
+
+    def maxHKL(self):
+        if len(self.systematic_absences) == 0:
+            max_hkl = np.zeros((3,), np.int)
+        else:
+            max_hkl = np.array([self.systematic_absences['h'].max(),
+                                self.systematic_absences['k'].max(),
+                                self.systematic_absences['l'].max()])
+        for r in self:
+            hkl = [(re.h, re.k, re.l) for re in r.symmetryEquivalents()]
+            max_hkl = N.maximum(max_hkl, N.maximum.reduce(N.array(hkl)))
+        return tuple(max_hkl)
+
+    def __iter__(self):
+        for i, (h, k, l) in enumerate(self.reflections):
+            yield Reflection(h, k, l, self.crystal, i)
+
+    def __len__(self):
+        return len(self.reflections)
+
+    def __getitem__(self, item):
+        hkl = np.array(item, dtype=self._dtype)
+        test = self.reflections == hkl
+        if test.any():
+            index = np.repeat(np.arange(len(self.reflections)), test)[0]
+            return Reflection(hkl['h'], hkl['k'], hkl['l'], self.crystal, index)
+        if (self.systematic_absences == hkl).any():
+            return Reflection(hkl['h'], hkl['k'], hkl['l'], self.crystal, None)
+
+        for hkl in self.crystal.space_group.\
+                        symmetryEquivalentMillerIndices(np.array(item))[0]:
+            for sign in [1., -1.]:
+                hkl_sym = np.array(tuple(sign*hkl), dtype=self._dtype)
+                test = self.reflections == hkl_sym
+                if test.any():
+                    index = np.repeat(np.arange(len(self.reflections)),
+                                      test)[0]
+                    r = Reflection(hkl_sym['h'], hkl_sym['k'], hkl_sym['l'],
+                                   self.crystal, index)
+                    for re in r.symmetryEquivalents():
+                        if (re.h, re.k, re.l) == item:
+                            return re
+                if (self.systematic_absences == hkl_sym).any():
+                    return Reflection(hkl_sym['h'], hkl_sym['k'], hkl_sym['l'],
+                                      self.crystal, None)
+
+        raise KeyError(item)
+
+    def hasReflection(self, h, k, l):
+        try:
+            _ = self[(h, k, l)]
+            return True
+        except KeyError:
+            hkl = np.array((h, k, l), dtype=self._dtype)
+            return (self.systematic_absences == hkl).any()
+
+    def __getstate__(self):
+        return (tuple(self.cell.basisVectors()),
+                self.space_group.number,
+                self.s_min, self.s_max,
+                self.completeness_range,
+                self.total_reflection_count,
+                self.reflections,
+                self.systematic_absences)
+
+    def __setstate__(self, state):
+        from CDTK.SpaceGroups import space_groups
+        from CDTK.Crystal import UnitCell
+        cell_basis, space_group_number, \
+                    self.s_min, self.s_max, \
+                    self.completeness_range, \
+                    self.total_reflection_count, \
+                    self.reflections, \
+                    self.systematic_absences = state
+        self.cell = UnitCell(*cell_basis)
+        self.space_group = space_groups[space_group_number]
+        self.crystal = Crystal(self.cell, self.space_group)
+
+    def storeHDF5(self, parent_group, path):
+        import h5py
+        import numpy as np
+
+        # Sort Miller indices and create the inverse index vector
+        # for the rearrangement which is needed for converting
+        # ReflectionData arrays.
+        rs = self.reflections
+        si = np.argsort(rs, order=('h', 'k', 'l'))
+        rs = np.take(rs, si)
+        sinv = np.argsort(si)
+        assert (np.take(si, sinv) == np.arange(len(si))).all()
+
+        dataset = parent_group.require_dataset(path, shape=rs.shape,
+                                               dtype=rs.dtype, exact=True)
+        dataset[...] = rs
+        a1, a2, a3 = self.cell.basisVectors()
+        dataset.attrs['a'] = a1.length()
+        dataset.attrs['b'] = a2.length()
+        dataset.attrs['c'] = a3.length()
+        dataset.attrs['alpha'] = a2.angle(a3)
+        dataset.attrs['beta'] = a1.angle(a3)
+        dataset.attrs['gamma'] = a1.angle(a2)
+        dataset.attrs['space_group'] = self.space_group.number
+        dataset.attrs['systematic_absences'] = self.systematic_absences
+        dataset.attrs['DATA_MODEL'] = 'CDTK'
+        dataset.attrs['DATA_MODEL_MAJOR_VERSION'] = 0
+        dataset.attrs['DATA_MODEL_MINOR_VERSION'] = 1
+        dataset.attrs['DATA_CLASS'] = 'ReflectionSet'
+        return dataset, sinv
+
+    @classmethod
+    def fromHDF5(cls, store, dataset):
+        if dataset.attrs['DATA_MODEL'] != 'CDTK' \
+           or dataset.attrs['DATA_MODEL_MAJOR_VERSION'] > 0 \
+           or dataset.attrs['DATA_MODEL_MINOR_VERSION'] > 1 \
+           or dataset.attrs['DATA_CLASS'] != 'ReflectionSet':
+            raise ValueError("HDF5 dataset does not contain a ReflectionSet")
+        from CDTK.SpaceGroups import space_groups
+        from CDTK.Crystal import UnitCell
+        space_group = space_groups[dataset.attrs['space_group']]
+        cell = UnitCell(dataset.attrs['a'],
+                        dataset.attrs['b'],
+                        dataset.attrs['c'],
+                        dataset.attrs['alpha'],
+                        dataset.attrs['beta'],
+                        dataset.attrs['gamma'])
+        self = cls(ReflectionSet(cell, space_group))
+        self.reflections = dataset[...]
+        self.systematic_absences = dataset.attrs['systematic_absences']
+        self.total_reflection_count = \
+                sum([r.n_symmetry_equivalents for r in self])
         return self
 
 #
