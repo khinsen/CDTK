@@ -734,6 +734,10 @@ class ReflectionSet(ReflectionSelector):
         assert rs["index"][si[-1]] == len(rs)-1
         rs = N.take(rs[['h', 'k', 'l']], si)
 
+        sas = np.array([(r.h, r.k, r.l)
+                        for r in self.systematic_absences],
+                      dtype=[('h', np.int32), ('k', np.int32), ('l', np.int32)])
+
         # Sort Miller indices and create the inverse index vector
         # for the rearrangement which is needed for converting
         # ReflectionData arrays.
@@ -753,6 +757,7 @@ class ReflectionSet(ReflectionSelector):
         dataset.attrs['beta'] = a1.angle(a3)
         dataset.attrs['gamma'] = a1.angle(a2)
         dataset.attrs['space_group'] = self.space_group.number
+        dataset.attrs['systematic_absences'] = sas
         dataset.attrs['DATA_MODEL'] = 'CDTK'
         dataset.attrs['DATA_MODEL_MAJOR_VERSION'] = 0
         dataset.attrs['DATA_MODEL_MINOR_VERSION'] = 1
@@ -778,6 +783,9 @@ class ReflectionSet(ReflectionSelector):
         self = cls(cell, space_group)
         for h, k, l in dataset:
             self.addReflection(h, k, l)
+        sas = dataset.attrs['systematic_absences']
+        for h, k, l in sas:
+            self.addReflection(h, k, l)
         return self
 
 #
@@ -796,14 +804,14 @@ class FrozenReflectionSet(ReflectionSet):
         self.compact = True
 
         rs = reflection_set.minimal_reflection_list
-        self.reflections = np.zeros((len(rs),), dtype=self._dtype)
+        self._reflections = np.zeros((len(rs),), dtype=self._dtype)
         for r in rs:
-            self.reflections[r.index] = (r.h, r.k, r.l)
+            self._reflections[r.index] = (r.h, r.k, r.l)
 
         rs = reflection_set.systematic_absences
-        self.systematic_absences = np.zeros((len(rs),), dtype=self._dtype)
+        self._absences = np.zeros((len(rs),), dtype=self._dtype)
         for index, r in enumerate(rs):
-            self.systematic_absences[index] = (r.h, r.k, r.l)
+            self._absences[index] = (r.h, r.k, r.l)
 
     _dtype = np.dtype([('h', np.int32),
                        ('k', np.int32),
@@ -819,57 +827,57 @@ class FrozenReflectionSet(ReflectionSet):
         raise ValueError("Can't modify FrozenReflectionSet")
 
     def sRange(self):
-        if len(self.reflections) == 0:
+        if len(self._reflections) == 0:
             raise ValueError("Empty ReflectionSet")
         return self.s_min, self.s_max
 
     def resolutionRange(self):
-        if len(self.reflections) == 0:
+        if len(self._reflections) == 0:
             raise ValueError("Empty ReflectionSet")
         return 1./self.s_max, 1./self.s_min
 
     def maxHKL(self):
-        if len(self.systematic_absences) == 0:
+        if len(self._absences) == 0:
             max_hkl = np.zeros((3,), np.int)
         else:
-            max_hkl = np.array([self.systematic_absences['h'].max(),
-                                self.systematic_absences['k'].max(),
-                                self.systematic_absences['l'].max()])
+            max_hkl = np.array([self._absences['h'].max(),
+                                self._absences['k'].max(),
+                                self._absences['l'].max()])
         for r in self:
             hkl = [(re.h, re.k, re.l) for re in r.symmetryEquivalents()]
             max_hkl = N.maximum(max_hkl, N.maximum.reduce(N.array(hkl)))
         return tuple(max_hkl)
 
     def __iter__(self):
-        for i, (h, k, l) in enumerate(self.reflections):
+        for i, (h, k, l) in enumerate(self._reflections):
             yield Reflection(h, k, l, self.crystal, i)
 
     def __len__(self):
-        return len(self.reflections)
+        return len(self._reflections)
 
     def __getitem__(self, item):
         hkl = np.array(item, dtype=self._dtype)
-        test = self.reflections == hkl
+        test = self._reflections == hkl
         if test.any():
-            index = np.repeat(np.arange(len(self.reflections)), test)[0]
+            index = np.repeat(np.arange(len(self._reflections)), test)[0]
             return Reflection(hkl['h'], hkl['k'], hkl['l'], self.crystal, index)
-        if (self.systematic_absences == hkl).any():
+        if (self._absences == hkl).any():
             return Reflection(hkl['h'], hkl['k'], hkl['l'], self.crystal, None)
 
         for hkl in self.crystal.space_group.\
                         symmetryEquivalentMillerIndices(np.array(item))[0]:
             for sign in [1., -1.]:
                 hkl_sym = np.array(tuple(sign*hkl), dtype=self._dtype)
-                test = self.reflections == hkl_sym
+                test = self._reflections == hkl_sym
                 if test.any():
-                    index = np.repeat(np.arange(len(self.reflections)),
+                    index = np.repeat(np.arange(len(self._reflections)),
                                       test)[0]
                     r = Reflection(hkl_sym['h'], hkl_sym['k'], hkl_sym['l'],
                                    self.crystal, index)
                     for re in r.symmetryEquivalents():
                         if (re.h, re.k, re.l) == item:
                             return re
-                if (self.systematic_absences == hkl_sym).any():
+                if (self._absences == hkl_sym).any():
                     return Reflection(hkl_sym['h'], hkl_sym['k'], hkl_sym['l'],
                                       self.crystal, None)
 
@@ -881,19 +889,31 @@ class FrozenReflectionSet(ReflectionSet):
             return True
         except KeyError:
             hkl = np.array((h, k, l), dtype=self._dtype)
-            return (self.systematic_absences == hkl).any()
+            return (self._absences == hkl).any()
 
     def totalReflectionCount(self):
-        return sum([r.n_symmetry_equivalents for r in self],
-                   len(self.systematic_absences))
-        
+        return sum(r.n_symmetry_equivalents for r in self) + \
+               sum(r.n_symmetry_equivalents for r in self.systematic_absences)
+
+    # Provide lists of reflections objects on demand, for compatibility
+    # with ReflectionSet.
+    @property
+    def systematic_absences(self):
+        return [Reflection(hkl['h'], hkl['k'], hkl['l'], self.crystal, None)
+                for hkl in self._absences]
+
+    @property
+    def minimal_reflection_list(self):
+        return [Reflection(hkl['h'], hkl['k'], hkl['l'], self.crystal, index)
+                for index, hkl in enumerate(self._reflections)]
+
     def __getstate__(self):
         return (tuple(self.cell.basisVectors()),
                 self.space_group.number,
                 self.s_min, self.s_max,
                 self.completeness_range,
-                self.reflections,
-                self.systematic_absences)
+                self._reflections,
+                self._absences)
 
     def __setstate__(self, state):
         from CDTK.SpaceGroups import space_groups
@@ -901,8 +921,8 @@ class FrozenReflectionSet(ReflectionSet):
         cell_basis, space_group_number, \
                     self.s_min, self.s_max, \
                     self.completeness_range, \
-                    self.reflections, \
-                    self.systematic_absences = state
+                    self._reflections, \
+                    self._absences = state
         self.cell = UnitCell(*cell_basis)
         self.space_group = space_groups[space_group_number]
         self.crystal = Crystal(self.cell, self.space_group)
@@ -925,9 +945,9 @@ class FrozenReflectionSet(ReflectionSet):
             pass
 
         r1, r2, r3 = cell.reciprocalBasisVectors()
-        sv = self.reflections['h'][:, np.newaxis]*r1.array + \
-             self.reflections['k'][:, np.newaxis]*r2.array + \
-             self.reflections['l'][:, np.newaxis]*r3.array
+        sv = self._reflections['h'][:, np.newaxis]*r1.array + \
+             self._reflections['k'][:, np.newaxis]*r2.array + \
+             self._reflections['l'][:, np.newaxis]*r3.array
 
         cached_data[('sVectorArray', id(cell))] = sv
         _cache[self] = cached_data
@@ -958,7 +978,7 @@ class FrozenReflectionSet(ReflectionSet):
 
         sg = self.space_group
         ntrans = len(sg)
-        nr = len(self.reflections)
+        nr = len(self._reflections)
         sv = N.zeros((ntrans, nr, 3), N.Float)
         p = N.zeros((ntrans, nr), N.Complex)
         twopii = 2.j*N.pi
@@ -966,7 +986,7 @@ class FrozenReflectionSet(ReflectionSet):
         r1 = r1.array
         r2 = r2.array
         r3 = r3.array
-        for index, r in enumerate(self.reflections):
+        for index, r in enumerate(self._reflections):
             hkl_list = sg.symmetryEquivalentMillerIndices(r.view('3i4'))[0]
             rh, rk, rl = r
             for i in range(ntrans):
@@ -988,7 +1008,7 @@ class FrozenReflectionSet(ReflectionSet):
                  for all reflections
         :rtype: N.array
         """
-        sm = N.zeros((len(self.reflections), 2), N.Int)
+        sm = N.zeros((len(self._reflections), 2), N.Int)
         for r in self:
             sm[r.index, 0] = r.symmetryFactor()
             sm[r.index, 1] = r.isCentric()
@@ -1001,7 +1021,7 @@ class FrozenReflectionSet(ReflectionSet):
         # Sort Miller indices and create the inverse index vector
         # for the rearrangement which is needed for converting
         # ReflectionData arrays.
-        rs = self.reflections
+        rs = self._reflections
         si = np.argsort(rs, order=('h', 'k', 'l'))
         rs = np.take(rs, si)
         sinv = np.argsort(si)
@@ -1018,7 +1038,7 @@ class FrozenReflectionSet(ReflectionSet):
         dataset.attrs['beta'] = a1.angle(a3)
         dataset.attrs['gamma'] = a1.angle(a2)
         dataset.attrs['space_group'] = self.space_group.number
-        dataset.attrs['systematic_absences'] = self.systematic_absences
+        dataset.attrs['systematic_absences'] = self._absences
         dataset.attrs['DATA_MODEL'] = 'CDTK'
         dataset.attrs['DATA_MODEL_MAJOR_VERSION'] = 0
         dataset.attrs['DATA_MODEL_MINOR_VERSION'] = 1
@@ -1042,8 +1062,8 @@ class FrozenReflectionSet(ReflectionSet):
                         dataset.attrs['beta'],
                         dataset.attrs['gamma'])
         self = cls(ReflectionSet(cell, space_group))
-        self.reflections = dataset[...]
-        self.systematic_absences = dataset.attrs['systematic_absences']
+        self._reflections = dataset[...]
+        self._absences = dataset.attrs['systematic_absences']
         return self
 
 #

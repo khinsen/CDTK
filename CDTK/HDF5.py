@@ -17,12 +17,12 @@ translated to and from HDF5 object references.
 import h5py
 
 # For now, import all modules directly for hard-wired handlers
-from CDTK.Reflections import ReflectionSet
+from CDTK.Reflections import FrozenReflectionSet
 from CDTK.ReflectionData import ReflectionData
 
 class HDF5Store(object):
 
-    handlers = {'ReflectionSet': ReflectionSet.fromHDF5,
+    handlers = {'ReflectionSet': FrozenReflectionSet.fromHDF5,
                 'ReflectionData': ReflectionData.fromHDF5}
 
     def __init__(self, hdf5_group):

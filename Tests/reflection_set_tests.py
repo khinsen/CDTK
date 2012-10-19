@@ -9,12 +9,14 @@
 
 import unittest
 from CDTK.Crystal import UnitCell
-from CDTK.Reflections import ReflectionSet
+from CDTK.Reflections import ReflectionSet, FrozenReflectionSet
 from CDTK.SpaceGroups import space_groups
+from CDTK.HDF5 import HDF5Store
 from CDTK import Units
 from Scientific.Geometry import Vector
 from Scientific import N
 import cPickle
+import h5py
 
 class ReflectionSetTests(unittest.TestCase):
 
@@ -116,7 +118,7 @@ class ReflectionSetTests(unittest.TestCase):
         self.assert_(frozen is frozen.freeze())
         self.assert_(frozen.isComplete())
         self.assert_(frozen.totalReflectionCount() ==
-                     2*len(frozen.reflections))
+                     2*len(frozen._reflections))
         for r in frozen:
             self.assert_(reflections.hasReflection(r.h, r.k, r.l))
             self.assert_(len(r.symmetryEquivalents()) == 2)
@@ -245,33 +247,76 @@ class ReflectionSetTests(unittest.TestCase):
                                     res_max, res_min,
                                     compact=self.compact)
         self.assert_(reflections.isComplete())
+
         string = cPickle.dumps(reflections)
         unpickled = cPickle.loads(string)
         self.assert_(unpickled.isComplete())
-        self.assertEqual(len(reflections), len(unpickled))
-        self.assertEqual(len(reflections.minimal_reflection_list),
-                         len(unpickled.minimal_reflection_list))
         self.assertEqual(len(reflections.reflection_map),
                          len(unpickled.reflection_map))
-        self.assertEqual(len(reflections.systematic_absences),
-                         len(unpickled.systematic_absences))
-        self.assertEqual(reflections.totalReflectionCount(),
-                         unpickled.totalReflectionCount())
-        for r in reflections:
+        self._compare(reflections, unpickled)
+
+        frozen = reflections.freeze()
+        self.assert_(frozen.isComplete())
+        self._compare(reflections, frozen)
+
+        string = cPickle.dumps(frozen)
+        unpickled = cPickle.loads(string)
+        self.assert_(unpickled.isComplete())
+        self.assert_((frozen._reflections == unpickled._reflections).any())
+        self.assert_((frozen._absences == unpickled._absences).any())
+        self._compare(frozen, unpickled)
+
+    def test_hdf5(self):
+        cell = UnitCell(3., 3., 4.,
+                        90.*Units.deg, 90.*Units.deg, 120.*Units.deg)
+        res_max = 0.5
+        res_min = 10.
+        reflections = ReflectionSet(cell, space_groups['P 31'],
+                                    res_max, res_min,
+                                    compact=self.compact)
+        frozen = reflections.freeze()
+
+        with h5py.File('test.h5', 'w') as f:
+            reflections.storeHDF5(f, 'reflections')
+            frozen.storeHDF5(f, 'frozen_reflections')
+
+        with h5py.File('test.h5', 'r') as f:
+            store = HDF5Store(f)
+            retrieved = store.retrieve('reflections')
+            retrieved_frozen = store.retrieve('frozen_reflections')
+
+        self.assert_(isinstance(retrieved, ReflectionSet))
+        self.assert_(isinstance(retrieved_frozen, ReflectionSet))
+        self.assert_(isinstance(retrieved, FrozenReflectionSet))
+        self.assert_(isinstance(retrieved_frozen, FrozenReflectionSet))
+
+        self._compare(reflections, retrieved, False)
+        self._compare(reflections, retrieved_frozen, False)
+
+    def _compare(self, rs1, rs2, check_indices=True):
+        self.assertEqual(len(rs1), len(rs2))
+        self.assertEqual(len(rs1.minimal_reflection_list),
+                         len(rs2.minimal_reflection_list))
+        self.assertEqual(len(rs1.systematic_absences),
+                         len(rs2.systematic_absences))
+        self.assertEqual(rs1.totalReflectionCount(),
+                         rs2.totalReflectionCount())
+        for r in rs1:
             for re in r.symmetryEquivalents():
-                rp = unpickled[(re.h, re.k, re.l)]
+                rp = rs2[(re.h, re.k, re.l)]
                 self.assertEqual(re.h, rp.h)
                 self.assertEqual(re.k, rp.k)
                 self.assertEqual(re.l, rp.l)
-                self.assertEqual(re.index, rp.index)
+                if check_indices:
+                    self.assertEqual(re.index, rp.index)
                 self.assertEqual(re.sf_conjugate, rp.sf_conjugate)
                 self.assertEqual(re.phase_factor, rp.phase_factor)
                 self.assertEqual(re.n_symmetry_equivalents,
                                  rp.n_symmetry_equivalents)
 
-        for r in reflections.systematic_absences:
-            self.assert_(unpickled[(r.h, r.k, r.l)]
-                         in unpickled.systematic_absences)
+        for r in rs1.systematic_absences:
+            self.assert_(rs2[(r.h, r.k, r.l)]
+                         in rs2.systematic_absences)
 
 class CompactReflectionSetTests(ReflectionSetTests):
 
