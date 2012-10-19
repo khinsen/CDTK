@@ -301,6 +301,8 @@ class ReflectionSetTests(unittest.TestCase):
                          len(rs2.systematic_absences))
         self.assertEqual(rs1.totalReflectionCount(),
                          rs2.totalReflectionCount())
+        self.assertEqual(rs1.s_min, rs2.s_min)
+        self.assertEqual(rs1.s_max, rs2.s_max)
         for r in rs1:
             for re in r.symmetryEquivalents():
                 rp = rs2[(re.h, re.k, re.l)]

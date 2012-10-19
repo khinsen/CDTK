@@ -1001,6 +1001,18 @@ class FrozenReflectionSet(ReflectionSet):
         self = cls(ReflectionSet(cell, space_group))
         self._reflections = dataset[...]
         self._absences = dataset.attrs['systematic_absences']
+
+        r1, r2, r3 = cell.reciprocalBasisVectors()
+        sv = self._reflections['h'][:, np.newaxis]*r1.array + \
+             self._reflections['k'][:, np.newaxis]*r2.array + \
+             self._reflections['l'][:, np.newaxis]*r3.array
+        sva = self._absences['h'][:, np.newaxis]*r1.array + \
+              self._absences['k'][:, np.newaxis]*r2.array + \
+              self._absences['l'][:, np.newaxis]*r3.array
+        s = np.concatenate([np.sqrt(np.sum(sv**2, axis=1)),
+                            np.sqrt(np.sum(sva**2, axis=1))])
+        self.s_min = s.min()
+        self.s_max = s.max()
         return self
 
 #
