@@ -723,7 +723,7 @@ class ReflectionSet(ReflectionSelector):
                  to the sort order used in the file
         :rtype: (h5py.Dataset, np.ndarray)
         """
-        self.freeze().storeHDF5(parent_group, path)
+        return self.freeze().storeHDF5(parent_group, path)
 
 #
 # A FrozenReflectionSet is a ReflectionSet that cannot be modified.
@@ -1000,7 +1000,10 @@ class FrozenReflectionSet(ReflectionSet):
                         dataset.attrs['gamma'])
         self = cls(ReflectionSet(cell, space_group))
         self._reflections = dataset[...]
-        self._absences = dataset.attrs['systematic_absences']
+        try:
+            self._absences = dataset.attrs['systematic_absences']
+        except KeyError:
+            self._absences = np.zeros((0,), dtype=self._dtype)
 
         r1, r2, r3 = cell.reciprocalBasisVectors()
         sv = self._reflections['h'][:, np.newaxis]*r1.array + \
