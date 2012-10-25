@@ -276,13 +276,11 @@ class ReflectionSetTests(unittest.TestCase):
                                     compact=self.compact)
         frozen = reflections.freeze()
 
-        with h5py.File('test.h5', 'w') as f:
-            store = HDF5Store(f)
+        with HDF5Store('test.h5', 'w') as store:
             store.store('reflections', reflections)
             store.store('frozen_reflections', frozen)
 
-        with h5py.File('test.h5', 'r') as f:
-            store = HDF5Store(f)
+        with HDF5Store('test.h5', 'r') as store:
             retrieved = store.retrieve('reflections')
             retrieved_frozen = store.retrieve('frozen_reflections')
 

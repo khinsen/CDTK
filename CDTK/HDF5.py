@@ -25,11 +25,24 @@ class HDF5Store(object):
     handlers = {'ReflectionSet': FrozenReflectionSet.fromHDF5,
                 'ReflectionData': ReflectionData.fromHDF5}
 
-    def __init__(self, hdf5_group):
-        assert isinstance(hdf5_group, h5py.Group)
-        self.root = hdf5_group
+    def __init__(self, hdf5_group_or_filename, file_mode=None):
+        if isinstance(hdf5_group_or_filename, h5py.Group):
+            assert file_mode is None
+            self.root = hdf5_group_or_filename
+        else:
+            assert isinstance(hdf5_group_or_filename, basestring)
+            if file_mode is None:
+                file_mode = 'r'
+            self.root = h5py.File(hdf5_group_or_filename, file_mode)
         self.cache = {}
         self.info_cache = {}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.root.file.close()
+        return False
 
     def relativePath(self, path):
         if path[0] == '/':
