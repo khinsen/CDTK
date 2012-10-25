@@ -29,6 +29,7 @@ class HDF5Store(object):
         assert isinstance(hdf5_group, h5py.Group)
         self.root = hdf5_group
         self.cache = {}
+        self.info_cache = {}
 
     def relativePath(self, path):
         if path[0] == '/':
@@ -41,11 +42,31 @@ class HDF5Store(object):
         return path
 
     def store(self, path, obj):
+        if path == '':
+            # unnamed data
+            path = "_UNNAMED_/%d" % id(obj)
         path = self.relativePath(path)
-        ret = obj.storeHDF5(path)
-        self.return_value_cache[obj] = ret
-        self._register(path, obj)
-        return node
+
+        if id(obj) in self.cache:
+            if path != self.cache[id(obj)]:
+                if not path.startswith("_UNNAMED_"):
+                    # add a soft link
+                    self.root[path] = h5py.SoftLink(self.cache[id(obj)])
+            node = self.root[self.cache[id(obj)]]
+            info = self.info_cache.get(id(obj), None)
+            return node, info
+
+        ret = obj.storeHDF5(self, path)
+        if isinstance(ret, tuple):
+            assert len(ret) == 2
+            node, info = ret
+        else:
+            node = ret
+            info = None
+        self.cache[path] = obj
+        self.cache[id(obj)] = path
+        self.info_cache[id(obj)] = info
+        return node, info
 
     def retrieve(self, path_or_node_or_ref):
         if isinstance(path_or_node_or_ref, h5py.h5r.Reference):
@@ -62,6 +83,9 @@ class HDF5Store(object):
         data = self.cache.get(path, None)
         if data is not None:
             return data
+        link_obj = self.root.get(path, getlink=True)
+        if isinstance(link_obj, h5py.SoftLink):
+            return self.retrieve(link_obj.path)
         node = self.root[path]
         data_class = node.attrs.get('DATA_CLASS', None)
         if data_class is None:

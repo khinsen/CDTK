@@ -360,9 +360,10 @@ class ReflectionData(object):
         vmd_script.close()
 
 
-    def storeHDF5(self, parent_group, path, reflection_set_ds, order):
+    def storeHDF5(self, store, path):
         import h5py
         import numpy as np
+        reflection_set_ds, order = store.store('', self.reflection_set)
         if self.value_label == 'structure_factor':
             # complex structure factor data
             dt = np.dtype([(self.value_label+'_real', np.float32),
@@ -382,8 +383,8 @@ class ReflectionData(object):
             # model/theoretical data
             dt = np.dtype([(self.value_label, np.float32)])
             values = np.take(self.array.astype(dt), order)
-        dataset = parent_group.require_dataset(path, shape=values.shape,
-                                               dtype=values.dtype, exact=True)
+        dataset = store.root.require_dataset(path, shape=values.shape,
+                                             dtype=values.dtype, exact=True)
         dataset[...] = values
         dataset.attrs['reflections'] = reflection_set_ds.ref
         dataset.attrs['DATA_MODEL'] = 'CDTK'

@@ -712,18 +712,8 @@ class ReflectionSet(ReflectionSelector):
                     return False
         return True
 
-    def storeHDF5(self, parent_group, path):
-        """
-        :param parent_group: HDF5 group in which the dataset is created
-        :type parent_group: h5py.Group
-        :param path: the path from parent_group to the dataset
-                     for the ReflectionSet.
-        :type : str
-        :return: the HDF5 dataset and the index permutation corresponding
-                 to the sort order used in the file
-        :rtype: (h5py.Dataset, np.ndarray)
-        """
-        return self.freeze().storeHDF5(parent_group, path)
+    def storeHDF5(self, store, path):
+        return self.freeze().storeHDF5(store, path)
 
 #
 # A FrozenReflectionSet is a ReflectionSet that cannot be modified.
@@ -951,7 +941,7 @@ class FrozenReflectionSet(ReflectionSet):
             sm[r.index, 1] = r.isCentric()
         return sm
 
-    def storeHDF5(self, parent_group, path):
+    def storeHDF5(self, store, path):
         import h5py
         import numpy as np
 
@@ -964,8 +954,8 @@ class FrozenReflectionSet(ReflectionSet):
         sinv = np.argsort(si)
         assert (np.take(si, sinv) == np.arange(len(si))).all()
 
-        dataset = parent_group.require_dataset(path, shape=rs.shape,
-                                               dtype=rs.dtype, exact=True)
+        dataset = store.root.require_dataset(path, shape=rs.shape,
+                                             dtype=rs.dtype, exact=True)
         dataset[...] = rs
         a1, a2, a3 = self.cell.basisVectors()
         dataset.attrs['a'] = a1.length()
@@ -975,7 +965,8 @@ class FrozenReflectionSet(ReflectionSet):
         dataset.attrs['beta'] = a1.angle(a3)
         dataset.attrs['gamma'] = a1.angle(a2)
         dataset.attrs['space_group'] = self.space_group.number
-        dataset.attrs['systematic_absences'] = self._absences
+        if len(self._absences) > 0:
+            dataset.attrs['systematic_absences'] = self._absences
         dataset.attrs['DATA_MODEL'] = 'CDTK'
         dataset.attrs['DATA_MODEL_MAJOR_VERSION'] = 0
         dataset.attrs['DATA_MODEL_MINOR_VERSION'] = 1
