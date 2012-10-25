@@ -945,14 +945,11 @@ class FrozenReflectionSet(ReflectionSet):
         import h5py
         import numpy as np
 
-        # Sort Miller indices and create the inverse index vector
-        # for the rearrangement which is needed for converting
-        # ReflectionData arrays.
+        # Sort Miller indices in order to have a standardized
+        # representation on disk.
         rs = self._reflections
         si = np.argsort(rs, order=('h', 'k', 'l'))
         rs = np.take(rs, si)
-        sinv = np.argsort(si)
-        assert (np.take(si, sinv) == np.arange(len(si))).all()
 
         dataset = store.root.require_dataset(path, shape=rs.shape,
                                              dtype=rs.dtype, exact=True)
@@ -971,7 +968,7 @@ class FrozenReflectionSet(ReflectionSet):
         dataset.attrs['DATA_MODEL_MAJOR_VERSION'] = 0
         dataset.attrs['DATA_MODEL_MINOR_VERSION'] = 1
         dataset.attrs['DATA_CLASS'] = 'ReflectionSet'
-        return dataset, sinv
+        return dataset, si
 
     @classmethod
     def fromHDF5(cls, store, dataset):
