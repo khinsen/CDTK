@@ -390,20 +390,12 @@ class ReflectionData(object):
                                              dtype=values.dtype, exact=True)
         dataset[...] = values
         dataset.attrs['reflections'] = reflection_set_ds.ref
-        dataset.attrs['DATA_MODEL'] = 'CDTK'
-        dataset.attrs['DATA_MODEL_MAJOR_VERSION'] = 0
-        dataset.attrs['DATA_MODEL_MINOR_VERSION'] = 1
-        dataset.attrs['DATA_CLASS'] = 'ReflectionData'
+        store.stamp(dataset, 'ReflectionData')
         return dataset
 
     @classmethod
     def fromHDF5(cls, store, dataset):
         import numpy as np
-        if dataset.attrs['DATA_MODEL'] != 'CDTK' \
-           or dataset.attrs['DATA_MODEL_MAJOR_VERSION'] > 0 \
-           or dataset.attrs['DATA_MODEL_MINOR_VERSION'] > 1 \
-           or dataset.attrs['DATA_CLASS'] != 'ReflectionData':
-            raise ValueError("HDF5 dataset does not contain ReflectionData")
         reflections = store.retrieve(dataset.attrs['reflections'])
         fields = dataset.dtype.fields.keys()
         if 'sigma' in fields:

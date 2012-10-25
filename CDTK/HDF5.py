@@ -21,6 +21,18 @@ import weakref
 from CDTK.Reflections import FrozenReflectionSet
 from CDTK.ReflectionData import ReflectionData
 
+#
+# Data model versioning 
+#
+# Current version
+DATA_MODEL_MAJOR_VERSION = 0
+DATA_MODEL_MINOR_VERSION = 1
+#
+# Minimal version that can be handled
+DATA_MODEL_MIN_MAJOR_VERSION = 0
+DATA_MODEL_MIN_MINOR_VERSION = 1
+
+
 class HDF5Store(object):
 
     handlers = {'ReflectionSet': FrozenReflectionSet.fromHDF5,
@@ -84,6 +96,12 @@ class HDF5Store(object):
         self.info_cache[obj] = info
         return node, info
 
+    def stamp(self, node, data_class):
+        node.attrs['DATA_MODEL'] = 'CDTK'
+        node.attrs['DATA_MODEL_MAJOR_VERSION'] = DATA_MODEL_MAJOR_VERSION
+        node.attrs['DATA_MODEL_MINOR_VERSION'] = DATA_MODEL_MINOR_VERSION
+        node.attrs['DATA_CLASS'] = data_class
+        
     def retrieve(self, path_or_node_or_ref):
         if isinstance(path_or_node_or_ref, h5py.h5r.Reference):
             path_or_node_or_ref = self.root[path_or_node_or_ref]
@@ -106,6 +124,14 @@ class HDF5Store(object):
         data_class = node.attrs.get('DATA_CLASS', None)
         if data_class is None:
             raise ValueError("unknown node type at " + path)
+
+        if node.attrs.get('DATA_MODEL', None) != 'CDTK' \
+           or node.attrs.get('DATA_MODEL_MAJOR_VERSION', None) \
+                            > DATA_MODEL_MIN_MAJOR_VERSION \
+           or node.attrs.get('DATA_MODEL_MINOR_VERSION', None) \
+                            > DATA_MODEL_MIN_MINOR_VERSION:
+            raise ValueError("Unknow data model or invalid version number")
+
         obj = self.handlers[data_class](self, node)
         self.obj_cache[path] = obj
         self.path_cache[obj] = path

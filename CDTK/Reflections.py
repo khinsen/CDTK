@@ -964,19 +964,11 @@ class FrozenReflectionSet(ReflectionSet):
         dataset.attrs['space_group'] = self.space_group.number
         if len(self._absences) > 0:
             dataset.attrs['systematic_absences'] = self._absences
-        dataset.attrs['DATA_MODEL'] = 'CDTK'
-        dataset.attrs['DATA_MODEL_MAJOR_VERSION'] = 0
-        dataset.attrs['DATA_MODEL_MINOR_VERSION'] = 1
-        dataset.attrs['DATA_CLASS'] = 'ReflectionSet'
+        store.stamp(dataset, 'ReflectionSet')
         return dataset, si
 
     @classmethod
     def fromHDF5(cls, store, dataset):
-        if dataset.attrs['DATA_MODEL'] != 'CDTK' \
-           or dataset.attrs['DATA_MODEL_MAJOR_VERSION'] > 0 \
-           or dataset.attrs['DATA_MODEL_MINOR_VERSION'] > 1 \
-           or dataset.attrs['DATA_CLASS'] != 'ReflectionSet':
-            raise ValueError("HDF5 dataset does not contain a ReflectionSet")
         from CDTK.SpaceGroups import space_groups
         from CDTK.Crystal import UnitCell
         space_group = space_groups[dataset.attrs['space_group']]
