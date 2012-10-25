@@ -39,7 +39,7 @@ from an atomic model.
 from Scientific import N, LA
 from CDTK import Units
 from CDTK.Utility import SymmetricTensor
-from CDTK.Reflections import ReflectionSet
+from CDTK.Reflections import ReflectionSet, Reflection
 from Scientific.Geometry import Tensor
 
 #
@@ -71,11 +71,14 @@ class ReflectionData(object):
 
     def __getitem__(self, reflection):
         """
-        :param reflection: a reflection
-        :type reflection: Reflection
+        :param reflection: a reflection or a (h, k, l) tuple
+        :type reflection: Reflection or tuple
         :return: the data value for the given reflection
         :rtype: float or complex
         """
+        if not isinstance(reflection, Reflection):
+            # accept (h, k, l) tuples
+            reflection = self.reflection_set[reflection]
         index = reflection.index
         if index is None: # systematic absence
             return self.absent_value
@@ -447,6 +450,8 @@ class ExperimentalReflectionData(ReflectionData):
         self.data_available = N.zeros((self.number_of_reflections,), N.Int0)
 
     def __getitem__(self, reflection):
+        if not isinstance(reflection, Reflection):
+            reflection = self.reflection_set[reflection]
         index = reflection.index
         if index is None: # systematic absence
             return self.absent_value
@@ -1070,6 +1075,8 @@ class StructureFactor(ReflectionData, AmplitudeData):
         return obj
 
     def __getitem__(self, reflection):
+        if not isinstance(reflection, Reflection):
+            reflection = self.reflection_set[reflection]
         index = reflection.index
         if index is None: # systematic absence
             return self.absent_value
