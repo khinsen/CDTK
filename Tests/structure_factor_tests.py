@@ -20,6 +20,7 @@ from CDTK.Crystal import UnitCell
 from CDTK.SpaceGroups import space_groups
 from CDTK.Reflections import ReflectionSet
 from CDTK.ReflectionData import StructureFactor
+from CDTK.HDF5 import HDF5Store
 from CDTK import Units
 
 class StructureFactorTests2ONX(unittest.TestCase):
@@ -142,6 +143,23 @@ class StructureFactorTests2ONX(unittest.TestCase):
                 self.assert_(r.h < 5)
                 eq_r = self.reflections[(r.h, r.k, r.l)]
                 self.assertEqual(new_data[r], data[eq_r])
+
+    def test_hdf5(self):
+        with HDF5Store('test.h5', 'w') as store:
+            store.store('test/exp_amplitudes', self.exp_amplitudes)
+            store.store('test/model_sf', self.model_sf)
+        with HDF5Store('test.h5') as store:
+            exp_amplitudes = store.retrieve('test/exp_amplitudes')
+            model_sf = store.retrieve('test/model_sf')
+        self.assert_(exp_amplitudes.reflection_set is model_sf.reflection_set)
+        self.assertAlmostEqual(exp_amplitudes.rFactor(model_sf),
+                               self.exp_amplitudes.rFactor(self.model_sf), 5)
+        rs = exp_amplitudes.reflection_set
+        ea = self.exp_amplitudes.resample(rs)
+        sf = self.model_sf.resample(rs)
+        self.assert_(N.absolute(sf.array-model_sf.array).max() < 1.e-5)
+        self.assert_(N.fabs(ea.array-exp_amplitudes.array).max() < 1.e-5)
+
 
 class StructureFactorAssignmentTests(unittest.TestCase):
 
