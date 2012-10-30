@@ -58,6 +58,9 @@ class HDF5Store(object):
         self.root.file.close()
         return False
 
+    def flush(self):
+        self.root.file.flush()
+
     def relativePath(self, path):
         if path[0] == '/':
             if path.startswith(self.root.name):
