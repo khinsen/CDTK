@@ -965,7 +965,7 @@ class FrozenReflectionSet(ReflectionSet):
         if len(self._absences) > 0:
             dataset.attrs['systematic_absences'] = self._absences
         store.stamp(dataset, 'ReflectionSet')
-        return dataset, si
+        return dataset, {'immutable': True, 'sort_indices': si}
 
     @classmethod
     def fromHDF5(cls, store, dataset):

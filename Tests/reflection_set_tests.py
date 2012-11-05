@@ -278,12 +278,17 @@ class ReflectionSetTests(unittest.TestCase):
 
         with HDF5Store('test.h5', 'w') as store:
             store.store('reflections', reflections)
+            retrieved = store.retrieve('reflections')
             store.store('frozen_reflections', frozen)
+
+        self.assert_(retrieved is reflections)
 
         with HDF5Store('test.h5', 'r') as store:
             retrieved = store.retrieve('reflections')
+            retrieved_again = store.retrieve('reflections')
             retrieved_frozen = store.retrieve('frozen_reflections')
 
+        self.assert_(retrieved_again is retrieved)
         self.assert_(isinstance(retrieved, ReflectionSet))
         self.assert_(isinstance(retrieved_frozen, ReflectionSet))
         self.assert_(isinstance(retrieved, FrozenReflectionSet))

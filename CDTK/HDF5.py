@@ -87,16 +87,11 @@ class HDF5Store(object):
             info = self.info_cache.get(obj, None)
             return node, info
 
-        ret = obj.storeHDF5(self, path)
-        if isinstance(ret, tuple):
-            assert len(ret) == 2
-            node, info = ret
-        else:
-            node = ret
-            info = None
-        self.obj_cache[path] = obj
-        self.path_cache[obj] = path
-        self.info_cache[obj] = info
+        node, info = obj.storeHDF5(self, path)
+        if info['immutable']:
+            self.obj_cache[path] = obj
+            self.path_cache[obj] = path
+            self.info_cache[obj] = info
         return node, info
 
     def stamp(self, node, data_class):

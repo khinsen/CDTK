@@ -366,7 +366,8 @@ class ReflectionData(object):
     def storeHDF5(self, store, path):
         import h5py
         import numpy as np
-        reflection_set_ds, order = store.store('', self.reflection_set)
+        reflection_set_ds, info = store.store('', self.reflection_set)
+        order = info['sort_indices']
         if self.value_label == 'structure_factor':
             # complex structure factor data
             dt = np.dtype([(self.value_label+'_real', np.float32),
@@ -391,7 +392,7 @@ class ReflectionData(object):
         dataset[...] = values
         dataset.attrs['reflections'] = reflection_set_ds.ref
         store.stamp(dataset, 'ReflectionData')
-        return dataset
+        return dataset, {'immutable': False}
 
     @classmethod
     def fromHDF5(cls, store, dataset):

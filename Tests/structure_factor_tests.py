@@ -147,14 +147,20 @@ class StructureFactorTests2ONX(unittest.TestCase):
     def test_hdf5(self):
         with HDF5Store('test.h5', 'w') as store:
             store.store('test/exp_amplitudes', self.exp_amplitudes)
+            retrieved = store.retrieve('test/exp_amplitudes')
             store.flush() # just for testing flush()
             store.store('test/model_sf', self.model_sf)
             store.store('test/model_intensities', self.model_sf.intensities())
+
+        self.assert_(retrieved is not self.exp_amplitudes)
+
         with HDF5Store('test.h5') as store:
             exp_amplitudes = store.retrieve('test/exp_amplitudes')
             model_sf = store.retrieve('test/model_sf')
             model_intensities = store.retrieve('test/model_intensities')
+
         self.assert_(exp_amplitudes.reflection_set is model_sf.reflection_set)
+        self.assert_(exp_amplitudes.reflection_set is model_intensities.reflection_set)
         self.assertAlmostEqual(exp_amplitudes.rFactor(model_sf),
                                self.exp_amplitudes.rFactor(self.model_sf), 5)
         rs = exp_amplitudes.reflection_set
