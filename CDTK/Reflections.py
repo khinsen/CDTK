@@ -703,6 +703,8 @@ class ReflectionSet(ReflectionSelector):
 
     # Use the same minimal state for equality checks
     def __eq__(self, other):
+        if not isinstance(other, ReflectionSet):
+            return False
         for v1, v2 in zip(self.__getstate__(), other.__getstate__()):
             if type(v1) is N.array_type:
                 if (v1 != v2).any():
